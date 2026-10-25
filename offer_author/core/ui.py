@@ -1,4 +1,4 @@
-"""Client for the warm compile service (harness/ui-harness/compile-server.mjs): the stock gravty-ui rules screen, headless.
+"""Client for the warm compile service (harness/ui/compile/compile-server.mjs): the stock gravty-ui rules screen, headless.
 
 The UI is the compiler: it loads the XML through the stock upload path, keeps what it understands, generates the DRL
 the engine will run, and creates the offer counters the XML refers to. Nothing here interprets blocks.

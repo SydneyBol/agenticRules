@@ -1,17 +1,11 @@
+"""Fixtures shared by tests/unit, tests/e2e and tests/live (helpers and paths: tests/support)."""
 import os
-import sys
 
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
-FIX = os.path.join(ROOT, "tests", "fixtures")
-GOLDEN = os.path.join(ROOT, "tests", "golden")  # rule XML the stock UI loads unchanged (13 offers)
-SEGMENTS = os.path.join(ROOT, "offer_author", "core", "data", "segments")
-SPIKE = os.environ.get("OFFER_AUTHOR_SPIKE", os.path.join(ROOT, "harness"))
-
-from offer_author.core import tree, ui  # noqa: E402
-from offer_author.core.catalog import Catalog  # noqa: E402
+from offer_author.core import tree, ui
+from offer_author.core.catalog import Catalog
+from tests.support import ROOT
 
 
 @pytest.fixture(scope="session")
@@ -22,31 +16,6 @@ def fixture_catalog():
 @pytest.fixture(scope="session")
 def devintam1_catalog():
     return Catalog.from_bolapi_dumps(os.path.join(ROOT, "catalogs", "devintam1", "bolapi"), "devintam1", 1, "12", "BASE")
-
-
-def golden(name):
-    """A golden offer as the model writes it: compile arguments (block selections, declared counters)."""
-    blocks, counters = tree.selections(open(os.path.join(GOLDEN, "compiled", name + ".xml")).read())
-    return {"canvas": "rules", "blocks": blocks, "counters": counters}
-
-
-def saved_segment(name):
-    blocks, _ = tree.selections(open(os.path.join(SEGMENTS, name + ".xml")).read())
-    return {"canvas": "segment", "blocks": blocks}
-
-
-def finish(**kw):
-    f = {"readback": "test", "assumptions": [], "blocking_questions": [], "unsupported": []}
-    f.update(kw)
-    return ("finish", f)
-
-
-def offer_main(**kw):
-    m = {"offer_name": "Test offer", "subtitle": "", "offer_description": "", "terms": [], "start_date": "", "end_date": "",
-         "max_usage_per_user": 0, "frequency": "none", "num_of_clients": 0, "offer_frequency_type": "",
-         "segment_prompt": "", "rules_prompt": ""}
-    m.update(kw)
-    return ("set_offer_main", m)
 
 
 @pytest.fixture

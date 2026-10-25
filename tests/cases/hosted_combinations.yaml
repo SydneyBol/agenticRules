@@ -1,6 +1,6 @@
 # Combination cases for hosted devintam1, in the tenant's own words, all run on ONE offer
 # ("AI Rules Combination Test"): each prompt goes through the rules-screen GenAI popup, replaces the rules, is saved,
-# and the saved DRL is checked in the engine (tools/check_hosted_combos.py).
+# and the saved DRL is checked in the engine (tools/qa/check_hosted_combos.py).
 #
 # devintam1 codes: stores HQ (Chennai HQ), WEB (online store), Chennai, VJD (Vijayawada); tier_class GOLD/Gold,
 # Silver, Basic; privileges 37 (2 hours of yoga), 64 (complimentary voucher); loyalty account 12, tag BASE.

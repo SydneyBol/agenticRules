@@ -17,7 +17,7 @@ from ..core.catalog import Catalog
 from ..ai.agent import generate
 from .pulsar import ascii_xml, ui_xml
 
-HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the repo (catalog dumps)
 EXIT = {"draft": 0, "needs_input": 0, "unsupported": 2, "error": 1}
 SEVERITY = {0: 0, 2: 1, 1: 2}  # batch exit code: an error outranks unsupported
 
@@ -59,7 +59,7 @@ def main(argv=None, llm=None):
     ap.add_argument("--batch", help="file with one prompt per line (# comments allowed)")
     ap.add_argument("--out-dir", default="out", help="output folder for --batch")
     ap.add_argument("--catalog", help="catalog JSON (e.g. catalogs/fixture.json) instead of saved bolapi responses")
-    ap.add_argument("--catalog-dir", default=os.path.join(HERE, "catalogs", "devintam1", "bolapi"))
+    ap.add_argument("--catalog-dir", default=os.path.join(ROOT, "catalogs", "devintam1", "bolapi"))
     ap.add_argument("--tenant", default="devintam1")
     ap.add_argument("--sponsor", type=int, default=1)
     ap.add_argument("--account", help="loyalty account id for points (default: the catalog's; 12 for devintam1)")

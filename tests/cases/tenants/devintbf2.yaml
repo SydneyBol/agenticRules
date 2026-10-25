@@ -1,5 +1,5 @@
 # devintbf2 profile for live QA (one planning offer, many rule sets). Codes picked 2026-10-25 from the catalog dump
-# (node ui-harness/tenant-catalog.mjs --tenant=devintbf2; tools/tenant_cases.py devintbf2 --suggest).
+# (node harness/ui/hosted/tenant-catalog.mjs --tenant=devintbf2; tools/qa/tenant_cases.py devintbf2 --suggest).
 # Program 1 "SHARE" (AED, Asia/Dubai), sponsor 1 "MAF".
 tenant: devintbf2
 program: 1

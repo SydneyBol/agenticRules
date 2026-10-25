@@ -1,4 +1,4 @@
-# Rules canvas block reference (generated from gravty-ui source by tools/block_reference.py; do not edit)
+# Rules canvas block reference (generated from gravty-ui source by tools/build/block_reference.py; do not edit)
 Toolbox: src/app/workspaces/offer/modules/offer-setup/screens/offer-rules/config/offer-rules.config.ts
 
 Connections: a block's `previous` check must share a name with the check of the statement input (or `next`) it

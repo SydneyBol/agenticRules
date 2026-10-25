@@ -200,7 +200,7 @@ class Catalog:
 
     @classmethod
     def from_bolapi_dumps(cls, directory, tenant, sponsor_id, account_id, default_tag=None):
-        """Saved responses written by ui-harness/tenant-catalog.mjs ({status, body} per file)."""
+        """Saved responses written by harness/ui/hosted/tenant-catalog.mjs ({status, body} per file)."""
         body = lambda f: json.load(open(os.path.join(directory, f + ".json")))["body"]
         resp = {k: body(k) for k in ("activity_attributes", "member_attributes", "product_attributes",
                                      "sponsor_loyalty_accounts", "privilege_products")}

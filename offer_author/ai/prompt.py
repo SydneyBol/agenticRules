@@ -1,7 +1,7 @@
 """What the model reads: the system prompt and its context, all generated or derived, none of it rule text.
 
-  context/block_reference*.md  both toolboxes, generated from the gravty-ui source (tools/block_reference.py)
-  context/kt.md                how the engine executes offers and blocks (tools/kt_prompt.py; DRL scrubbed)
+  context/block_reference*.md  both toolboxes, generated from the gravty-ui source (tools/build/block_reference.py)
+  context/kt.md                how the engine executes offers and blocks (tools/build/kt_prompt.py; DRL scrubbed)
   core/data/blueprints, segments  the product's saved offers and segments, shown as block selections
   the tenant catalog           catalog.prompt_text()
 The compiled rules (DRL) are private: never part of anything here.

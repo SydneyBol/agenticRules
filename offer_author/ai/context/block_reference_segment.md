@@ -1,4 +1,4 @@
-# Segment canvas block reference (generated from gravty-ui source by tools/block_reference.py; do not edit)
+# Segment canvas block reference (generated from gravty-ui source by tools/build/block_reference.py; do not edit)
 Toolbox: src/app/workspaces/program/screens/segment-setup/config/segmentation-blockly.config.ts
 
 Connections: a block's `previous` check must share a name with the check of the statement input (or `next`) it

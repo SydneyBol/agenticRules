@@ -10,13 +10,10 @@ tests/.live*/
 harness/results/**
 !harness/results/*/
 !harness/results/*/pulsar_offers.json
-full/results/
 
-# harness: dependencies, browser profiles, built engine
-harness/ui-harness/node_modules/
-harness/ui-harness/chrome-profile/
-harness/ui-harness/tmp-profile-*/
-harness/engine-harness/target/
+# harness: node dependencies, built engine (Chrome profiles live in the OS temp dir)
+harness/ui/node_modules/
+harness/engine/target/
 
 # local env and IDE
 .env
@@ -26,4 +23,4 @@ harness/engine-harness/target/
 .DS_Store
 .idea/amazonq.xml
 .idea/awsToolkit.xml
-harness/ui-harness/.claude/
+harness/ui/.claude/

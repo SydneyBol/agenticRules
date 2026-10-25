@@ -1,5 +1,5 @@
 # Attribute and value picking at scale: the scaled catalog (tests/scaled_catalog.py: 1000 attributes, 507 stores,
-# 5000 SKUs, 250 activity types, look-alike attributes). Run live: tools/scale_accuracy.py (inline values vs lookup).
+# 5000 SKUs, 250 activity types, look-alike attributes). Run live: tools/bench/scale_accuracy.py (inline values vs lookup).
 #   picks:  "object.attribute": [codes]  the draft must use exactly these codes on that attribute
 #   forbid: attributes the draft must not use (look-alikes)
 #   question: true = the draft must ask (ambiguous or missing value); false = no blocking question

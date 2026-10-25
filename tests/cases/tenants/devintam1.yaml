@@ -1,5 +1,5 @@
 # Tenant profile: the codes and words tests/cases/hosted_combinations.yaml is written in (the base tenant).
-# tools/tenant_cases.py maps the cases to another tenant with that tenant's profile.
+# tools/qa/tenant_cases.py maps the cases to another tenant with that tenant's profile.
 tenant: devintam1
 program: 1
 sponsor: 1

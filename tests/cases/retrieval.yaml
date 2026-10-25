@@ -1,5 +1,5 @@
 # Attribute retrieval: the manager's words for ONE attribute -> the attribute(s) that are right (any of `want`).
-# The object (activity | member | product) is given, as find_attributes takes it. Used by tools/retrieval_bench.py to
+# The object (activity | member | product) is given, as find_attributes takes it. Used by tools/bench/retrieval_bench.py to
 # pick the bi-encoder / cross-encoder pair (~/Documents/Gravty/ai-agent/AttributeRetrieval.md).
 #   devintbf2: the real tenant catalog (catalogs/devintbf2/bolapi), with its own look-alikes and junk names
 #   scaled:    tests/scaled_catalog.py (1,000 attributes, look-alikes next to the targets), grown further by the bench

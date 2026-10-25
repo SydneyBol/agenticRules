@@ -234,7 +234,7 @@ Reversal: CANCELLATION BIT → `RevertBitProcessor` loads original from S3, chec
 inverts actions (REVERSAL / PARTIAL_REFUND per SKU / HEADER_LEVEL_PARTIAL_REFUND), decrements counters.
 
 ## Runtime behaviours confirmed by the local harness (2026-10-21)
-Source: `offer-author-spike/engine-harness` (real Drools + `OfferActionHelperImpl`, infra stubbed).
+Source: the engine harness (real Drools + `OfferActionHelperImpl`, infra stubbed).
 - **MA_A is not persisted across BITs.** It lives only in `EngineMemberImpl` temp maps. Cross-transaction state must use MA_O.
 - **Unset MA_O reads 0 / "".** a number condition on it sees 0 and a text condition an empty value. Values are stored as strings at program decimal scale ("1.00").
 - **`updateMTA` is visible to later `if`s in the same Drools rule.** Order matters for cap/remainder logic.
