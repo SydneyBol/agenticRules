@@ -88,8 +88,8 @@ python3 -m venv .venv && .venv/bin/pip install -c requirements-lock.txt -e '.[te
 cd harness/ui-harness && npm ci            # puppeteer-core only; it drives your installed Chrome
 ```
 
-Model: `OFFER_AUTHOR_MODEL` (default `us.anthropic.claude-opus-5-5`; `us.anthropic.claude-sonnet-5-5` is at parity for
-rules, see `~/Documents/Gravty/ModelChoice-Sonnet55.md`).
+Model: `OFFER_AUTHOR_MODEL` (default `us.anthropic.claude-sonnet-5-5`, at parity with Opus 5.5 for rules; set
+`us.anthropic.claude-opus-5-5` to switch back). See `~/Documents/Gravty/ModelChoice-Sonnet55.md`.
 
 ## Harness (`harness/`)
 

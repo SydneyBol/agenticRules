@@ -19,16 +19,20 @@ class LLMError(Exception):
     pass
 
 
+DEFAULT_MODEL = "us.anthropic.claude-sonnet-5-5"
+
+
 class BedrockLLM:
     """Claude on Amazon Bedrock (bedrock-runtime via AnthropicBedrock; Mantle isn't enabled on the account).
 
     Settings verified in the spike: tool_choice auto (forced choice 400s on Opus/Sonnet 5.5), effort medium,
-    tenant catalog in a cached system block.
+    tenant catalog in a cached system block. Default Sonnet 5.5: at parity with Opus 5.5 on every suite and the hosted
+    QA (2026-10-25); OFFER_AUTHOR_MODEL=us.anthropic.claude-opus-5-5 switches back.
     """
 
     def __init__(self, model=None, region=None, effort="medium", max_tokens=16000, retries=2, client=None):
         from anthropic import AnthropicBedrock
-        self.model = model or os.environ.get("OFFER_AUTHOR_MODEL", "us.anthropic.claude-opus-5-5")
+        self.model = model or os.environ.get("OFFER_AUTHOR_MODEL", DEFAULT_MODEL)
         self.effort, self.max_tokens, self.retries = effort, max_tokens, retries
         self.client = client or AnthropicBedrock(aws_region=region or os.environ.get("AWS_REGION", "us-west-2"))
 

@@ -228,3 +228,11 @@ def test_counter_and_rule_names_read_like_variables(fixture_catalog):
     assert all(len(x) <= 50 and "." not in x and "h_" not in x for x in names)
     tags = rules_of(res)
     assert len(set(tags)) == len(tags) and not any("h_" in t for t in tags)
+
+
+def test_default_model_is_sonnet_and_env_overrides(monkeypatch):
+    from offer_author.llm import BedrockLLM
+    monkeypatch.delenv("OFFER_AUTHOR_MODEL", raising=False)
+    assert BedrockLLM(client=object()).model == "us.anthropic.claude-sonnet-5-5"
+    monkeypatch.setenv("OFFER_AUTHOR_MODEL", "us.anthropic.claude-opus-5-5")
+    assert BedrockLLM(client=object()).model == "us.anthropic.claude-opus-5-5"
