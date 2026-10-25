@@ -110,7 +110,7 @@ const state = fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, 'utf8')) 
 const summary = {};
 await page.setRequestInterception(true);
 const ai = [], aiSeen = [], mtoPosts = [], drlCalls = [];
-let lastGen = null;
+let lastGen = null, lastPrompt = null;
 const onReq = async (req) => {
   const u = req.url();
   let url; try { url = new URL(u); } catch { return req.continue(); }
@@ -127,6 +127,7 @@ const onReq = async (req) => {
       if (body && /\/offer\/rules/.test(url.pathname)) {  // JWT is stripped, so send the offer's counters with the request
         const j = JSON.parse(body || '{}');
         if (j.id != null && !j.existing_counters) body = JSON.stringify({ ...j, existing_counters: await existingCounters(j.id) });
+        lastPrompt = j.prompt;
       }
       const r = await fetch(BACKEND + rel, { method: req.method(), headers: { 'Content-Type': 'application/json' }, body });
       const text = await r.text();
@@ -157,7 +158,7 @@ try {
   const queue = PLAN.map((x) => ({ ...x, attempt: 1 }));
   for (const item of queue) {
     const res = { key: item.key, mode: item.mode, prompt: item.prompt, attempt: item.attempt };
-    ai.length = 0; aiSeen.length = 0; mtoPosts.length = 0; drlCalls.length = 0; lastGen = null;
+    ai.length = 0; aiSeen.length = 0; mtoPosts.length = 0; drlCalls.length = 0; lastGen = null; lastPrompt = null;
     try {
       // --offer-key=K: every item runs on ONE offer (state[K], created once, named --offer-name); each popup
       // generation replaces its rules. --fresh: a new planning offer per item (earlier ids kept under `previous`)
@@ -307,6 +308,9 @@ try {
                            unsupported: g.unsupported, assumptions: g.assumptions, error: g.error };
         res.counter_report = g.counter_report;
         res.counter_notes = g.counter_notes;
+        // the popup opens pre-filled with the stored stage prompt: the case prompt must replace it, not be appended
+        res.popup_prompt = lastPrompt;
+        res.popup_prompt_exact = (lastPrompt || '').trim() === item.prompt.trim();
         if (g.xml) { res.upload_xml = path.join(OUT, item.key + '.generated.xml'); fs.writeFileSync(res.upload_xml, b64(g.xml)); }
       }
       res.note_on_canvas = await page.evaluate(() => [...document.querySelectorAll('textarea, .blocklyCommentText, .blocklyText')]
