@@ -41,7 +41,7 @@ def test_dependencies_point_one_way():
 
 
 def test_model_context_lives_with_the_ai_and_code_data_with_the_code():
-    assert sorted(os.listdir(os.path.join(PKG, "ai", "context"))) == ["block_reference.md", "block_reference_segment.md", "kt.md"]
+    assert sorted(os.listdir(os.path.join(PKG, "ai", "context"))) == ["block_reference.md", "block_reference_segment.md", "kt.md", "member_dates.md"]
     assert {"block_reference.json", "blueprints", "segments"} <= set(os.listdir(os.path.join(PKG, "core", "data")))
 
 

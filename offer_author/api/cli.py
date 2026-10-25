@@ -71,8 +71,8 @@ def main(argv=None, llm=None):
     if not a.prompt and not a.batch:
         ap.error("give a prompt or --batch FILE")
     if llm is None:
-        from ..ai.llm import BedrockLLM
-        llm = BedrockLLM()
+        from ..ai.llm import make_llm
+        llm = make_llm()
     cat = load_catalog(a)
 
     def run(prompt):

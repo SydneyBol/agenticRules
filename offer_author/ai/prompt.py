@@ -105,7 +105,7 @@ def static_prompt():
     global _STATIC
     if _STATIC is None:
         read = lambda n: open(os.path.join(CONTEXT, n)).read()  # noqa: E731
-        _STATIC = "\n\n".join([read("block_reference.md"), read("block_reference_segment.md"), read("kt.md"),
+        _STATIC = "\n\n".join([read("block_reference.md"), read("block_reference_segment.md"), read("kt.md"), read("member_dates.md"),
                                examples("blueprints", "Seeded blueprints (rules canvas)"),
                                examples("segments", "Saved member segments (segment canvas)")])
     return _STATIC

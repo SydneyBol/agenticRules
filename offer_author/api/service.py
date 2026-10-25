@@ -107,7 +107,7 @@ def create_app(llm, catalog_for, jobs=None, counters_for=None):
 def main():
     from ..core.catalog import Catalog
     from ..core.counters import BolapiCounterSource
-    from ..ai.llm import BedrockLLM
+    from ..ai.llm import make_llm
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     ap = argparse.ArgumentParser()
     ap.add_argument("--catalog-dir", required=True)
@@ -120,7 +120,7 @@ def main():
     a = ap.parse_args()
     cat = Catalog.from_bolapi_dumps(a.catalog_dir, a.tenant, a.sponsor, a.account, a.tag)
     counters_for = BolapiCounterSource(a.bolapi_base).get if a.bolapi_base else None
-    create_app(BedrockLLM(), lambda sponsor, account, auth: cat, counters_for=counters_for).run(port=a.port)
+    create_app(make_llm(), lambda sponsor, account, auth: cat, counters_for=counters_for).run(port=a.port)
 
 
 if __name__ == "__main__":

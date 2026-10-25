@@ -13,17 +13,27 @@ def bit(date, amount=60, location="HQ", btype=None):
 
 
 def got(bo):
-    """-> (points, first privilege id or None) one BIT earned."""
+    """-> (points, privilege ids) one BIT earned: one id as a string, several as a sorted list, none as None."""
     pts = round(sum(p["total"] for p in bo.get("points", []) if p["action"] == "REWARD_POINTS"), 2)
-    pv = bo.get("privileges", [])
-    first = pv[0] if pv else None
-    priv = str(first.get("product_id", first.get("productId", first)) if isinstance(first, dict) else first) if pv else None
-    return pts, priv
+    ids = sorted(str(p.get("product_id", p.get("productId", p)) if isinstance(p, dict) else p) for p in bo.get("privileges", []))
+    return pts, (ids[0] if len(ids) == 1 else ids or None)
+
+
+def expected(expect):
+    """-> (points, sorted privilege ids) a case expects: points (number), a privilege id (str), None (nothing at all),
+    or {points: n, privilege: id | privileges: [ids]} for several rewards on one BIT."""
+    if isinstance(expect, dict):
+        ids = expect.get("privileges") or ([expect["privilege"]] if expect.get("privilege") is not None else [])
+        return expect.get("points", 0), sorted(map(str, ids))
+    if isinstance(expect, str):
+        return 0, [expect]
+    return expect or 0, []
 
 
 def passes(expect, pts, priv):
-    """expect: points (number), a privilege id (str), or None (nothing at all)."""
-    return (priv == expect) if isinstance(expect, str) or expect is None else (abs(pts - expect) < 0.01 and priv is None)
+    """Exact: the expected points and exactly the expected privileges (priv as got returns it)."""
+    want_pts, want_ids = expected(expect)
+    return abs(pts - want_pts) < 0.01 and sorted([priv] if isinstance(priv, str) else priv or []) == want_ids
 
 
 def offer_id(drl):

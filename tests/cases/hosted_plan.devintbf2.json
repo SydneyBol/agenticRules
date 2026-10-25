@@ -68,5 +68,65 @@
   "key": "H14_formula",
   "mode": "popup",
   "prompt": "Points = 2 x the spend amount + 50 on every spend."
+ },
+ {
+  "key": "C01_birthday_window_once_per_occurrence",
+  "mode": "popup",
+  "prompt": "500 bonus points on a spend of $50 or more made within 15 days before or after the member's birthday, at most once per birthday."
+ },
+ {
+  "key": "C02_birthday_month_tier_rates_voucher",
+  "mode": "popup",
+  "prompt": "In the member's birthday month, Gold members earn 3 points per $1 and all other members 2 points per $1 on every spend; in other months every member earns 1 point per $1. The first spend of $100 or more in a birthday month also earns a complimentary VOX Cinemas movie ticket, once per year."
+ },
+ {
+  "key": "C03_marginal_bands_daily_cap",
+  "mode": "popup",
+  "prompt": "Gold members earn 2 points per $1 on the first $200 of a spend and 3 points per $1 on the part of the spend above $200; all other members earn 1 point per $1. A member earns at most 1000 points per calendar day from this offer: a spend that reaches the cap earns only the points left under it."
+ },
+ {
+  "key": "C04_weekly_streak",
+  "mode": "popup",
+  "prompt": "A member who spends $25 or more in each of 3 consecutive calendar weeks (Monday to Sunday) earns a free Ski Dubai entry pass. A week without such a spend starts the count again, and so does the reward."
+ },
+ {
+  "key": "C05_nth_qualifying_excluding_online_by_tier",
+  "mode": "popup",
+  "prompt": "Every 3rd spend of $40 or more earns 150 bonus points; for Silver members every 2nd such spend. Spends at the Automation Online Location store never count and never earn."
+ },
+ {
+  "key": "C06_lunch_hours_store_tier_stacking",
+  "mode": "popup",
+  "prompt": "On weekdays from 11am until 2pm, spends at the Hyderabad or Kolkata store earn 2 points per $1, and Gold members earn 3 points per $1 there instead; a spend over $300 in that window also earns 100 bonus points. Every other spend earns 1 point per $1."
+ },
+ {
+  "key": "C07_anniversary_and_birthday_windows",
+  "mode": "popup",
+  "prompt": "Within 7 days before or after the member's wedding anniversary, a spend earns a complimentary VOX Cinemas movie ticket; within 15 days before or after their birthday, a spend earns 300 bonus points. Each reward at most once per anniversary or birthday; a spend inside both windows earns both."
+ },
+ {
+  "key": "C08_repeat_thresholds_online_double",
+  "mode": "popup",
+  "prompt": "Every time a member's cumulative spend reaches another $1000 ($1000, $2000, $3000, and so on), they earn 500 bonus points; a spend that passes two of these marks earns 1000. Spends at the Automation Online Location store count double toward the cumulative spend."
+ },
+ {
+  "key": "C09_tier_groups_different_caps",
+  "mode": "popup",
+  "prompt": "Gold and Silver members spending $100 or more at any store except the Automation Online Location store earn 200 bonus points, at most 3 times per member. Other members earn the same 200 points only for spends of $100 or more on Sundays, at most once."
+ },
+ {
+  "key": "C10_new_member_windows",
+  "mode": "popup",
+  "prompt": "New members earn 5 points per $1 on their first 2 spends made within 30 days of joining. From day 31 to day 90 after joining, spends over $50 earn 2 points per $1. No other spend earns from this offer."
+ },
+ {
+  "key": "C11_milestone_ladder_multi_cross",
+  "mode": "popup",
+  "prompt": "Cumulative spend milestones: at $500 total spend a complimentary VOX Cinemas movie ticket, at $1000 a free Ski Dubai entry pass, at $2000 1000 bonus points. Each milestone is given once, and a single spend that passes several milestones earns all of them."
+ },
+ {
+  "key": "C12_monthly_first_spend_weekend_cap",
+  "mode": "popup",
+  "prompt": "The first spend of each calendar month earns 100 bonus points. Weekday spends earn 1 point per $1. Weekend spends earn 2 points per $1 until the member has earned 400 points from weekend spends in that calendar month; after that, weekend spends earn 1 point per $1."
  }
 ]

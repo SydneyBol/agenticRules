@@ -80,11 +80,14 @@ try {
     const privs = (out?.assigned_privileges || []).map((x) => String(x.product_id ?? x.privilege_product_id ?? x.product ?? x.id));
     const err = r.body?.error?.code;
     const got = r.status < 300 ? (privs.length ? privs.join(',') + (pts ? ` +${pts} points` : '') : pts) : err;
-    // exact: the expected points and no privilege; the expected privilege and no points; null = nothing at all
+    // exact: the expected points and no privilege; the expected privilege and no points; null = nothing at all;
+    // {points, privilege | privileges} = those points and exactly those privileges (several rewards on one BIT)
     const ok = r.status < 300;
-    const pass = typeof c.expect === 'number' ? (ok && Math.abs(pts - c.expect) < 0.01 && !privs.length)
-      : c.expect === null ? (ok && Math.abs(pts) < 0.01 && !privs.length)
-      : /^\d+$/.test(String(c.expect)) ? (ok && Math.abs(pts) < 0.01 && privs.length === 1 && privs[0] === String(c.expect))
+    const same = (want) => ok && Math.abs(pts - want.points) < 0.01 && [...privs].sort().join() === want.ids.map(String).sort().join();
+    const pass = typeof c.expect === 'number' ? same({ points: c.expect, ids: [] })
+      : c.expect === null ? same({ points: 0, ids: [] })
+      : typeof c.expect === 'object' ? same({ points: c.expect.points || 0, ids: c.expect.privileges || (c.expect.privilege != null ? [c.expect.privilege] : []) })
+      : /^\d+$/.test(String(c.expect)) ? same({ points: 0, ids: [c.expect] })
       : (!ok && (err === c.expect || (c.expect === 'LOCATION_NOT_FOUND' && /location code/i.test(JSON.stringify(r.body)))));
     if (c.chain && r.status < 300) {
       // output mtomap is {offer_id: {counter: value}}; the mocked member takes MA_O as {counter: value}
