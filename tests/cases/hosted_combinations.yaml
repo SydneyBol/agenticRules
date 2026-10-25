@@ -1,0 +1,152 @@
+# Combination cases for hosted devintam1, in the tenant's own words, all run on ONE offer
+# ("AI Rules Combination Test"): each prompt goes through the rules-screen GenAI popup, replaces the rules, is saved,
+# and the saved DRL is checked in the engine (tools/check_hosted_combos.py).
+#
+# devintam1 codes: stores HQ (Chennai HQ), WEB (online store), Chennai, VJD (Vijayawada); tier_class GOLD/Gold,
+# Silver, Basic; privileges 37 (2 hours of yoga), 64 (complimentary voucher); loyalty account 12, tag BASE.
+# BIT row: [date, amount, store, expect] with expect = points (number), privilege id (string) or null (no points and no
+# privilege). Each sequence is one member whose counters carry from BIT to BIT; a note says what a sequence checks.
+# probe: [sequence, bit] = the paying BIT the store probes replay at other stores (default: cheapest at a named store).
+# A BIT's activity type is the one the saved rule requires (read from the DRL). Member default: tier_class GOLD.
+
+cases:
+  - id: H01_tier_store_bands_cap
+    prompt: "Gold members spending $100 or more at the Chennai HQ store earn 3x points, $50 to $99.99 earns 2x, with a maximum of 2000 bonus points per member."
+    sequences:
+      - member: {tier_class: GOLD}
+        bits: [["2026-10-20T12:00:00", 100, HQ, 300], ["2026-10-20T12:00:00", 50, HQ, 100], ["2026-10-20T12:00:00", 100, WEB, 0],
+               ["2026-10-20T12:00:00", 600, HQ, 1600], ["2026-10-20T12:00:00", 100, HQ, 0]]
+      - member: {tier_class: Silver}
+        bits: [["2026-10-20T12:00:00", 100, HQ, 0]]
+      - member: {tier_class: GOLD}
+        note: "band edges, fresh cap"
+        bits: [["2026-10-20T12:00:00", 99.99, HQ, 199.98], ["2026-10-20T12:00:00", 49.99, HQ, 0]]
+
+  - id: H02_or_once
+    prompt: "100 bonus points on any spend at the Vijayawada store, or on any spend over $500 anywhere."
+    sequences:
+      - bits: [["2026-10-20T12:00:00", 10, VJD, 100], ["2026-10-20T12:00:00", 501, HQ, 100], ["2026-10-20T12:00:00", 600, VJD, 100],
+               ["2026-10-20T12:00:00", 500, HQ, 0]]
+      - note: "neither branch"
+        bits: [["2026-10-20T12:00:00", 10, HQ, 0], ["2026-10-20T12:00:00", 500, WEB, 0]]
+
+  - id: H03_and_of_or_privilege
+    prompt: "On weekends, spends over $60 or any spend at the online store earn a free 2 hours of yoga session."
+    sequences:
+      - bits: [["2026-10-24T12:00:00", 61, HQ, "37"], ["2026-10-24T12:00:00", 10, WEB, "37"], ["2026-10-24T12:00:00", 70, WEB, "37"],
+               ["2026-10-20T12:00:00", 70, WEB, null]]
+      - note: "edges: $60 is not over $60, Sunday is a weekend day, weekday over $60"
+        bits: [["2026-10-24T12:00:00", 60, HQ, null], ["2026-10-25T12:00:00", 61, HQ, "37"], ["2026-10-20T12:00:00", 61, HQ, null]]
+
+  - id: H04_or_of_and_groups
+    prompt: "100 bonus points for Gold members spending at the Chennai HQ store, or for Silver members spending over $500 anywhere."
+    sequences:
+      - member: {tier_class: GOLD}
+        bits: [["2026-10-20T12:00:00", 10, HQ, 100], ["2026-10-20T12:00:00", 600, WEB, 0]]
+      - member: {tier_class: Silver}
+        bits: [["2026-10-20T12:00:00", 600, WEB, 100], ["2026-10-20T12:00:00", 10, HQ, 0]]
+      - member: {tier_class: GOLD}
+        note: "Gold elsewhere"
+        bits: [["2026-10-20T12:00:00", 10, WEB, 0]]
+      - member: {tier_class: Silver}
+        note: "Silver $500 edge"
+        bits: [["2026-10-20T12:00:00", 500, WEB, 0], ["2026-10-20T12:00:00", 501, WEB, 100]]
+
+  - id: H05_three_way_or
+    prompt: "Double points on spends at the online store, on Sundays, or on spends over $1000."
+    sequences:
+      - bits: [["2026-10-20T12:00:00", 10, WEB, 20], ["2026-10-25T12:00:00", 10, HQ, 20], ["2026-10-20T12:00:00", 1001, HQ, 2002],
+               ["2026-10-20T12:00:00", 10, HQ, 0]]
+      - note: "edges: $1000 is not over, Saturday is not Sunday"
+        bits: [["2026-10-20T12:00:00", 1000, HQ, 0], ["2026-10-24T12:00:00", 10, HQ, 0]]
+
+  - id: H06_nested_or_and_or
+    prompt: "50 bonus points when (a Gold member spends on a weekend at either the Chennai HQ or Vijayawada store) or (any member spends over $800)."
+    sequences:
+      - member: {tier_class: GOLD}
+        bits: [["2026-10-24T12:00:00", 10, VJD, 50], ["2026-10-24T12:00:00", 10, WEB, 0], ["2026-10-20T12:00:00", 801, WEB, 50]]
+      - member: {tier_class: Silver}
+        bits: [["2026-10-24T12:00:00", 10, HQ, 0], ["2026-10-20T12:00:00", 900, HQ, 50]]
+      - member: {tier_class: GOLD}
+        note: "Gold: other named store, Sunday, weekday, $800 edge"
+        bits: [["2026-10-24T12:00:00", 10, HQ, 50], ["2026-10-25T12:00:00", 10, VJD, 50], ["2026-10-20T12:00:00", 10, HQ, 0],
+               ["2026-10-20T12:00:00", 800, WEB, 0]]
+
+  - id: H07_deep_nesting
+    prompt: "A complimentary voucher when (the spend is at the online store and over $20) or (it is a Friday and the member is Silver)."
+    probe: [0, 0]   # Gold, Tuesday, $21 online: pays only through the store branch
+    sequences:
+      - member: {tier_class: GOLD}
+        bits: [["2026-10-20T12:00:00", 21, WEB, "64"], ["2026-10-20T12:00:00", 20, WEB, null], ["2026-10-23T12:00:00", 5, HQ, null]]
+      - member: {tier_class: Silver}
+        bits: [["2026-10-23T12:00:00", 5, HQ, "64"]]
+      - member: {tier_class: Silver}
+        note: "Silver on Thursday, Silver Friday online"
+        bits: [["2026-10-22T12:00:00", 5, HQ, null], ["2026-10-23T12:00:00", 5, WEB, "64"]]
+      - member: {tier_class: GOLD}
+        note: "Gold on Friday over $20 elsewhere"
+        bits: [["2026-10-23T12:00:00", 21, HQ, null]]
+
+  - id: H08_nth_by_tier_privilege
+    prompt: "Every 3rd spend by Silver members earns a free 2 hours of yoga session."
+    sequences:
+      - member: {tier_class: Silver}
+        bits: [["2026-10-20T12:00:00", 20, HQ, null], ["2026-10-21T12:00:00", 20, HQ, null], ["2026-10-22T12:00:00", 20, HQ, "37"],
+               ["2026-10-23T12:00:00", 20, HQ, null], ["2026-10-24T12:00:00", 20, HQ, null], ["2026-10-25T12:00:00", 20, HQ, "37"]]
+      - member: {tier_class: GOLD}
+        bits: [["2026-10-20T12:00:00", 20, HQ, null], ["2026-10-21T12:00:00", 20, HQ, null], ["2026-10-22T12:00:00", 20, HQ, null]]
+
+  - id: H09_base_earn_plus_weekend_bonus
+    prompt: "1 point per $1 on all spends, plus 100 bonus points on weekend spends."
+    sequences:
+      - bits: [["2026-10-24T12:00:00", 30, HQ, 130], ["2026-10-20T12:00:00", 30, HQ, 30]]
+      - note: "Sunday and Friday"
+        bits: [["2026-10-25T12:00:00", 30, HQ, 130], ["2026-10-23T12:00:00", 30, HQ, 30]]
+
+  - id: H10_milestone_privilege_tier
+    prompt: "Gold members whose total spend reaches $500 get a complimentary voucher, once."
+    sequences:
+      - member: {tier_class: GOLD}
+        bits: [["2026-10-20T12:00:00", 300, HQ, null], ["2026-10-21T12:00:00", 200, HQ, "64"], ["2026-10-22T12:00:00", 500, HQ, null]]
+      - member: {tier_class: GOLD}
+        note: "exactly $500 in total"
+        bits: [["2026-10-20T12:00:00", 499, HQ, null], ["2026-10-21T12:00:00", 1, HQ, "64"]]
+      - member: {tier_class: Silver}
+        note: "not Gold"
+        bits: [["2026-10-20T12:00:00", 600, HQ, null]]
+
+  - id: H11_unique_stores_from_list
+    prompt: "Spend at 2 different stores among the Chennai HQ store, Vijayawada and the online store to earn 250 points, once."
+    sequences:
+      - bits: [["2026-10-20T12:00:00", 20, HQ, 0], ["2026-10-21T12:00:00", 20, Chennai, 0], ["2026-10-22T12:00:00", 20, VJD, 250],
+               ["2026-10-23T12:00:00", 20, WEB, 0]]
+      - note: "the same store twice is one store"
+        bits: [["2026-10-20T12:00:00", 20, HQ, 0], ["2026-10-21T12:00:00", 20, HQ, 0], ["2026-10-22T12:00:00", 20, WEB, 250]]
+
+  - id: H12_rate_by_tier
+    prompt: "Gold members earn 3 points per $1, Silver members 2 points per $1, everyone else 1 point per $1."
+    sequences:
+      - member: {tier_class: GOLD}
+        bits: [["2026-10-20T12:00:00", 10, HQ, 30]]
+      - member: {tier_class: Silver}
+        bits: [["2026-10-20T12:00:00", 10, HQ, 20]]
+      - member: {tier_class: Basic}
+        bits: [["2026-10-20T12:00:00", 10, HQ, 10]]
+      - member: {tier_class: Silver}
+        note: "other amount"
+        bits: [["2026-10-20T12:00:00", 25, HQ, 50]]
+
+  - id: H13_store_day_hour
+    prompt: "3x points on spends at the online store between 5pm and 7pm on Fridays."
+    sequences:
+      - bits: [["2026-10-23T17:30:00", 10, WEB, 30], ["2026-10-23T19:00:00", 10, WEB, 0], ["2026-10-23T17:30:00", 10, HQ, 0],
+               ["2026-10-22T17:30:00", 10, WEB, 0]]
+      - note: "edges: 5pm in, 6:59pm in, 4:59pm out"
+        bits: [["2026-10-23T17:00:00", 10, WEB, 30], ["2026-10-23T18:59:00", 10, WEB, 30], ["2026-10-23T16:59:00", 10, WEB, 0]]
+
+  - id: H14_formula
+    prompt: "Points = 2 x the spend amount + 50 on every spend."
+    sequences:
+      - bits: [["2026-10-20T12:00:00", 10, HQ, 70]]
+      - note: "other amounts"
+        bits: [["2026-10-20T12:00:00", 25, HQ, 100], ["2026-10-20T12:00:00", 1, HQ, 52]]

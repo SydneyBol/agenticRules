@@ -1,0 +1,24 @@
+{
+ "status": "draft",
+ "message": null,
+ "readback": "For every coffee item on a transaction (a line item whose product category is Coffee), the member gets 5 DELTA MILES per unit bought. For example, 3 coffees earn 15 points.",
+ "assumptions": [
+  "'Coffee item' is taken to mean the product category COFFEE (Coffee) only. Cappuccino (CPCN) and Latte are separate categories and are not included unless you add them.",
+  "Points are given per unit bought (line-item quantity), so buying 2 of the same coffee earns 10 points.",
+  "No activity type was given, so the offer applies to any transaction that has coffee line items.",
+  "No start date, end date, usage limit or cap was given, so the offer has none."
+ ],
+ "blocking_questions": [],
+ "unsupported": [],
+ "offer_settings": {
+  "start_date": null,
+  "end_date": null,
+  "max_usage_per_user": null,
+  "frequency": null
+ },
+ "counters": [],
+ "rule_count": 1,
+ "block_count": 8,
+ "latency_s": 7.85,
+ "repairs": 0
+}

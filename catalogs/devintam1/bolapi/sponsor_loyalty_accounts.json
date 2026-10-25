@@ -1,0 +1,523 @@
+{
+ "status": 200,
+ "body": {
+  "sponsor_ids": [
+   1
+  ],
+  "loyalty_accounts": [
+   {
+    "id": 45,
+    "loyalty_currency": "RecogRecog",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 12,
+    "loyalty_currency": "DELTA MILES",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 65,
+    "loyalty_currency": "stars",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 46,
+    "loyalty_currency": "Ai scan (never expire)",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 22,
+    "loyalty_currency": "MILES last accrual- CAL DATE",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 14,
+    "loyalty_currency": "MILES last accrual- first day of next mo",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 23,
+    "loyalty_currency": "STARS last Activity-anniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 39,
+    "loyalty_currency": "PENDING MILES 1",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": true,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 41,
+    "loyalty_currency": "Account points",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 66,
+    "loyalty_currency": "Pending 1s",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": true,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 48,
+    "loyalty_currency": "ai scan-1 day - accrual- annv",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 51,
+    "loyalty_currency": "ai scan - 1 day - accrual- cal date",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 53,
+    "loyalty_currency": "ai scan-1 day-accrual-Frst day quarter",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 58,
+    "loyalty_currency": "ai scan-1 year-accrual-anniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 3,
+    "loyalty_currency": "eCredits",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 61,
+    "loyalty_currency": "Check1",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 63,
+    "loyalty_currency": "testt",
+    "currency_type": "External",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 7,
+    "loyalty_currency": "Meritor Rewards",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 1,
+    "loyalty_currency": "ePoints",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 47,
+    "loyalty_currency": "ai scan 1 hour exp",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 11,
+    "loyalty_currency": "SKYMILES never",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 20,
+    "loyalty_currency": "MILES last accrual- quarter",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 18,
+    "loyalty_currency": "GRE-EMIR- accrual-  quarter",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 16,
+    "loyalty_currency": "GRE-EMIR-accrual- CAL DATE",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 29,
+    "loyalty_currency": "ACC first day of next month- DELTA",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 31,
+    "loyalty_currency": "LAST ACC anniversary- EMIR",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 34,
+    "loyalty_currency": "LAST ACC-Quarter- EMIR",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 36,
+    "loyalty_currency": "LAST ACTIVITY CAL DATE- MIMI",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 52,
+    "loyalty_currency": "ai scan -1 day-accrual-Frst day nxtmonth",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 54,
+    "loyalty_currency": "ai scan-1 month-accrual-Frst day month",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 59,
+    "loyalty_currency": "ai scan-1 year-accrual-cal date",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 49,
+    "loyalty_currency": "ai scan - 1 month - acc- cal date",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 62,
+    "loyalty_currency": "Check2",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 55,
+    "loyalty_currency": "ai scan-1 month-accrual-anniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 57,
+    "loyalty_currency": "ai scan-1 year-accrual-frst day quarter",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 2,
+    "loyalty_currency": "eWallet",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 33,
+    "loyalty_currency": "LAST ACC- FIrst day of next month- EMIR",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 40,
+    "loyalty_currency": "PENDING MILES 2",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": true,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 44,
+    "loyalty_currency": "Testpointss",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 24,
+    "loyalty_currency": "STARS last Activity-CAL DATE",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 26,
+    "loyalty_currency": "STARS last Activity- Quarter",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 43,
+    "loyalty_currency": "Recognition-Expiration Optimisation",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 21,
+    "loyalty_currency": "MILES last accrual-anniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 25,
+    "loyalty_currency": "STARS last Activity-first day of next mo",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 60,
+    "loyalty_currency": "ai scan-1year-accrual-frstdaynxtmonth",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 64,
+    "loyalty_currency": "testttttttt",
+    "currency_type": "External",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 56,
+    "loyalty_currency": "ai scan-1 month-accrual-frst day quarter",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 15,
+    "loyalty_currency": "GRE EMIR - accrual -anniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 17,
+    "loyalty_currency": "GRE-EMIR-accrual-First day of next month",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 27,
+    "loyalty_currency": "ACC CAL DATE- DELTA",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 28,
+    "loyalty_currency": "ACC anniversary- DELTA",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 30,
+    "loyalty_currency": "ACC - Quarter- DELTA",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 32,
+    "loyalty_currency": "LAST ACC-CAL DATE- EMIR",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 35,
+    "loyalty_currency": "LAST ACTIVITY anniversary- MIMI",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 37,
+    "loyalty_currency": "LAST ACTIVITY first day of next mo- MIMI",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 38,
+    "loyalty_currency": "LAST ACTIVITY Quarter- MIMI",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 42,
+    "loyalty_currency": "Sponsor specific ACC- anniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": true,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   }
+  ]
+ }
+}

@@ -1,0 +1,65 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 460,
+   "type": "TIER_CLASS",
+   "code": "DIA",
+   "name": "Diamond",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1659613587440382,
+   "localisations": [
+    {
+     "name": "Diamond",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 461,
+   "type": "TIER_CLASS",
+   "code": "GLDGLW",
+   "name": "Gold",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1659613596592630,
+   "localisations": [
+    {
+     "name": "Gold",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 462,
+   "type": "TIER_CLASS",
+   "code": "PLTNM",
+   "name": "Platinum",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1659613621616563,
+   "localisations": [
+    {
+     "name": "Platinum",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 463,
+   "type": "TIER_CLASS",
+   "code": "SLVR",
+   "name": "Silver",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1659613631014996,
+   "localisations": [
+    {
+     "name": "Silver",
+     "locale_code": "en"
+    }
+   ]
+  }
+ ]
+}

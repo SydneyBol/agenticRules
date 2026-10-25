@@ -1,0 +1,380 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 243,
+   "type": "PRODUCT_CATEGORY",
+   "code": "COMPUTERS & ACCESSORIES",
+   "name": "Computers & Accessories",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072058082,
+   "localisations": [
+    {
+     "name": "Computers & Accessories",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 244,
+   "type": "PRODUCT_CATEGORY",
+   "code": "ALCOHOL",
+   "name": "Alcoholic Beverages",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072058110,
+   "localisations": [
+    {
+     "name": "Alcoholic Beverages",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 336,
+   "type": "PRODUCT_CATEGORY",
+   "code": "VCH",
+   "name": "Voucher",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706779387666152,
+   "localisations": [
+    {
+     "name": "Voucher",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 338,
+   "type": "PRODUCT_CATEGORY",
+   "code": "TCK",
+   "name": "Tickets",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706863137182126,
+   "localisations": [
+    {
+     "name": "Tickets",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 339,
+   "type": "PRODUCT_CATEGORY",
+   "code": "EVNTSMNTS",
+   "name": "Entertainment",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706863217040816,
+   "localisations": [
+    {
+     "name": "Entertainment",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 341,
+   "type": "PRODUCT_CATEGORY",
+   "code": "INT",
+   "name": "Invitation",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706866481358499,
+   "localisations": [
+    {
+     "name": "Invitation",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 343,
+   "type": "PRODUCT_CATEGORY",
+   "code": "AMN",
+   "name": "Amenities",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706866865703209,
+   "localisations": [
+    {
+     "name": "Amenities",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 345,
+   "type": "PRODUCT_CATEGORY",
+   "code": "CNCRT",
+   "name": "Concert",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706866932473989,
+   "localisations": [
+    {
+     "name": "Concert",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 346,
+   "type": "PRODUCT_CATEGORY",
+   "code": "MEAL",
+   "name": "Meal",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706867218455070,
+   "localisations": [
+    {
+     "name": "Meal",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 353,
+   "type": "PRODUCT_CATEGORY",
+   "code": "DISC",
+   "name": "Discount",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706871089554260,
+   "localisations": [
+    {
+     "name": "Discount",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 354,
+   "type": "PRODUCT_CATEGORY",
+   "code": "DATA",
+   "name": "Data",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706871209600863,
+   "localisations": [
+    {
+     "name": "Data",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 355,
+   "type": "PRODUCT_CATEGORY",
+   "code": "TSHT",
+   "name": "T-Shirt",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1707905748674213,
+   "localisations": [
+    {
+     "name": "T-Shirt",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 356,
+   "type": "PRODUCT_CATEGORY",
+   "code": "MEALS",
+   "name": "Meals",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1707905768385586,
+   "localisations": [
+    {
+     "name": "Meals",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 357,
+   "type": "PRODUCT_CATEGORY",
+   "code": "DSRT",
+   "name": "Dessert",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775558122469971,
+   "localisations": [
+    {
+     "name": "Dessert",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 358,
+   "type": "PRODUCT_CATEGORY",
+   "code": "CPCN",
+   "name": "Cappuccino",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1707905827090668,
+   "localisations": [
+    {
+     "name": "Cappuccino",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 359,
+   "type": "PRODUCT_CATEGORY",
+   "code": "Latte",
+   "name": "LATTE",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1707905860425991,
+   "localisations": [
+    {
+     "name": "LATTE",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 362,
+   "type": "PRODUCT_CATEGORY",
+   "code": "ARTSESSION",
+   "name": "Art Sessions",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1708076445310598,
+   "localisations": [
+    {
+     "name": "Art Sessions",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 474,
+   "type": "PRODUCT_CATEGORY",
+   "code": "ELECTRONIC GADGETS",
+   "name": "Electronic gadgets",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1756718740651038,
+   "localisations": [
+    {
+     "name": "Electronic gadgets",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 475,
+   "type": "PRODUCT_CATEGORY",
+   "code": "FOOD AND BEVERAGES",
+   "name": "Food and beverages",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1756718786966392,
+   "localisations": [
+    {
+     "name": "Food and beverages",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 476,
+   "type": "PRODUCT_CATEGORY",
+   "code": "CLOTHING",
+   "name": "Clothing",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1756718815904727,
+   "localisations": [
+    {
+     "name": "Clothing",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 477,
+   "type": "PRODUCT_CATEGORY",
+   "code": "SALAD",
+   "name": "Salad",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1756794066140812,
+   "localisations": [
+    {
+     "name": "Salad",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 478,
+   "type": "PRODUCT_CATEGORY",
+   "code": "COFFEE",
+   "name": "Coffee",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1756810085077508,
+   "localisations": [
+    {
+     "name": "Coffee",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 583,
+   "type": "PRODUCT_CATEGORY",
+   "code": "spa",
+   "name": "spa",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1782985951688408,
+   "localisations": [
+    {
+     "name": "spa",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 585,
+   "type": "PRODUCT_CATEGORY",
+   "code": "sports",
+   "name": "sports",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1783494624991934,
+   "localisations": [
+    {
+     "name": "sports",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 590,
+   "type": "PRODUCT_CATEGORY",
+   "code": "BEAUTY & HYGIENE",
+   "name": "BEAUTY & HYGIENE",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1788246721788011,
+   "localisations": [
+    {
+     "name": "BEAUTY & HYGIENE",
+     "locale_code": "en"
+    }
+   ]
+  }
+ ]
+}

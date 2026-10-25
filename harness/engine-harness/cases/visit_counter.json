@@ -1,0 +1,118 @@
+{
+  "offer_id": 456,
+  "priority": 1,
+  "non_cumulative": false,
+  "drl": "    rule \"activity-${offer_id}-2\" ${offer_priority}\n    \twhen\n    \t\t$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS(\"h_bit_type\") != \"EVENT\")  && ((existInListS(readAttributeS(\"h_bit_type\"), \"${activity}\"))) )\n    \tthen\n    \t\tString ruleTag = \"\";\n    \t\tReadHelper bitHeader = null;\n    \t\tReadHelper bit = null;\n    \t\tReadHelper bitPayment = null;\n    \t\t    ruleTag = \"Count Visit\";\n        bitHeader = $activity.getHeaderReadHelper();\n        bit = $activity.getHeaderReadHelper();\n            \t\t$activity.getActionHelper().updateMTA(${offer_id}, \"Count Visit\", \"MA_O\", \"visits\", (1), \"INCREMENT_BY\", bit);\n            \t\t$activity.getActionHelper().updateMTA(${offer_id}, \"Count Visit\", \"MA_A\", \"visits_this_bit\", (1), \"INCREMENT_BY\", bit);\n    ruleTag = \"Reward on Third Visit\";\n        bitHeader = $activity.getHeaderReadHelper();\n        bit = $activity.getHeaderReadHelper();\n        if(($activity.readAttributeN(\"member\",null,\"MA_O\", \"visits\", \"${offer_id}\") >= (${visits_required})) && (!($activity.readAttributeS(\"member\",null,\"MA_O\", \"Reward Given\", \"${offer_id}\").contentEquals(\"Yes\")))){\n            \t\t$activity.getActionHelper().pointsAction(\"${loyalty_account_tag}\", ${offer_id}, \"Reward on Third Visit\", \"REWARD_POINTS\", \"${loyalty_account}\", (${bonus_points}), bit);\n            \t\t$activity.getActionHelper().updateMTA(${offer_id}, \"Reward on Third Visit\", \"MA_O\", \"Reward Given\", (String.valueOf(\"Yes\")), \"SET\", bit);\n\n        }\n    end\n",
+  "params": {
+    "activity": "SPEND",
+    "visits_required": "3",
+    "loyalty_account": "1",
+    "loyalty_account_tag": "VISIT_BONUS",
+    "bonus_points": "500"
+  },
+  "member": {
+    "id": "M1",
+    "attributes": {}
+  },
+  "bits": [
+    {
+      "header": {
+        "h_bit_date": "2026-10-20T10:00:00",
+        "h_bit_amount": 10,
+        "h_bit_type": "SPEND",
+        "h_bit_category": "ACCRUAL",
+        "h_location": "L1",
+        "h_sponsor_id": 10,
+        "h_program_id": 1,
+        "h_member_id": "M1"
+      },
+      "lines": []
+    },
+    {
+      "header": {
+        "h_bit_date": "2026-10-21T10:00:00",
+        "h_bit_amount": 20,
+        "h_bit_type": "SPEND",
+        "h_bit_category": "ACCRUAL",
+        "h_location": "L1",
+        "h_sponsor_id": 10,
+        "h_program_id": 1,
+        "h_member_id": "M1"
+      },
+      "lines": []
+    },
+    {
+      "header": {
+        "h_bit_date": "2026-10-22T10:00:00",
+        "h_bit_amount": 30,
+        "h_bit_type": "SPEND",
+        "h_bit_category": "ACCRUAL",
+        "h_location": "L1",
+        "h_sponsor_id": 10,
+        "h_program_id": 1,
+        "h_member_id": "M1"
+      },
+      "lines": []
+    },
+    {
+      "header": {
+        "h_bit_date": "2026-10-23T10:00:00",
+        "h_bit_amount": 40,
+        "h_bit_type": "SPEND",
+        "h_bit_category": "ACCRUAL",
+        "h_location": "L1",
+        "h_sponsor_id": 10,
+        "h_program_id": 1,
+        "h_member_id": "M1"
+      },
+      "lines": []
+    }
+  ],
+  "expect": [
+    {
+      "points": [],
+      "mto": {
+        "visits": "1.00"
+      },
+      "mta": {
+        "visits_this_bit": 1.0
+      }
+    },
+    {
+      "points": [],
+      "mto": {
+        "visits": "2.00"
+      },
+      "mta": {
+        "visits_this_bit": 1.0
+      }
+    },
+    {
+      "points": [
+        {
+          "action": "REWARD_POINTS",
+          "account": "1",
+          "tags": "VISIT_BONUS",
+          "total": 500.0
+        }
+      ],
+      "mto": {
+        "visits": "3.00",
+        "Reward Given": "Yes"
+      },
+      "mta": {
+        "visits_this_bit": 1.0
+      }
+    },
+    {
+      "points": [],
+      "mto": {
+        "visits": "4.00",
+        "Reward Given": "Yes"
+      },
+      "mta": {
+        "visits_this_bit": 1.0
+      }
+    }
+  ]
+}

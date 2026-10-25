@@ -1,0 +1,523 @@
+{
+ "status": 200,
+ "body": {
+  "sponsor_ids": [
+   1
+  ],
+  "loyalty_accounts": [
+   {
+    "id": 97,
+    "loyalty_currency": "maxRewardLimit",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 100,
+    "loyalty_currency": "Cwallet",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 93,
+    "loyalty_currency": "Recog_type",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 89,
+    "loyalty_currency": "LA 1402 Redemp",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 92,
+    "loyalty_currency": "LA_Redemp_0703",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 90,
+    "loyalty_currency": "LA 1402 recog",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 16,
+    "loyalty_currency": "LA_Acc_CalDate",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 87,
+    "loyalty_currency": "LA_3101_Recog",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 33,
+    "loyalty_currency": "LA expiry check",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 88,
+    "loyalty_currency": "LA_3101_External",
+    "currency_type": "External",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 85,
+    "loyalty_currency": "LA redemption 27",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 14,
+    "loyalty_currency": "LA_Acc_FDOQ",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 98,
+    "loyalty_currency": "maxRewardLimitBlueprint",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 101,
+    "loyalty_currency": "AB12 Account",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 83,
+    "loyalty_currency": "recognition auto",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 15,
+    "loyalty_currency": "LA_Acc_Aniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 17,
+    "loyalty_currency": "LA_LaAcc_FDONM",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 99,
+    "loyalty_currency": "pendingpoints",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": true,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 84,
+    "loyalty_currency": "AWDLA 12",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 66,
+    "loyalty_currency": "Reward_Point_v",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 21,
+    "loyalty_currency": "LA_LaAct_FDONM",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 23,
+    "loyalty_currency": "LA_LaAct_Aniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 10,
+    "loyalty_currency": "PointsLastAccrual",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 91,
+    "loyalty_currency": "LA 1402 Exter",
+    "currency_type": "External",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 31,
+    "loyalty_currency": "Externall",
+    "currency_type": "External",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 32,
+    "loyalty_currency": "Testing recognition",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 26,
+    "loyalty_currency": "Auto_redeem",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 70,
+    "loyalty_currency": "Redemption check LA",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 96,
+    "loyalty_currency": "Symbol",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 13,
+    "loyalty_currency": "LA_Acc_FDONM",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 30,
+    "loyalty_currency": "External_Type_LA_La",
+    "currency_type": "External",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 61,
+    "loyalty_currency": "Recog LA1",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 62,
+    "loyalty_currency": "External LA1",
+    "currency_type": "External",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 19,
+    "loyalty_currency": "LA_LaAcc_Aniversary",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 29,
+    "loyalty_currency": "Recog_nition_acc_Reg",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 86,
+    "loyalty_currency": "LA_3101_Redem",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 18,
+    "loyalty_currency": "LA_LaAcc_FDOQ",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 27,
+    "loyalty_currency": "temp red",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 8,
+    "loyalty_currency": "reward_redeem_limit",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 25,
+    "loyalty_currency": "Auto_Policy_setup",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 95,
+    "loyalty_currency": "Redemption_Stage",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 22,
+    "loyalty_currency": "LA_LaAct_FDOQ",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 60,
+    "loyalty_currency": "New LA1",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 39,
+    "loyalty_currency": "AirportPoints",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 24,
+    "loyalty_currency": "LA_LaAct_CalDate",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 9,
+    "loyalty_currency": "PointsAccrual",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 28,
+    "loyalty_currency": "Increment Bal_la",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 20,
+    "loyalty_currency": "LA_LaAcc_CalDate",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 7,
+    "loyalty_currency": "automation_pending",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": true,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 11,
+    "loyalty_currency": "PointsLastActivity",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 71,
+    "loyalty_currency": "Recogition check LA",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 72,
+    "loyalty_currency": "External Check LA",
+    "currency_type": "External",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "N"
+   },
+   {
+    "id": 12,
+    "loyalty_currency": "ExpirePointsLA",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 3,
+    "loyalty_currency": "Status Points",
+    "currency_type": "Recognition",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 1,
+    "loyalty_currency": "SHARE Points",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": false,
+    "status": "Active",
+    "enable_pending_points": true,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 102,
+    "loyalty_currency": "1 hr exp RT",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": true,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   },
+   {
+    "id": 103,
+    "loyalty_currency": "Sponsor Specific Loyalty account",
+    "currency_type": "Redemption",
+    "is_sponsor_specific": true,
+    "status": "Active",
+    "enable_pending_points": false,
+    "visible_to_members": "Y"
+   }
+  ]
+ }
+}

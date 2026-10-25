@@ -1,0 +1,72 @@
+[
+ {
+  "key": "H01_tier_store_bands_cap",
+  "mode": "popup",
+  "prompt": "Gold members spending $100 or more at the Hyderabad store earn 3x points, $50 to $99.99 earns 2x, with a maximum of 2000 bonus points per member."
+ },
+ {
+  "key": "H02_or_once",
+  "mode": "popup",
+  "prompt": "100 bonus points on any spend at the Kolkata store, or on any spend over $500 anywhere."
+ },
+ {
+  "key": "H03_and_of_or_privilege",
+  "mode": "popup",
+  "prompt": "On weekends, spends over $60 or any spend at the Automation Online Location store earn a free Ski Dubai entry pass."
+ },
+ {
+  "key": "H04_or_of_and_groups",
+  "mode": "popup",
+  "prompt": "100 bonus points for Gold members spending at the Hyderabad store, or for Silver members spending over $500 anywhere."
+ },
+ {
+  "key": "H05_three_way_or",
+  "mode": "popup",
+  "prompt": "Double points on spends at the Automation Online Location store, on Sundays, or on spends over $1000."
+ },
+ {
+  "key": "H06_nested_or_and_or",
+  "mode": "popup",
+  "prompt": "50 bonus points when (a Gold member spends on a weekend at either the Hyderabad or Kolkata store) or (any member spends over $800)."
+ },
+ {
+  "key": "H07_deep_nesting",
+  "mode": "popup",
+  "prompt": "A complimentary VOX Cinemas movie ticket when (the spend is at the Automation Online Location store and over $20) or (it is a Friday and the member is Silver)."
+ },
+ {
+  "key": "H08_nth_by_tier_privilege",
+  "mode": "popup",
+  "prompt": "Every 3rd spend by Silver members earns a free Ski Dubai entry pass."
+ },
+ {
+  "key": "H09_base_earn_plus_weekend_bonus",
+  "mode": "popup",
+  "prompt": "1 point per $1 on all spends, plus 100 bonus points on weekend spends."
+ },
+ {
+  "key": "H10_milestone_privilege_tier",
+  "mode": "popup",
+  "prompt": "Gold members whose total spend reaches $500 get a complimentary VOX Cinemas movie ticket, once."
+ },
+ {
+  "key": "H11_unique_stores_from_list",
+  "mode": "popup",
+  "prompt": "Spend at 2 different stores among the Hyderabad store, Kolkata and the Automation Online Location store to earn 250 points, once."
+ },
+ {
+  "key": "H12_rate_by_tier",
+  "mode": "popup",
+  "prompt": "Gold members earn 3 points per $1, Silver members 2 points per $1, everyone else 1 point per $1."
+ },
+ {
+  "key": "H13_store_day_hour",
+  "mode": "popup",
+  "prompt": "3x points on spends at the Automation Online Location store between 5pm and 7pm on Fridays."
+ },
+ {
+  "key": "H14_formula",
+  "mode": "popup",
+  "prompt": "Points = 2 x the spend amount + 50 on every spend."
+ }
+]

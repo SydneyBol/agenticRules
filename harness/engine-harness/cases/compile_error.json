@@ -1,0 +1,31 @@
+{
+  "offer_id": 999,
+  "priority": 1,
+  "drl": "  rule \"activity-${offer_id}-2\" ${offer_priority}\n                  when\n                    $activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS(\"h_bit_type\") != \"EVENT\")  && ((existInListS(readAttributeS(\"h_bit_type\"), \"${activity_type}\"))) )\n                  then\n                    String ruleTag = \"\";\n                    ReadHelper bitHeader = null;\n                    ReadHelper bit = null;\n                    ReadHelper bitPayment = null;\n                      ruleTag = \"Track Different Activity\";\n              bitHeader = $activity.getHeaderReadHelper();\n              bit = $activity.getHeaderReadHelper();\n              if((bitHeader.readAttributeN(\"h_bit_amount\") >= (${minimum_spend_threshold_}))){\n                  \t\t$activity.getActionHelper().updateMTA(${offer_id}, \"Track Different Activity\", \"MA_O\", \"Member Activity\", (1), \"INCREMENT_BY\", bit);\n\n              }\n    ruleTag = \"Reward on the First Activity\";\n              bitHeader = $activity.getHeaderReadHelper();\n              bit = $activity.getHeaderReadHelper();\n              if(($activity.readAttributeN(\"member\",null,\"MA_O\", \"Member Activity\", \"${offer_id}\") == (1))){\n                  \t\t$activity.getActionHelper().pointsActionTypo(\"${tag}\", ${offer_id}, \"Reward on the First Activity\", \"REWARD_POINTS\", \"${loyalty_account}\", (${bonus_points}), bit);\n\n              }\n    ruleTag = \"Reward on the Second Activity\";\n              bitHeader = $activity.getHeaderReadHelper();\n              bit = $activity.getHeaderReadHelper();\n              if(($activity.readAttributeN(\"member\",null,\"MA_O\", \"Member Activity\", \"${offer_id}\") == (2))){\n                  \t\t$activity.getActionHelper().pointsAction(\"${tag}\", ${offer_id}, \"Reward on the Second Activity\", \"REWARD_POINTS\", \"${loyalty_account}\", (${bonus_points_2}), bit);\n\n              }\n    ruleTag = \"Reward on the Third Activity\";\n              bitHeader = $activity.getHeaderReadHelper();\n              bit = $activity.getHeaderReadHelper();\n              if(($activity.readAttributeN(\"member\",null,\"MA_O\", \"Member Activity\", \"${offer_id}\") == (3))){\n                  \t\t$activity.getActionHelper().assignPrivilege(${offer_id}, \"Reward on the Third Activity\", \"${third_activity_voucher}\", \"${third_activity_voucher_usage_policy}\", (${voucher_value_}), (${voucher_quantity}),null,null, bit);\n\n              }\n                end\n",
+  "params": {
+    "activity_type": "SPEND",
+    "minimum_spend_threshold_": "20",
+    "tag": "PROG",
+    "loyalty_account": "1",
+    "bonus_points": "100",
+    "bonus_points_2": "200",
+    "third_activity_voucher": "501",
+    "third_activity_voucher_usage_policy": "",
+    "voucher_value_": "0",
+    "voucher_quantity": "1"
+  },
+  "bits": [
+    {
+      "header": {
+        "h_bit_date": "2026-10-20T10:00:00",
+        "h_bit_amount": 50,
+        "h_bit_type": "SPEND",
+        "h_bit_category": "ACCRUAL",
+        "h_location": "L1",
+        "h_sponsor_id": 10,
+        "h_program_id": 1,
+        "h_member_id": "M1"
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+# Tenant profile: the codes and words tests/cases/hosted_combinations.yaml is written in (the base tenant).
+# tools/tenant_cases.py maps the cases to another tenant with that tenant's profile.
+tenant: devintam1
+program: 1
+sponsor: 1
+account: 12
+tag: BASE
+currency: INR
+tier_attribute: tier_class          # MA_P attribute the member rows set
+# role -> code. Roles are the base tenant's codes, so the base profile maps each to itself.
+codes:
+  HQ: HQ                            # a named store ("Chennai HQ store")
+  VJD: VJD                          # a second named store ("Vijayawada store")
+  WEB: WEB                          # the online store
+  Chennai: Chennai                  # any other active store, never named in a prompt
+  GOLD: GOLD                        # tier_class values
+  Silver: Silver
+  Basic: Basic
+  "37": "37"                        # privilege "2 hours of yoga session"
+  "64": "64"                        # privilege "complimentary voucher"
+# role -> how the prompts say it (longest phrases are replaced first)
+phrases:
+  HQ: ["Chennai HQ store", "Chennai HQ"]
+  VJD: ["Vijayawada store", "Vijayawada"]
+  WEB: ["online store"]
+  GOLD: ["Gold"]
+  Silver: ["Silver"]
+  "37": ["free 2 hours of yoga session"]
+  "64": ["complimentary voucher"]

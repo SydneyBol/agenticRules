@@ -1,0 +1,9 @@
+# One reward offer per line, in the manager's own words (devintam1 catalog). Run:
+#   offer-xml --batch examples/prompts.txt --out-dir examples/out
+Gold tier members get 100 bonus points on weekend spends of at least $50 at the Chennai HQ store or the online store.
+Every 5th purchase earns a free 2 hours of yoga session.
+Members get a complimentary voucher on a spend within 7 days of their birthday, once a year.
+Visit 3 different stores and earn 300 bonus points, once.
+5 points for every coffee item bought.
+Spends of $200 or more earn 3x points, below that 1x, with a lifetime cap of 2000 bonus points.
+Earn 500 points for spending in each of 4 consecutive weeks.

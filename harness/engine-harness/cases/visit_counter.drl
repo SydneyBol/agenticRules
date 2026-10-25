@@ -1,0 +1,22 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Count Visit";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Count Visit", "MA_O", "visits", (1), "INCREMENT_BY", bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Count Visit", "MA_A", "visits_this_bit", (1), "INCREMENT_BY", bit);
+    ruleTag = "Reward on Third Visit";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "visits", "${offer_id}") >= (${visits_required})) && (!($activity.readAttributeS("member",null,"MA_O", "Reward Given", "${offer_id}").contentEquals("Yes")))){
+            		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "Reward on Third Visit", "REWARD_POINTS", "${loyalty_account}", (${bonus_points}), bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Reward on Third Visit", "MA_O", "Reward Given", (String.valueOf("Yes")), "SET", bit);
+
+        }
+    end

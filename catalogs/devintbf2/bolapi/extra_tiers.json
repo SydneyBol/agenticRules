@@ -1,0 +1,212 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 1,
+   "name": "tier gold",
+   "logo": "https://master-media.devintbf2.gravty.info/cf-data/2/program/logos/87da1eac-547f-4b2a-ad0f-940b67d964bc-Screenshot_2026091612055988_45e686c594768066ad.jpg",
+   "tier": 1,
+   "tier_code": "tier_gold",
+   "tier_rank": 1,
+   "active": true,
+   "visible": true,
+   "paid_points": {},
+   "pay_with_points": false,
+   "tier_type": {
+    "paid": false,
+    "earned": true,
+    "tier_amount": null,
+    "complementary": true,
+    "tier_currency": ""
+   },
+   "tier_threshold": [
+    {
+     "attain_threshold": 0,
+     "retain_threshold": 0,
+     "loyalty_account_id": 90
+    }
+   ],
+   "associated_privileges": [
+    {
+     "usage": 1,
+     "value": null,
+     "quantity": "1",
+     "validity": "RELATIVE",
+     "valid_for": 2,
+     "product_id": 12560,
+     "sponsor_id": 1,
+     "usage_policy": 9185,
+     "valid_period": "DAYS",
+     "not_valid_for": "",
+     "cancel_on_tier_expiry": false,
+     "cancel_on_tier_upgrade": false
+    }
+   ],
+   "points_expiration_exemptions": [],
+   "tier_class_id": 1,
+   "tier_class_code": "test_tier",
+   "tier_class_name": "test tier",
+   "tier_class_active": true,
+   "tier_class_logo": null
+  },
+  {
+   "id": 2,
+   "name": "Tier Platinum",
+   "logo": "https://master-media.devintbf2.gravty.info/cf-data/2/program/logos/e62271b1-10ba-431c-a4ec-b116ea2717be-Vector.png",
+   "tier": 1,
+   "tier_code": "Tier_Platinum",
+   "tier_rank": 2,
+   "active": false,
+   "visible": true,
+   "paid_points": {},
+   "pay_with_points": false,
+   "tier_type": {
+    "paid": false,
+    "earned": true,
+    "tier_amount": null,
+    "complementary": true,
+    "tier_currency": ""
+   },
+   "tier_threshold": [
+    {
+     "attain_threshold": 500,
+     "retain_threshold": 400,
+     "loyalty_account_id": 90
+    }
+   ],
+   "associated_privileges": [
+    {
+     "usage": 1,
+     "value": null,
+     "quantity": "2",
+     "validity": "FIXED",
+     "valid_for": "",
+     "product_id": 13813,
+     "sponsor_id": 1,
+     "usage_policy": 10003,
+     "valid_period": "",
+     "not_valid_for": "2036-01-18T00:00:00+04:00",
+     "cancel_on_tier_expiry": false,
+     "cancel_on_tier_upgrade": false
+    }
+   ],
+   "points_expiration_exemptions": [],
+   "tier_class_id": 1,
+   "tier_class_code": "test_tier",
+   "tier_class_name": "test tier",
+   "tier_class_active": true,
+   "tier_class_logo": null
+  },
+  {
+   "id": 3,
+   "name": "tier dimond",
+   "logo": "https://master-media.devintbf2.gravty.info/cf-data/2/program/logos/33f4054d-00a8-492d-bfac-0bc13c815e89-ResetButton.png",
+   "tier": 1,
+   "tier_code": "tier_dimond",
+   "tier_rank": 3,
+   "active": true,
+   "visible": true,
+   "paid_points": {},
+   "pay_with_points": false,
+   "tier_type": {
+    "paid": false,
+    "earned": true,
+    "tier_amount": null,
+    "complementary": true,
+    "tier_currency": ""
+   },
+   "tier_threshold": [
+    {
+     "attain_threshold": 1000,
+     "retain_threshold": 900,
+     "loyalty_account_id": 90
+    }
+   ],
+   "associated_privileges": [
+    {
+     "usage": 1,
+     "value": null,
+     "quantity": "2",
+     "validity": "RELATIVE",
+     "valid_for": 3,
+     "product_id": 35,
+     "sponsor_id": 1,
+     "usage_policy": 53,
+     "valid_period": "MONTHS",
+     "not_valid_for": "",
+     "cancel_on_tier_expiry": false,
+     "cancel_on_tier_upgrade": false
+    }
+   ],
+   "points_expiration_exemptions": [],
+   "tier_class_id": 1,
+   "tier_class_code": "test_tier",
+   "tier_class_name": "test tier",
+   "tier_class_active": true,
+   "tier_class_logo": null
+  },
+  {
+   "id": 4,
+   "name": "testdsfa",
+   "logo": "https://master-media.devintbf2.gravty.info/cf-data/2/program/logos/71848d13-dcbe-4d5e-80c6-d13e7e538417-Screenshot_2026091612055988_45e686c594768066ad.jpg",
+   "tier": 1,
+   "tier_code": "testdsfa",
+   "tier_rank": 4,
+   "active": true,
+   "visible": true,
+   "paid_points": {},
+   "pay_with_points": false,
+   "tier_type": {
+    "paid": false,
+    "earned": false,
+    "tier_amount": null,
+    "complementary": true,
+    "tier_currency": ""
+   },
+   "tier_threshold": [],
+   "associated_privileges": [],
+   "points_expiration_exemptions": [],
+   "tier_class_id": 1,
+   "tier_class_code": "test_tier",
+   "tier_class_name": "test tier",
+   "tier_class_active": true,
+   "tier_class_logo": null
+  },
+  {
+   "id": 5,
+   "name": "test12345",
+   "logo": "https://master-media.devintbf2.gravty.info/cf-data/2/program/logos/e93ddf56-1ed7-4c6d-99f3-ee5ed42b63d6-Screenshot_2026091612055988_45e686c594768066ad.jpg",
+   "tier": 1,
+   "tier_code": "test12345",
+   "tier_rank": 5,
+   "active": true,
+   "visible": true,
+   "paid_points": {
+    "tier_points": 13,
+    "tier_points_value": "12"
+   },
+   "pay_with_points": true,
+   "tier_type": {
+    "paid": true,
+    "earned": true,
+    "tier_amount": "10",
+    "complementary": false,
+    "tier_currency": "AED"
+   },
+   "tier_threshold": [
+    {
+     "attain_threshold": 7,
+     "retain_threshold": 5,
+     "loyalty_account_id": 90
+    }
+   ],
+   "associated_privileges": [],
+   "points_expiration_exemptions": [],
+   "tier_class_id": 1,
+   "tier_class_code": "test_tier",
+   "tier_class_name": "test tier",
+   "tier_class_active": true,
+   "tier_class_logo": null
+  }
+ ]
+}

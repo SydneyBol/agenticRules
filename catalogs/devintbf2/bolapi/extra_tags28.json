@@ -1,0 +1,62 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 45,
+   "created_ts": "2023-03-16T17:17:07.445176+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443096+04:00",
+   "version_counter": 1678971680760418,
+   "name": "automation2",
+   "code": "AUTOMATION2",
+   "expiration_level": "TAG_LEVEL",
+   "expiration_unit": "MONTHS",
+   "expiration_date": null,
+   "expiration_period": 3,
+   "active": true,
+   "on_occassion": "calculated",
+   "prepaid_billing_rate": 1,
+   "postpaid_billing_rate": null,
+   "updated_by": 112576,
+   "created_by": 112576,
+   "loyalty_account": 28
+  },
+  {
+   "id": 44,
+   "created_ts": "2023-03-16T17:16:19.787196+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443098+04:00",
+   "version_counter": 1678971633102443,
+   "name": "Automation",
+   "code": "AUTOMATION",
+   "expiration_level": "ACCOUNT_LEVEL",
+   "expiration_unit": "",
+   "expiration_date": null,
+   "expiration_period": null,
+   "active": true,
+   "on_occassion": "calculated",
+   "prepaid_billing_rate": null,
+   "postpaid_billing_rate": null,
+   "updated_by": 112576,
+   "created_by": 112576,
+   "loyalty_account": 28
+  },
+  {
+   "id": 34,
+   "created_ts": "2022-12-21T11:36:57.447544+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443115+04:00",
+   "version_counter": 1671607270762814,
+   "name": "Base",
+   "code": "BASE",
+   "expiration_level": "ACCOUNT_LEVEL",
+   "expiration_unit": null,
+   "expiration_date": null,
+   "expiration_period": null,
+   "active": true,
+   "on_occassion": null,
+   "prepaid_billing_rate": null,
+   "postpaid_billing_rate": null,
+   "updated_by": 112920,
+   "created_by": 112920,
+   "loyalty_account": 28
+  }
+ ]
+}

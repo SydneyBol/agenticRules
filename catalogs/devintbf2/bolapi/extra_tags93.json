@@ -1,0 +1,43 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 190,
+   "created_ts": "2024-03-08T11:48:46.521396+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443054+04:00",
+   "version_counter": 1709883179836636,
+   "name": "Bonus",
+   "code": "BONUS",
+   "expiration_level": "ACCOUNT_LEVEL",
+   "expiration_unit": "",
+   "expiration_date": null,
+   "expiration_period": null,
+   "active": true,
+   "on_occassion": "",
+   "prepaid_billing_rate": 1,
+   "postpaid_billing_rate": 2,
+   "updated_by": 115018,
+   "created_by": 115018,
+   "loyalty_account": 93
+  },
+  {
+   "id": 189,
+   "created_ts": "2024-03-08T11:48:02.849961+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443123+04:00",
+   "version_counter": 1709883136165204,
+   "name": "Base",
+   "code": "BASE",
+   "expiration_level": "ACCOUNT_LEVEL",
+   "expiration_unit": null,
+   "expiration_date": null,
+   "expiration_period": null,
+   "active": true,
+   "on_occassion": null,
+   "prepaid_billing_rate": 1,
+   "postpaid_billing_rate": null,
+   "updated_by": 115018,
+   "created_by": 115018,
+   "loyalty_account": 93
+  }
+ ]
+}

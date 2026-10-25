@@ -1,0 +1,39 @@
+{
+ "status": "needs_input",
+ "message": null,
+ "readback": "When a member makes a Spend within 7 days before or after their birthday, they get the 'Complimentary Voucher Codes' privilege (ID 64). They can get it once per birthday, so once a year.",
+ "assumptions": [
+  "'Within 7 days of their birthday' is read as 7 days before through 7 days after the birthday.",
+  "'A spend' is read as the activity type SPEND (Spend), not PURCHASE (Shopping).",
+  "'Complimentary voucher' is read as privilege 64 'Complimentary Voucher Codes', not 63 'COmplimentry'.",
+  "'Once a year' comes from the occasion reward, which is given once per birthday. No other usage limit or frequency is set.",
+  "The birthday is taken from the member attribute date_of_birth for this draft.",
+  "Any spend amount counts, because no minimum was given.",
+  "No start or end date was given, so the offer runs indefinitely."
+ ],
+ "blocking_questions": [
+  "Two member attributes could hold the birthday: 'Date of Birth' (date_of_birth) and 'birthday date' (birthday_date). Which one should be used? The draft uses date_of_birth."
+ ],
+ "unsupported": [],
+ "offer_settings": {
+  "start_date": null,
+  "end_date": null,
+  "max_usage_per_user": null,
+  "frequency": null
+ },
+ "counters": [
+  {
+   "offer": null,
+   "name": "AI last rewarded year",
+   "data_type": "NUMBER",
+   "level": "OFFER",
+   "activity_id": 1,
+   "counter_type": "REGULAR",
+   "target_type": "NO TARGET"
+  }
+ ],
+ "rule_count": 5,
+ "block_count": 81,
+ "latency_s": 9.62,
+ "repairs": 0
+}

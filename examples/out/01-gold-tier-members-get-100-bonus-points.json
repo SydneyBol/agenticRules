@@ -1,0 +1,27 @@
+{
+ "status": "draft",
+ "message": null,
+ "readback": "Gold tier members get a one-time 100 bonus points (DELTA MILES) on each Spend transaction made on a Saturday or Sunday, when the amount is $50 or more and the store is Chennai HQ (HQ) or Elite Group Online (WEB). The bonus is given once per transaction, even if both conditions match.",
+ "assumptions": [
+  "\"Spends\" means the SPEND activity type (Spend). If you meant PURCHASE (Shopping), it can be switched or added.",
+  "Gold tier is checked using the member's Tier Class. The catalog has two Gold codes (GOLD and Gold), so both are included.",
+  "\"Chennai HQ store\" is location code HQ. The separate location code 'Chennai' is not included.",
+  "\"Online store\" is location WEB (Elite Group Online).",
+  "Weekend means Saturday (6) and Sunday (7), based on the transaction date.",
+  "\"At least $50\" means a BIT Amount of 50 or more. Currency is not checked.",
+  "No start or end date and no per-member usage limit were given, so the bonus applies to every qualifying transaction with no time limit."
+ ],
+ "blocking_questions": [],
+ "unsupported": [],
+ "offer_settings": {
+  "start_date": null,
+  "end_date": null,
+  "max_usage_per_user": null,
+  "frequency": null
+ },
+ "counters": [],
+ "rule_count": 1,
+ "block_count": 13,
+ "latency_s": 14.31,
+ "repairs": 0
+}

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "offer-xml-generator"
+version = "0.1.0"
+description = "English description of a Gravty reward offer -> Blockly rule XML the stock gravty-ui loads"
+requires-python = ">=3.11"
+dependencies = ["anthropic[bedrock]>=1.17", "Flask>=3.1", "jsonschema>=4.26", "httpx>=0.28"]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "PyYAML>=6"]
+
+[project.scripts]
+offer-xml = "offer_author.cli:main"
+offer-xml-server = "offer_author.service:main"
+
+[tool.setuptools]
+packages = ["offer_author"]

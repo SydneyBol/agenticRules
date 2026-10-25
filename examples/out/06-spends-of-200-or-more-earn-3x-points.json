@@ -1,0 +1,36 @@
+{
+ "status": "draft",
+ "message": null,
+ "readback": "Each spend transaction earns points based on its amount. A transaction of $200 or more earns 3x the amount in points, and a transaction under $200 earns 1x. Each member can earn at most 2,000 bonus points from this offer over their lifetime.",
+ "assumptions": [
+  "'Spends' is taken as the Spend activity type (SPEND). It could also mean Shopping (PURCHASE).",
+  "The spend amount is read from BIT Amount (h_bit_amount), and the threshold is applied to each transaction on its own, not to cumulative spend.",
+  "'3x points' means points = amount x 3 in total, not 3x on top of base earning. 1x means points = amount x 1.",
+  "'$200 or more' includes exactly $200 (>= 200).",
+  "The 2,000-point lifetime cap applies to all points this offer awards, in both bands.",
+  "No start or end dates were given, so the offer has none. Points go to the DELTA MILES account."
+ ],
+ "blocking_questions": [],
+ "unsupported": [],
+ "offer_settings": {
+  "start_date": null,
+  "end_date": null,
+  "max_usage_per_user": null,
+  "frequency": null
+ },
+ "counters": [
+  {
+   "offer": null,
+   "name": "AI bonus awarded",
+   "data_type": "NUMBER",
+   "level": "OFFER",
+   "activity_id": 1,
+   "counter_type": "REGULAR",
+   "target_type": "NO TARGET"
+  }
+ ],
+ "rule_count": 4,
+ "block_count": 75,
+ "latency_s": 7.33,
+ "repairs": 0
+}

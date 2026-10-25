@@ -1,0 +1,62 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 170,
+   "created_ts": "2023-12-27T17:25:46.745351+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443062+04:00",
+   "version_counter": 1703682600060579,
+   "name": "Two",
+   "code": "TWO",
+   "expiration_level": "TAG_LEVEL",
+   "expiration_unit": "DAYS",
+   "expiration_date": null,
+   "expiration_period": 1,
+   "active": true,
+   "on_occassion": "calculated",
+   "prepaid_billing_rate": null,
+   "postpaid_billing_rate": null,
+   "updated_by": 112981,
+   "created_by": 112981,
+   "loyalty_account": 85
+  },
+  {
+   "id": 169,
+   "created_ts": "2023-12-27T17:25:34.187298+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443077+04:00",
+   "version_counter": 1703682587502545,
+   "name": "One",
+   "code": "ONE",
+   "expiration_level": "ACCOUNT_LEVEL",
+   "expiration_unit": "",
+   "expiration_date": null,
+   "expiration_period": null,
+   "active": true,
+   "on_occassion": "calculated",
+   "prepaid_billing_rate": null,
+   "postpaid_billing_rate": 1,
+   "updated_by": 112981,
+   "created_by": 112981,
+   "loyalty_account": 85
+  },
+  {
+   "id": 168,
+   "created_ts": "2023-12-27T17:25:18.895923+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443121+04:00",
+   "version_counter": 1703682572211151,
+   "name": "Base",
+   "code": "BASE",
+   "expiration_level": "ACCOUNT_LEVEL",
+   "expiration_unit": null,
+   "expiration_date": null,
+   "expiration_period": null,
+   "active": true,
+   "on_occassion": null,
+   "prepaid_billing_rate": null,
+   "postpaid_billing_rate": null,
+   "updated_by": 112981,
+   "created_by": 112981,
+   "loyalty_account": 85
+  }
+ ]
+}

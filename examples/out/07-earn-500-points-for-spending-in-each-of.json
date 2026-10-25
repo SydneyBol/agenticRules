@@ -1,0 +1,32 @@
+{
+ "status": "unsupported",
+ "message": null,
+ "readback": "A member gets 500 bonus DELTA MILES after making at least one Spend activity in each of 4 weeks in a row.",
+ "assumptions": [
+  "I took \"spending\" to mean the activity type SPEND (Spend). If you meant PURCHASE (Shopping), or both, change the activity types.",
+  "Any Spend activity counts toward a week, whatever the amount. There is no minimum spend.",
+  "Weeks are calendar weeks as the platform defines them.",
+  "No start or end date was given, so the offer has no date limits.",
+  "A member can earn the reward again each time they finish a new 4-week streak. There is no per-member usage limit.",
+  "The 500 points go to the DELTA MILES account."
+ ],
+ "blocking_questions": [],
+ "unsupported": [
+  {
+   "phrase": "streak",
+   "reason": "consecutive-period streaks need an event (scheduled) section, which the prototype does not compile yet",
+   "alternative": "use nth_activity or milestone within the offer period"
+  }
+ ],
+ "offer_settings": {
+  "start_date": null,
+  "end_date": null,
+  "max_usage_per_user": null,
+  "frequency": null
+ },
+ "counters": [],
+ "rule_count": null,
+ "block_count": null,
+ "latency_s": 7.47,
+ "repairs": 0
+}

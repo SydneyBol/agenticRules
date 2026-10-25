@@ -1,0 +1,2015 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 10,
+   "type": "BIT_TYPE",
+   "code": "FAMILY_INVITE_ACCEPTED",
+   "name": "Family Invite Accepted",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020067482342,
+   "localisations": [
+    {
+     "name": "Family Invite Accepted",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 11,
+   "type": "BIT_TYPE",
+   "code": "FAMILY_INVITE_REJECTED",
+   "name": "Family Invite Rejected",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020067498162,
+   "localisations": [
+    {
+     "name": "Family Invite Rejected",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 12,
+   "type": "BIT_TYPE",
+   "code": "FAMILY_GROUP_DELETED",
+   "name": "Family Group Deleted",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020067510798,
+   "localisations": [
+    {
+     "name": "Family Group Deleted",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "type": "BIT_TYPE",
+   "code": "FAMILY_INVITE_CREATED",
+   "name": "Family Invite Created",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020067521390,
+   "localisations": [
+    {
+     "name": "Family Invite Created",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 14,
+   "type": "BIT_TYPE",
+   "code": "FAMILY_GROUP_LEFT",
+   "name": "Family Group Left",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020067531578,
+   "localisations": [
+    {
+     "name": "Family Group Left",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 22,
+   "type": "BIT_TYPE",
+   "code": "MEMBER_UPDATE",
+   "name": "Update Profile",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051353,
+   "localisations": [
+    {
+     "name": "Update Profile",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 23,
+   "type": "BIT_TYPE",
+   "code": "MEMBER_CONFIRM",
+   "name": "Confirm Membership",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051381,
+   "localisations": [
+    {
+     "name": "Confirm Membership",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 24,
+   "type": "BIT_TYPE",
+   "code": "EMAIL_CONFIRM",
+   "name": "Confirm Email",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051409,
+   "localisations": [
+    {
+     "name": "Confirm Email",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 25,
+   "type": "BIT_TYPE",
+   "code": "PHONE_CONFIRM",
+   "name": "Confirm Phone",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051436,
+   "localisations": [
+    {
+     "name": "Confirm Phone",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 26,
+   "type": "BIT_TYPE",
+   "code": "ENROL",
+   "name": "Enroll",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051464,
+   "localisations": [
+    {
+     "name": "Enroll",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 27,
+   "type": "BIT_TYPE",
+   "code": "EVENT",
+   "name": "Event",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1746704569287676,
+   "localisations": [
+    {
+     "name": "Event",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 28,
+   "type": "BIT_TYPE",
+   "code": "DINING",
+   "name": "Dining",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051519,
+   "localisations": [
+    {
+     "name": "Dining",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 29,
+   "type": "BIT_TYPE",
+   "code": "PURCHASE",
+   "name": "Shopping",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051547,
+   "localisations": [
+    {
+     "name": "Shopping",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 30,
+   "type": "BIT_TYPE",
+   "code": "VIDEO-WATCHING",
+   "name": "Watching a Video",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051574,
+   "localisations": [
+    {
+     "name": "Watching a Video",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 31,
+   "type": "BIT_TYPE",
+   "code": "SHARING",
+   "name": "Video Share",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051602,
+   "localisations": [
+    {
+     "name": "Video Share",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 32,
+   "type": "BIT_TYPE",
+   "code": "FLIGHT",
+   "name": "Fly",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051630,
+   "localisations": [
+    {
+     "name": "Fly",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 33,
+   "type": "BIT_TYPE",
+   "code": "BOOKING",
+   "name": "Book",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051657,
+   "localisations": [
+    {
+     "name": "Book",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 34,
+   "type": "BIT_TYPE",
+   "code": "PAYMENT",
+   "name": "Payments",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051685,
+   "localisations": [
+    {
+     "name": "Payments",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 35,
+   "type": "BIT_TYPE",
+   "code": "MOBILE CHECK-IN",
+   "name": "Check-in",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051712,
+   "localisations": [
+    {
+     "name": "Check-in",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 36,
+   "type": "BIT_TYPE",
+   "code": "MEMBERSHIP_CANCELLATION",
+   "name": "Membership Cancellation",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051740,
+   "localisations": [
+    {
+     "name": "Membership Cancellation",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 37,
+   "type": "BIT_TYPE",
+   "code": "SOCIAL_FB_POST_LIKE",
+   "name": "Facebook Post Like",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051769,
+   "localisations": [
+    {
+     "name": "Facebook Post Like",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 38,
+   "type": "BIT_TYPE",
+   "code": "SOCIAL_FB_POST_COMMENT",
+   "name": "Facebook Post Comment",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051797,
+   "localisations": [
+    {
+     "name": "Facebook Post Comment",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 39,
+   "type": "BIT_TYPE",
+   "code": "SOCIAL_FB_CHECK_IN",
+   "name": "Facebook Check in",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051824,
+   "localisations": [
+    {
+     "name": "Facebook Check in",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 40,
+   "type": "BIT_TYPE",
+   "code": "SOCIAL_FB_POST_PHOTO",
+   "name": "Posting Photo on Facebook",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051852,
+   "localisations": [
+    {
+     "name": "Posting Photo on Facebook",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 41,
+   "type": "BIT_TYPE",
+   "code": "SOCIAL_FB_POST_VIDEO",
+   "name": "Posting Video on Facebook",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051879,
+   "localisations": [
+    {
+     "name": "Posting Video on Facebook",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 42,
+   "type": "BIT_TYPE",
+   "code": "MEMBERSHIP_CHANGE",
+   "name": "Membership Change",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051906,
+   "localisations": [
+    {
+     "name": "Membership Change",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 43,
+   "type": "BIT_TYPE",
+   "code": "PAYMENT_WITH_POINTS",
+   "name": "Payment with Points",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051933,
+   "localisations": [
+    {
+     "name": "Payment with Points",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 44,
+   "type": "BIT_TYPE",
+   "code": "CREATE_WALLET",
+   "name": "Create Wallet",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051960,
+   "localisations": [
+    {
+     "name": "Create Wallet",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 45,
+   "type": "BIT_TYPE",
+   "code": "ADD_CARD",
+   "name": "Add Card",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072051987,
+   "localisations": [
+    {
+     "name": "Add Card",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 46,
+   "type": "BIT_TYPE",
+   "code": "ADD_FUND",
+   "name": "Add Fund",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052014,
+   "localisations": [
+    {
+     "name": "Add Fund",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 47,
+   "type": "BIT_TYPE",
+   "code": "REDEEM_CASH",
+   "name": "Redeem Cash",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052042,
+   "localisations": [
+    {
+     "name": "Redeem Cash",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 48,
+   "type": "BIT_TYPE",
+   "code": "CREATE_OFFER_BOOKING",
+   "name": "Create Offer Booking",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052069,
+   "localisations": [
+    {
+     "name": "Create Offer Booking",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 49,
+   "type": "BIT_TYPE",
+   "code": "CANCEL_OFFER_BOOKING",
+   "name": "Cancel Offer Booking",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052098,
+   "localisations": [
+    {
+     "name": "Cancel Offer Booking",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 50,
+   "type": "BIT_TYPE",
+   "code": "UPDATE_OFFER_BOOKING",
+   "name": "Update Offer Booking",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052126,
+   "localisations": [
+    {
+     "name": "Update Offer Booking",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 51,
+   "type": "BIT_TYPE",
+   "code": "REDEMPTION_OTP",
+   "name": "Redemption OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801322845735,
+   "localisations": [
+    {
+     "name": "Redemption OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 52,
+   "type": "BIT_TYPE",
+   "code": "AVAILMENT_OTP",
+   "name": "Availment OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801322870768,
+   "localisations": [
+    {
+     "name": "Availment OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 53,
+   "type": "BIT_TYPE",
+   "code": "MOBILE_UPDATE_OTP",
+   "name": "Mobile Update OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801322894064,
+   "localisations": [
+    {
+     "name": "Mobile Update OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 54,
+   "type": "BIT_TYPE",
+   "code": "RESET_PASSWORD_OTP",
+   "name": "Reset Password OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801322916806,
+   "localisations": [
+    {
+     "name": "Reset Password OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 55,
+   "type": "BIT_TYPE",
+   "code": "TIER_CHANGE",
+   "name": "Manual Tier Change",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1736872237072243,
+   "localisations": [
+    {
+     "name": "Manual Tier Change",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 56,
+   "type": "BIT_TYPE",
+   "code": "OFFER_ACCEPTANCE_TRIGGER",
+   "name": "Offer Acceptance Trigger",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801322939522,
+   "localisations": [
+    {
+     "name": "Offer Acceptance Trigger",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 57,
+   "type": "BIT_TYPE",
+   "code": "POINT_TRANSFER_OTP",
+   "name": "Point Transfer OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801322962947,
+   "localisations": [
+    {
+     "name": "Point Transfer OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 58,
+   "type": "BIT_TYPE",
+   "code": "OFFER_NOTIFICATION",
+   "name": "Offer Notification Trigger",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801322987538,
+   "localisations": [
+    {
+     "name": "Offer Notification Trigger",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 59,
+   "type": "BIT_TYPE",
+   "code": "MEMBER_MERGE",
+   "name": "Member Merge",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801323012339,
+   "localisations": [
+    {
+     "name": "Member Merge",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 60,
+   "type": "BIT_TYPE",
+   "code": "PRIVILEGE_TRANSFER",
+   "name": "Privilege Transfer",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801323036781,
+   "localisations": [
+    {
+     "name": "Privilege Transfer",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 61,
+   "type": "BIT_TYPE",
+   "code": "PARTIAL_REFUND",
+   "name": "Partial Refund",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801323060518,
+   "localisations": [
+    {
+     "name": "Partial Refund",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 62,
+   "type": "BIT_TYPE",
+   "code": "LINK_FAMILY_MEMBER",
+   "name": "Family Member Linked",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052458,
+   "localisations": [
+    {
+     "name": "Family Member Linked",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 63,
+   "type": "BIT_TYPE",
+   "code": "UNLINK_FAMILY_MEMBER",
+   "name": "Family Member Unlinked",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052485,
+   "localisations": [
+    {
+     "name": "Family Member Unlinked",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 64,
+   "type": "BIT_TYPE",
+   "code": "LINK_FAMILY_HEAD",
+   "name": "Family Head Linked",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052513,
+   "localisations": [
+    {
+     "name": "Family Head Linked",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 65,
+   "type": "BIT_TYPE",
+   "code": "UNLINK_FAMILY_HEAD",
+   "name": "Family Head Unlinked",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052540,
+   "localisations": [
+    {
+     "name": "Family Head Unlinked",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 66,
+   "type": "BIT_TYPE",
+   "code": "MEMBERSHIP_DELETION",
+   "name": "Delete Member",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052567,
+   "localisations": [
+    {
+     "name": "Delete Member",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 67,
+   "type": "BIT_TYPE",
+   "code": "REDEEM_AWARD",
+   "name": "Redeem Award",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052595,
+   "localisations": [
+    {
+     "name": "Redeem Award",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 68,
+   "type": "BIT_TYPE",
+   "code": "MEMBER_REFERRAL",
+   "name": "Member Referral",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052623,
+   "localisations": [
+    {
+     "name": "Member Referral",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 69,
+   "type": "BIT_TYPE",
+   "code": "FAMILY_INVITE_ACCEPTED_BY_MEMBER",
+   "name": "Family Invite Accepted by Member",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052651,
+   "localisations": [
+    {
+     "name": "Family Invite Accepted by Member",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 70,
+   "type": "BIT_TYPE",
+   "code": "FAMILY_INVITE_REJECTED_BY_MEMBER",
+   "name": "Family Invite Rejected by Member",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052679,
+   "localisations": [
+    {
+     "name": "Family Invite Rejected by Member",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 71,
+   "type": "BIT_TYPE",
+   "code": "FAMILY_MEMBER_LEFT_GROUP",
+   "name": "Family Member Left Group",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052706,
+   "localisations": [
+    {
+     "name": "Family Member Left Group",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 72,
+   "type": "BIT_TYPE",
+   "code": "RESET_PASSWORD_CONFIRM",
+   "name": "Reset Password Confirm",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052733,
+   "localisations": [
+    {
+     "name": "Reset Password Confirm",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 73,
+   "type": "BIT_TYPE",
+   "code": "RECEIPT_STATUS_CHANGED",
+   "name": "Receipt Status Changed",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052761,
+   "localisations": [
+    {
+     "name": "Receipt Status Changed",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 74,
+   "type": "BIT_TYPE",
+   "code": "THIRD_PARTY_REWARD",
+   "name": "Third-Party-Reward",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052788,
+   "localisations": [
+    {
+     "name": "Third-Party-Reward",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 75,
+   "type": "BIT_TYPE",
+   "code": "THIRD_PARTY_TRANSFER",
+   "name": "Third-Party-Transfer",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052815,
+   "localisations": [
+    {
+     "name": "Third-Party-Transfer",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 76,
+   "type": "BIT_TYPE",
+   "code": "THIRD_PARTY_REDEEM",
+   "name": "Third-Party-Redeem",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052843,
+   "localisations": [
+    {
+     "name": "Third-Party-Redeem",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 77,
+   "type": "BIT_TYPE",
+   "code": "PRIVILEGE_EXTENSION",
+   "name": "Privilege Extension",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052871,
+   "localisations": [
+    {
+     "name": "Privilege Extension",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 78,
+   "type": "BIT_TYPE",
+   "code": "TIER_PURCHASE",
+   "name": "Tier Purchase",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702461911202110,
+   "localisations": [
+    {
+     "name": "Tier Purchase",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 79,
+   "type": "BIT_TYPE",
+   "code": "TIER_PAYMENT",
+   "name": "Tier Payment",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702461911314842,
+   "localisations": [
+    {
+     "name": "Tier Payment",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 80,
+   "type": "BIT_TYPE",
+   "code": "POINTS_ADJUSTMENT",
+   "name": "Points Adjustment",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072052998,
+   "localisations": [
+    {
+     "name": "Points Adjustment",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 81,
+   "type": "BIT_TYPE",
+   "code": "PRIVILEGE_ISSUANCE",
+   "name": "Privilege Issuance",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072053026,
+   "localisations": [
+    {
+     "name": "Privilege Issuance",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 82,
+   "type": "BIT_TYPE",
+   "code": "PRIVILEGE_AVAILMENT",
+   "name": "Privilege Availment",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072053053,
+   "localisations": [
+    {
+     "name": "Privilege Availment",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 83,
+   "type": "BIT_TYPE",
+   "code": "PRIVILEGE_REINSTATEMENT",
+   "name": "Privilege Reinstatement",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072053080,
+   "localisations": [
+    {
+     "name": "Privilege Reinstatement",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 85,
+   "type": "BIT_TYPE",
+   "code": "HEADER_LEVEL_PARTIAL_REFUND",
+   "name": "Header-Level Partial Refund",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702020072053134,
+   "localisations": [
+    {
+     "name": "Header-Level Partial Refund",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 314,
+   "type": "BIT_TYPE",
+   "code": "PRIVILEGE_CANCELLATION",
+   "name": "Privilege Cancellation",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702461905007965,
+   "localisations": [
+    {
+     "name": "Privilege Cancellation",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 315,
+   "type": "BIT_TYPE",
+   "code": "HOTNOTE_CREATED",
+   "name": "Hotnote Created",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702461905008007,
+   "localisations": [
+    {
+     "name": "Hotnote Created",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 316,
+   "type": "BIT_TYPE",
+   "code": "HOTNOTE_UPDATED",
+   "name": "Hotnote Updated",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702461905008035,
+   "localisations": [
+    {
+     "name": "Hotnote Updated",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 317,
+   "type": "BIT_TYPE",
+   "code": "HOTNOTE_COMMENT_ADD",
+   "name": "Hotnote Comment Add",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1702461905008063,
+   "localisations": [
+    {
+     "name": "Hotnote Comment Add",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 321,
+   "type": "BIT_TYPE",
+   "code": "REVERSAL",
+   "name": "Reversal",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1703067242794804,
+   "localisations": [
+    {
+     "name": "Reversal",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 324,
+   "type": "BIT_TYPE",
+   "code": "OFFER_ACCEPTANCE",
+   "name": "Offer Acceptance",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445686,
+   "localisations": [
+    {
+     "name": "Offer Acceptance",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 325,
+   "type": "BIT_TYPE",
+   "code": "CREATE_COBRAND_CARD",
+   "name": "Create Cobrand Card",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445717,
+   "localisations": [
+    {
+     "name": "Create Cobrand Card",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 326,
+   "type": "BIT_TYPE",
+   "code": "CHANGE_COBRAND_CARD",
+   "name": "Change Cobrand Card",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445737,
+   "localisations": [
+    {
+     "name": "Change Cobrand Card",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 327,
+   "type": "BIT_TYPE",
+   "code": "DELETE_COBRAND_CARD",
+   "name": "Delete Cobrand Card",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445756,
+   "localisations": [
+    {
+     "name": "Delete Cobrand Card",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 328,
+   "type": "BIT_TYPE",
+   "code": "UPDATE_COBRAND_CARD",
+   "name": "Update Cobrand Card",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445775,
+   "localisations": [
+    {
+     "name": "Update Cobrand Card",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 329,
+   "type": "BIT_TYPE",
+   "code": "CREATE_BANK_ACCOUNT",
+   "name": "Create Bank Account",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445794,
+   "localisations": [
+    {
+     "name": "Create Bank Account",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 330,
+   "type": "BIT_TYPE",
+   "code": "DELETE_BANK_ACCOUNT",
+   "name": "Delete Bank Account",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445813,
+   "localisations": [
+    {
+     "name": "Delete Bank Account",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 331,
+   "type": "BIT_TYPE",
+   "code": "UPDATE_BANK_ACCOUNT",
+   "name": "Update Bank Account",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445831,
+   "localisations": [
+    {
+     "name": "Update Bank Account",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 332,
+   "type": "BIT_TYPE",
+   "code": "TWO_FA_EMAIL_OTP",
+   "name": "Two FA Email OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445850,
+   "localisations": [
+    {
+     "name": "Two FA Email OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 333,
+   "type": "BIT_TYPE",
+   "code": "TWO_FA_MOBILE_OTP",
+   "name": "Two FA Mobile OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1706598125445869,
+   "localisations": [
+    {
+     "name": "Two FA Mobile OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 364,
+   "type": "BIT_TYPE",
+   "code": "CHOICE_PRIVILEGE_ASSIGNMENT",
+   "name": "Choice Privilege Assignment",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1709556684237509,
+   "localisations": [
+    {
+     "name": "Choice Privilege Assignment",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 365,
+   "type": "BIT_TYPE",
+   "code": "POINTS_EXPIRY_EXTENSION",
+   "name": "Points Expiry Extension",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1709556684237539,
+   "localisations": [
+    {
+     "name": "Points Expiry Extension",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 382,
+   "type": "BIT_TYPE",
+   "code": "CLOSE_COBRAND_CARD",
+   "name": "Close Cobrand Card",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1722493056208022,
+   "localisations": [
+    {
+     "name": "Close Cobrand Card",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 384,
+   "type": "BIT_TYPE",
+   "code": "RETRO_REQUEST_CREATE",
+   "name": "Retro Request Create",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1724918772648585,
+   "localisations": [
+    {
+     "name": "Retro Request Create",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 385,
+   "type": "BIT_TYPE",
+   "code": "RETRO_REQUEST_UPDATE",
+   "name": "Retro Request Update",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1724918772648629,
+   "localisations": [
+    {
+     "name": "Retro Request Update",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 424,
+   "type": "BIT_TYPE",
+   "code": "TIER_REQUALIFICATION",
+   "name": "Tier Requalification",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1736872128672021,
+   "localisations": [
+    {
+     "name": "Tier Requalification",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 425,
+   "type": "BIT_TYPE",
+   "code": "BAM",
+   "name": "BAM",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1738139757182173,
+   "localisations": [
+    {
+     "name": "BAM",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 453,
+   "type": "BIT_TYPE",
+   "code": "custom_reward",
+   "name": "custom_reward",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1747890928945803,
+   "localisations": [
+    {
+     "name": "custom_reward",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 454,
+   "type": "BIT_TYPE",
+   "code": "custom_reward1",
+   "name": "custom_reward1",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1747888251841648,
+   "localisations": [
+    {
+     "name": "custom_reward1",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 455,
+   "type": "BIT_TYPE",
+   "code": "custom_reward2",
+   "name": "custom_reward2",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1747888565542318,
+   "localisations": [
+    {
+     "name": "custom_reward2",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 457,
+   "type": "BIT_TYPE",
+   "code": "custom_reward3",
+   "name": "custom_reward3",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1747991572108663,
+   "localisations": [
+    {
+     "name": "custom_reward3",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 458,
+   "type": "BIT_TYPE",
+   "code": "custom_reward4",
+   "name": "custom_reward4",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1747991580231100,
+   "localisations": [
+    {
+     "name": "custom_reward4",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 459,
+   "type": "BIT_TYPE",
+   "code": "custom_reward5",
+   "name": "custom_reward5",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1747991587528950,
+   "localisations": [
+    {
+     "name": "custom_reward5",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 460,
+   "type": "BIT_TYPE",
+   "code": "custom_type",
+   "name": "custom_type",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1748328100542366,
+   "localisations": [
+    {
+     "name": "custom_type",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 469,
+   "type": "BIT_TYPE",
+   "code": "SKY DIVING",
+   "name": "SKY DIVING",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1755067287758663,
+   "localisations": [
+    {
+     "name": "SKY DIVING",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 470,
+   "type": "BIT_TYPE",
+   "code": "SPEND",
+   "name": "Spend",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1755614038526976,
+   "localisations": [
+    {
+     "name": "Spend",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 471,
+   "type": "BIT_TYPE",
+   "code": "MEMBER_LOGIN_EMAIL_OTP",
+   "name": "Member Login Email OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1756187424054514,
+   "localisations": [
+    {
+     "name": "Member Login Email OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 472,
+   "type": "BIT_TYPE",
+   "code": "MEMBER_LOGIN_MOBILE_OTP",
+   "name": "Member Login Mobile OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1756187424054543,
+   "localisations": [
+    {
+     "name": "Member Login Mobile OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 473,
+   "type": "BIT_TYPE",
+   "code": "POINTS_CONVERSION",
+   "name": "Points Conversion",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1756187424054559,
+   "localisations": [
+    {
+     "name": "Points Conversion",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 484,
+   "type": "BIT_TYPE",
+   "code": "ACTIVATE_PLAN",
+   "name": "Activate Plan",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1760524913440504,
+   "localisations": [
+    {
+     "name": "Activate Plan",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 485,
+   "type": "BIT_TYPE",
+   "code": "RENEW_PLAN",
+   "name": "Renew Plan",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1760524913440538,
+   "localisations": [
+    {
+     "name": "Renew Plan",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 486,
+   "type": "BIT_TYPE",
+   "code": "CHANGE_PLAN",
+   "name": "Change Plan",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1760524913440557,
+   "localisations": [
+    {
+     "name": "Change Plan",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 487,
+   "type": "BIT_TYPE",
+   "code": "UPDATE_PLAN",
+   "name": "Update Plan",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1760524913440573,
+   "localisations": [
+    {
+     "name": "Update Plan",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 488,
+   "type": "BIT_TYPE",
+   "code": "BILL_PAYMENT",
+   "name": "Bill Payment",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1760524913440589,
+   "localisations": [
+    {
+     "name": "Bill Payment",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 489,
+   "type": "BIT_TYPE",
+   "code": "ADD_ON_PURCHASE",
+   "name": "Add On Purchase",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1760524913440605,
+   "localisations": [
+    {
+     "name": "Add On Purchase",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 490,
+   "type": "BIT_TYPE",
+   "code": "REMOVE_ADDON",
+   "name": "Remove Add On",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1760524913440621,
+   "localisations": [
+    {
+     "name": "Remove Add On",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 546,
+   "type": "BIT_TYPE",
+   "code": "POINTS_TRANSFER",
+   "name": "POINTS TRANSFER",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1767364909567212,
+   "localisations": [
+    {
+     "name": "POINTS TRANSFER",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 547,
+   "type": "BIT_TYPE",
+   "code": "SWEEPSTAKE_ISSUANCE",
+   "name": "Sweepstake Issuance",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775115010431689,
+   "localisations": [
+    {
+     "name": "Sweepstake Issuance",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 548,
+   "type": "BIT_TYPE",
+   "code": "SWEEPSTAKE_REWARD",
+   "name": "Sweepstake Reward",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775115010431708,
+   "localisations": [
+    {
+     "name": "Sweepstake Reward",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 549,
+   "type": "BIT_TYPE",
+   "code": "HOLD_POINTS",
+   "name": "Hold Points",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775115010431717,
+   "localisations": [
+    {
+     "name": "Hold Points",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 550,
+   "type": "BIT_TYPE",
+   "code": "SPIN_THE_WHEEL_ISSUANCE",
+   "name": "Spin the Wheel Issuance",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775115010431725,
+   "localisations": [
+    {
+     "name": "Spin the Wheel Issuance",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 551,
+   "type": "BIT_TYPE",
+   "code": "SCRATCH_CARD_ISSUANCE",
+   "name": "Scratch Card Issuance",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775115010431732,
+   "localisations": [
+    {
+     "name": "Scratch Card Issuance",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 552,
+   "type": "BIT_TYPE",
+   "code": "CANCEL_PLAY_WIN_REWARD",
+   "name": "Cancel Play Win Reward",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775115010431740,
+   "localisations": [
+    {
+     "name": "Cancel Play Win Reward",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 553,
+   "type": "BIT_TYPE",
+   "code": "SPIN_THE_WHEEL",
+   "name": "Spin the Wheel",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775115010431747,
+   "localisations": [
+    {
+     "name": "Spin the Wheel",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 554,
+   "type": "BIT_TYPE",
+   "code": "SCRATCH_CARD",
+   "name": "Scratch Card",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1775115010431755,
+   "localisations": [
+    {
+     "name": "Scratch Card",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 595,
+   "type": "BIT_TYPE",
+   "code": "RESET_PASSWORD_EMAIL_OTP",
+   "name": "Reset Password Email OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801241443545,
+   "localisations": [
+    {
+     "name": "Reset Password Email OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 596,
+   "type": "BIT_TYPE",
+   "code": "RESET_PASSWORD_PHONE_OTP",
+   "name": "Reset Password Phone OTP",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801241443564,
+   "localisations": [
+    {
+     "name": "Reset Password Phone OTP",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 597,
+   "type": "BIT_TYPE",
+   "code": "TIER_EXTENSION",
+   "name": "Tier Extension Service",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801241443574,
+   "localisations": [
+    {
+     "name": "Tier Extension Service",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 598,
+   "type": "BIT_TYPE",
+   "code": "UPDATE_PARTNER_PROGRAM",
+   "name": "Update Partner Program",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801241443585,
+   "localisations": [
+    {
+     "name": "Update Partner Program",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 599,
+   "type": "BIT_TYPE",
+   "code": "UNLINK_PARTNER_PROGRAM",
+   "name": "Unlink Partner Program",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801241443595,
+   "localisations": [
+    {
+     "name": "Unlink Partner Program",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 600,
+   "type": "BIT_TYPE",
+   "code": "LINK_PARTNER_PROGRAM",
+   "name": "Link Partner Program",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801241443604,
+   "localisations": [
+    {
+     "name": "Link Partner Program",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 601,
+   "type": "BIT_TYPE",
+   "code": "DELETE_PARTNER_PROGRAM",
+   "name": "Delete Partner Program",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791801241443614,
+   "localisations": [
+    {
+     "name": "Delete Partner Program",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 701,
+   "type": "BIT_TYPE",
+   "code": "LINK_GROUP_HEAD",
+   "name": "Link Group Head",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889766807666,
+   "localisations": [
+    {
+     "name": "Link Group Head",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 702,
+   "type": "BIT_TYPE",
+   "code": "UNLINK_GROUP_HEAD",
+   "name": "Unlink Group Head",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889766846757,
+   "localisations": [
+    {
+     "name": "Unlink Group Head",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 703,
+   "type": "BIT_TYPE",
+   "code": "LINK_GROUP_MEMBER",
+   "name": "Link Group Member",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889766880048,
+   "localisations": [
+    {
+     "name": "Link Group Member",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 704,
+   "type": "BIT_TYPE",
+   "code": "UNLINK_GROUP_MEMBER",
+   "name": "Unlink Group Member",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889766913670,
+   "localisations": [
+    {
+     "name": "Unlink Group Member",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 705,
+   "type": "BIT_TYPE",
+   "code": "PROMOTED_TO_HEAD",
+   "name": "Promoted To Head",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889766947538,
+   "localisations": [
+    {
+     "name": "Promoted To Head",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 706,
+   "type": "BIT_TYPE",
+   "code": "GROUP_INVITE_SENT",
+   "name": "Group Invite Sent",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889766982274,
+   "localisations": [
+    {
+     "name": "Group Invite Sent",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 707,
+   "type": "BIT_TYPE",
+   "code": "GROUP_INVITE_RESENT",
+   "name": "Group Invite Resent",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889767017218,
+   "localisations": [
+    {
+     "name": "Group Invite Resent",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 708,
+   "type": "BIT_TYPE",
+   "code": "GROUP_INVITE_ACCEPTED",
+   "name": "Group Invite Accepted",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889767050689,
+   "localisations": [
+    {
+     "name": "Group Invite Accepted",
+     "locale_code": "en"
+    }
+   ]
+  },
+  {
+   "id": 709,
+   "type": "BIT_TYPE",
+   "code": "GROUP_INVITE_REJECTED",
+   "name": "Group Invite Rejected",
+   "active": true,
+   "can_deactivate": true,
+   "version_counter": 1791889767084009,
+   "localisations": [
+    {
+     "name": "Group Invite Rejected",
+     "locale_code": "en"
+    }
+   ]
+  }
+ ]
+}

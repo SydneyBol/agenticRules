@@ -1,0 +1,24 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 197,
+   "created_ts": "2024-11-14T13:42:12.408973+04:00",
+   "updated_ts": "2025-06-13T03:39:43.443110+04:00",
+   "version_counter": 1731576385724204,
+   "name": "Base",
+   "code": "BASE",
+   "expiration_level": "ACCOUNT_LEVEL",
+   "expiration_unit": null,
+   "expiration_date": null,
+   "expiration_period": null,
+   "active": true,
+   "on_occassion": null,
+   "prepaid_billing_rate": null,
+   "postpaid_billing_rate": null,
+   "updated_by": 121415,
+   "created_by": 121415,
+   "loyalty_account": 96
+  }
+ ]
+}

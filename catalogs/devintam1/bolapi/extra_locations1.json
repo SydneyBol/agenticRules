@@ -1,0 +1,401 @@
+{
+ "status": 200,
+ "body": [
+  {
+   "id": 1,
+   "sponsor": 1,
+   "sponsor_name": "Elite International",
+   "contact_phone": null,
+   "location_name": "Chennai",
+   "location_code": "HQ",
+   "address": "WVQ8+R3 Papalwadi, Maharashtra, India",
+   "location_type": "HQ",
+   "phone_number": null,
+   "landline": "",
+   "acquisition_url": "",
+   "country": 104,
+   "state": 4,
+   "city": 5,
+   "area": 3,
+   "latitude": 18.9395337,
+   "longitude": 73.8652437,
+   "image": "https://master-media.devintam1.gravty.info/cf-data/1/location/images/a04ba913-f6ae-4fbd-9df6-d23c7326e121-HQA.jpeg",
+   "location_timings": [
+    {
+     "id": 175,
+     "day": 1,
+     "open_time": "12:00:00",
+     "close_time": "10:00:00",
+     "version_counter": 1788432169261489
+    },
+    {
+     "id": 176,
+     "day": 2,
+     "open_time": "12:00:00",
+     "close_time": "10:00:00",
+     "version_counter": 1788432169269333
+    },
+    {
+     "id": 177,
+     "day": 3,
+     "open_time": "12:00:00",
+     "close_time": "10:00:00",
+     "version_counter": 1788432169276779
+    },
+    {
+     "id": 178,
+     "day": 4,
+     "open_time": "12:00:00",
+     "close_time": "10:00:00",
+     "version_counter": 1788432169284451
+    },
+    {
+     "id": 179,
+     "day": 5,
+     "open_time": "12:00:00",
+     "close_time": "10:00:00",
+     "version_counter": 1788432169291669
+    },
+    {
+     "id": 180,
+     "day": 6,
+     "open_time": "12:00:00",
+     "close_time": "10:00:00",
+     "version_counter": 1788432169298752
+    },
+    {
+     "id": 181,
+     "day": 7,
+     "open_time": "12:00:00",
+     "close_time": "10:00:00",
+     "version_counter": 1788432169305875
+    }
+   ],
+   "version_counter": 1788432169374165,
+   "location_category": "OFFLINE",
+   "online_url": "",
+   "active": true,
+   "extra_data": {
+    "base_parking_rate/hr": 0,
+    "date_of_journey": "2026-04-04",
+    "location_region": "Hyderabad",
+    "new": [
+     "hop"
+    ],
+    "time_reached": "2026-04-04T10:15:00"
+   },
+   "pin": "1533",
+   "city_code": "PAPALWADIMAHARASHTRA",
+   "country_code": "IN",
+   "contact_user_name": null,
+   "destination": null,
+   "system_user": 11,
+   "tags": [],
+   "location_level_reward_redemption_limits": false,
+   "contact_email": null,
+   "contact_name": null
+  },
+  {
+   "id": 2,
+   "sponsor": 1,
+   "sponsor_name": "Elite International",
+   "contact_phone": null,
+   "location_name": "Elite Group Online",
+   "location_code": "WEB",
+   "address": "52QR+FC Chalakwadi, Maharashtra, India",
+   "location_type": "ONL",
+   "phone_number": "",
+   "landline": "",
+   "acquisition_url": "",
+   "country": 104,
+   "state": 4,
+   "city": 6,
+   "area": 4,
+   "latitude": null,
+   "longitude": null,
+   "image": "https://master-media.devintam1.gravty.info/cf-data/1/location/images/13a5f209-5e8c-4cdb-bdf4-b5b4aa809bcc-ELITE_2.png",
+   "location_timings": [],
+   "version_counter": 1788430466759534,
+   "location_category": "ONLINE",
+   "online_url": "https://elitegroup.com",
+   "active": true,
+   "extra_data": {
+    "base_parking_rate/hr": 1,
+    "date_of_journey": "2026-08-27",
+    "new": [
+     "hip"
+    ],
+    "time_reached": "2026-04-14T00:15:00"
+   },
+   "pin": "4993",
+   "city_code": "CHALAKWADIMAHARASHTRA",
+   "country_code": "IN",
+   "contact_user_name": null,
+   "destination": "Hyderabad",
+   "system_user": 12,
+   "tags": [],
+   "location_level_reward_redemption_limits": false,
+   "contact_email": null,
+   "contact_name": null
+  },
+  {
+   "id": 9,
+   "sponsor": 1,
+   "sponsor_name": "Elite International",
+   "contact_phone": null,
+   "location_name": "\u00e2\u20ac\u0153\u00c4\u203a\u00e2\u20ac_202522712543",
+   "location_code": "202522712540",
+   "address": "296 Queen Street, Auckland 1010, New Zealand",
+   "location_type": "GYM",
+   "phone_number": "",
+   "landline": "",
+   "acquisition_url": "",
+   "country": 259,
+   "state": 15,
+   "city": 20,
+   "area": 18,
+   "latitude": -36.8508852,
+   "longitude": 174.7645088,
+   "image": null,
+   "location_timings": [],
+   "version_counter": 1788426236216457,
+   "location_category": "OFFLINE",
+   "online_url": "",
+   "active": true,
+   "extra_data": {
+    "base_parking_rate/hr": 0
+   },
+   "pin": "8709",
+   "city_code": "COLORADOSPRINGSCOLORADO",
+   "country_code": "UNITEDSTATESNORT",
+   "contact_user_name": null,
+   "destination": null,
+   "system_user": null,
+   "tags": [],
+   "location_level_reward_redemption_limits": false
+  },
+  {
+   "id": 22,
+   "sponsor": 1,
+   "sponsor_name": "Elite International",
+   "contact_phone": null,
+   "location_name": "Chennai",
+   "location_code": "Chennai",
+   "address": "WVCP+5M Deopura Kalan, Rajasthan, India",
+   "location_type": "HTL",
+   "phone_number": "",
+   "landline": "",
+   "acquisition_url": "",
+   "country": 261,
+   "state": 28,
+   "city": 40,
+   "area": 41,
+   "latitude": 25.9204938,
+   "longitude": 75.8867281,
+   "image": null,
+   "location_timings": [],
+   "version_counter": 1788430480628278,
+   "location_category": "OFFLINE",
+   "online_url": "",
+   "active": true,
+   "extra_data": {},
+   "pin": "4779",
+   "city_code": "DEOPURAKALANRAJASTHAN",
+   "country_code": "INDIAASIA",
+   "contact_user_name": null,
+   "destination": null,
+   "system_user": null,
+   "tags": [],
+   "location_level_reward_redemption_limits": false
+  },
+  {
+   "id": 44,
+   "sponsor": 1,
+   "sponsor_name": "Elite International",
+   "contact_phone": "",
+   "location_name": "Vijayawada",
+   "location_code": "VJD",
+   "address": "54/A, Mogalrajapuram, Christurajupuram, Nunna, Vijayawada, Andhra Pradesh 520010, India",
+   "location_type": "HTL",
+   "phone_number": null,
+   "landline": "",
+   "acquisition_url": "",
+   "country": 261,
+   "state": 36,
+   "city": 71,
+   "area": 73,
+   "latitude": 16.5061743,
+   "longitude": 80.6480153,
+   "image": null,
+   "location_timings": [
+    {
+     "id": 156,
+     "day": 1,
+     "open_time": "06:00:00",
+     "close_time": "12:00:00",
+     "version_counter": 1788430487122868
+    },
+    {
+     "id": 157,
+     "day": 2,
+     "open_time": "06:00:00",
+     "close_time": "12:00:00",
+     "version_counter": 1788430487130273
+    },
+    {
+     "id": 158,
+     "day": 3,
+     "open_time": "06:00:00",
+     "close_time": "12:00:00",
+     "version_counter": 1788430487137250
+    },
+    {
+     "id": 159,
+     "day": 4,
+     "open_time": "06:00:00",
+     "close_time": "12:00:00",
+     "version_counter": 1788430487144266
+    },
+    {
+     "id": 160,
+     "day": 5,
+     "open_time": "06:00:00",
+     "close_time": "12:00:00",
+     "version_counter": 1788430487151085
+    },
+    {
+     "id": 161,
+     "day": 6,
+     "open_time": "06:00:00",
+     "close_time": "12:00:00",
+     "version_counter": 1788430487157874
+    },
+    {
+     "id": 162,
+     "day": 7,
+     "open_time": "06:00:00",
+     "close_time": "12:00:00",
+     "version_counter": 1788430487164512
+    }
+   ],
+   "version_counter": 1788430487220107,
+   "location_category": "OFFLINE",
+   "online_url": "",
+   "active": true,
+   "extra_data": {
+    "1new": [
+     "hip"
+    ],
+    "base_parking_rate/hr": 5,
+    "date_of_journey": "2025-10-10",
+    "location_currency": "INR",
+    "rev": [
+     "1"
+    ],
+    "time_reached": "2025-10-11T00:00:00"
+   },
+   "pin": "1708",
+   "city_code": "VIJAYAWADAANDHRAPRADESH",
+   "country_code": "INDIAASIA",
+   "contact_user_name": null,
+   "destination": "CHE",
+   "system_user": 192,
+   "tags": [],
+   "location_level_reward_redemption_limits": false,
+   "contact_email": null,
+   "contact_name": null
+  },
+  {
+   "id": 59,
+   "sponsor": 1,
+   "sponsor_name": "Elite International",
+   "contact_phone": null,
+   "location_name": "Elite",
+   "location_code": "SAMPLE_1923458",
+   "address": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "location_type": "GYM",
+   "phone_number": null,
+   "landline": "",
+   "acquisition_url": "http://sample.com",
+   "country": 26,
+   "state": 35,
+   "city": 8,
+   "area": 14,
+   "latitude": 40.7632205,
+   "longitude": -73.9357916,
+   "image": null,
+   "location_timings": [
+    {
+     "id": 182,
+     "day": 1,
+     "open_time": "09:00:00",
+     "close_time": "05:00:00",
+     "version_counter": 1788432292043990
+    }
+   ],
+   "version_counter": 1788432292106652,
+   "location_category": "OFFLINE",
+   "online_url": "",
+   "active": true,
+   "extra_data": {
+    "base_parking_rate/hr": 6
+   },
+   "pin": "6857",
+   "city_code": "PROVIDENCERHODEISLAND",
+   "country_code": "BT",
+   "contact_user_name": null,
+   "destination": null,
+   "system_user": 306,
+   "tags": [],
+   "location_level_reward_redemption_limits": false,
+   "contact_email": null,
+   "contact_name": null
+  },
+  {
+   "id": 60,
+   "sponsor": 1,
+   "sponsor_name": "Elite International",
+   "contact_phone": null,
+   "location_name": "Elite Group Offline",
+   "location_code": "SAMPLE_19234585",
+   "address": "Offers and sponsors are essential components in modern loyalty and rewards platforms, helping organizations improve customer engagement, increase retention, and drive transactional growth across multiple business channels. Sponsors act as the primary entities responsible for funding and managing promotional campaigns, while offers represent the benefits, discounts, cashback rewards, or incentives provided to customers based on predefined business rules and eligibility conditions. A well-designed",
+   "location_type": "GYM",
+   "phone_number": null,
+   "landline": "",
+   "acquisition_url": "http://sample.com",
+   "country": 26,
+   "state": 35,
+   "city": 8,
+   "area": 14,
+   "latitude": 40.7632205,
+   "longitude": -73.9357916,
+   "image": null,
+   "location_timings": [
+    {
+     "id": 183,
+     "day": 1,
+     "open_time": "09:00:00",
+     "close_time": "05:00:00",
+     "version_counter": 1788432305058757
+    }
+   ],
+   "version_counter": 1788432305117960,
+   "location_category": "OFFLINE",
+   "online_url": "",
+   "active": true,
+   "extra_data": {
+    "base_parking_rate/hr": 4
+   },
+   "pin": "0548",
+   "city_code": "PROVIDENCERHODEISLAND",
+   "country_code": "BT",
+   "contact_user_name": null,
+   "destination": null,
+   "system_user": 308,
+   "tags": [],
+   "location_level_reward_redemption_limits": false,
+   "contact_email": null,
+   "contact_name": null
+  }
+ ]
+}

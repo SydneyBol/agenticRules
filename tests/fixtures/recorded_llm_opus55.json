@@ -1,0 +1,4641 @@
+[
+ {
+  "scenario": "S01_tiered_exclusive",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 7.9,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 110,
+  "out_tok": 585,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "tiers",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [
+      {
+       "gt": 100,
+       "ge": null,
+       "lt": null,
+       "le": 500,
+       "multiplier": 2,
+       "rate": null
+      },
+      {
+       "gt": 500,
+       "ge": null,
+       "lt": null,
+       "le": null,
+       "multiplier": 3,
+       "rate": null
+      }
+     ],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "bands": [
+       {
+        "lower": 100,
+        "lower_inclusive": false,
+        "has_upper": true,
+        "upper": 500,
+        "upper_inclusive": true,
+        "factor_kind": "multiplier",
+        "factor": 2
+       },
+       {
+        "lower": 500,
+        "lower_inclusive": false,
+        "has_upper": false,
+        "upper": 0,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 3
+       }
+      ]
+     }
+    }
+   ],
+   "questions": [
+    "Should the multiplier be the total points (e.g. 2x = amount x 2), or a bonus added on top of base earn (e.g. an extra 1x)?",
+    "What start and end dates should the offer have?"
+   ],
+   "unsupported": [],
+   "readback": "On SPEND activities, members earn 2x points (transaction amount x 2) when the transaction amount is over $100 and up to $500 (including $500 exactly). If the amount is over $500 they earn 3x points instead. Only one band applies to each transaction. Spends of $100 or less earn nothing from this offer.",
+   "finish": {
+    "readback": "On SPEND activities, members earn 2x points (transaction amount x 2) when the transaction amount is over $100 and up to $500 (including $500 exactly). If the amount is over $500 they earn 3x points instead. Only one band applies to each transaction. Spends of $100 or less earn nothing from this offer.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should the multiplier be the total points (e.g. 2x = amount x 2), or a bonus added on top of base earn (e.g. an extra 1x)?",
+     "What start and end dates should the offer have?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "bands": true,
+   "multipliers": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S01_tiered_exclusive",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 5.7,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 110,
+  "out_tok": 565,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "tiers",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [
+      {
+       "gt": 100,
+       "ge": null,
+       "lt": null,
+       "le": 500,
+       "multiplier": 2,
+       "rate": null
+      },
+      {
+       "gt": 500,
+       "ge": null,
+       "lt": null,
+       "le": null,
+       "multiplier": 3,
+       "rate": null
+      }
+     ],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "bands": [
+       {
+        "lower": 100,
+        "lower_inclusive": false,
+        "has_upper": true,
+        "upper": 500,
+        "upper_inclusive": true,
+        "factor_kind": "multiplier",
+        "factor": 2
+       },
+       {
+        "lower": 500,
+        "lower_inclusive": false,
+        "has_upper": false,
+        "upper": 0,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 3
+       }
+      ]
+     }
+    }
+   ],
+   "questions": [
+    "Should the 2x/3x be the total points earned (including base points), or bonus points on top of the base earn?",
+    "Should the offer have a start date and an end date? None were given, so it currently has no dates."
+   ],
+   "unsupported": [],
+   "readback": "On SPEND activities, members earn points based on the transaction amount. If it's over $100 up to and including $500, they get 2x the amount. If it's over $500, they get 3x the amount. Only one band applies per transaction. Spends of $100 or less get no bonus.",
+   "finish": {
+    "readback": "On SPEND activities, members earn points based on the transaction amount. If it's over $100 up to and including $500, they get 2x the amount. If it's over $500, they get 3x the amount. Only one band applies per transaction. Spends of $100 or less get no bonus.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should the 2x/3x be the total points earned (including base points), or bonus points on top of the base earn?",
+     "Should the offer have a start date and an end date? None were given, so it currently has no dates."
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "bands": true,
+   "multipliers": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S01_tiered_exclusive",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 5.5,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 110,
+  "out_tok": 567,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "tiers",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [
+      {
+       "gt": 100,
+       "ge": null,
+       "lt": null,
+       "le": 500,
+       "multiplier": 2,
+       "rate": null
+      },
+      {
+       "gt": 500,
+       "ge": null,
+       "lt": null,
+       "le": null,
+       "multiplier": 3,
+       "rate": null
+      }
+     ],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "bands": [
+       {
+        "lower": 100,
+        "lower_inclusive": false,
+        "has_upper": true,
+        "upper": 500,
+        "upper_inclusive": true,
+        "factor_kind": "multiplier",
+        "factor": 2
+       },
+       {
+        "lower": 500,
+        "lower_inclusive": false,
+        "has_upper": false,
+        "upper": 0,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 3
+       }
+      ]
+     }
+    }
+   ],
+   "questions": [
+    "Should 2x/3x be the total points earned (including base points) or extra bonus points on top of base earn?",
+    "What are the offer start and end dates, and is there a cap or per-member usage limit?"
+   ],
+   "unsupported": [],
+   "readback": "On SPEND activities, points = transaction amount x 2 when the amount is over $100 and up to $500. When the amount is over $500, points = transaction amount x 3 instead. Only one band applies to each transaction. Spends of $100 or less earn nothing from this offer.",
+   "finish": {
+    "readback": "On SPEND activities, points = transaction amount x 2 when the amount is over $100 and up to $500. When the amount is over $500, points = transaction amount x 3 instead. Only one band applies to each transaction. Spends of $100 or less earn nothing from this offer.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should 2x/3x be the total points earned (including base points) or extra bonus points on top of base earn?",
+     "What are the offer start and end dates, and is there a cap or per-member usage limit?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "bands": true,
+   "multipliers": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S02_tiered_plus_cap",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.9,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 122,
+  "out_tok": 746,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "tiers",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [
+      {
+       "gt": null,
+       "ge": 0,
+       "lt": 1000,
+       "le": null,
+       "multiplier": 0.1,
+       "rate": null
+      },
+      {
+       "gt": null,
+       "ge": 1000,
+       "lt": null,
+       "le": null,
+       "multiplier": 0.2,
+       "rate": null
+      }
+     ],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "bands": [
+       {
+        "lower": 0,
+        "lower_inclusive": true,
+        "has_upper": true,
+        "upper": 1000,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 0.1
+       },
+       {
+        "lower": 1000,
+        "lower_inclusive": true,
+        "has_upper": false,
+        "upper": 0,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 0.2
+       }
+      ]
+     }
+    },
+    {
+     "kind": "cap",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": 300,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "max_points": 300
+     }
+    }
+   ],
+   "questions": [
+    "Should the offer have a start and end date? None were given, so it currently runs with no time limit.",
+    "Is 'bonus points' meant as points per currency unit (e.g. $500 purchase = 50 points)? I assumed 10%/20% of the transaction amount in points."
+   ],
+   "unsupported": [],
+   "readback": "On every purchase (SPEND activity), the member earns bonus points of 10% of the transaction amount when the amount is under $1000, or 20% when it is $1000 or more. Only one rate applies to each transaction. Each member can earn at most 300 bonus points in total from this offer.",
+   "finish": {
+    "readback": "On every purchase (SPEND activity), the member earns bonus points of 10% of the transaction amount when the amount is under $1000, or 20% when it is $1000 or more. Only one rate applies to each transaction. Each member can earn at most 300 bonus points in total from this offer.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should the offer have a start and end date? None were given, so it currently runs with no time limit.",
+     "Is 'bonus points' meant as points per currency unit (e.g. $500 purchase = 50 points)? I assumed 10%/20% of the transaction amount in points."
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "bands": true,
+   "max_points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S02_tiered_plus_cap",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 122,
+  "out_tok": 728,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "tiers",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [
+      {
+       "gt": null,
+       "ge": 0,
+       "lt": 1000,
+       "le": null,
+       "multiplier": 0.1,
+       "rate": null
+      },
+      {
+       "gt": null,
+       "ge": 1000,
+       "lt": null,
+       "le": null,
+       "multiplier": 0.2,
+       "rate": null
+      }
+     ],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "bands": [
+       {
+        "lower": 0,
+        "lower_inclusive": true,
+        "has_upper": true,
+        "upper": 1000,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 0.1
+       },
+       {
+        "lower": 1000,
+        "lower_inclusive": true,
+        "has_upper": false,
+        "upper": 0,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 0.2
+       }
+      ]
+     }
+    },
+    {
+     "kind": "cap",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": 300,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "max_points": 300
+     }
+    }
+   ],
+   "questions": [
+    "What start and end dates should the offer have? None were given, so it currently has no date limits.",
+    "Should bonus points go to the 'Points' account with the BONUS tag? That is the only account available."
+   ],
+   "unsupported": [],
+   "readback": "On every purchase (SPEND activity), the member earns bonus points equal to 10% of the transaction amount. If the purchase is $1000 or more, they earn 20% instead (the higher rate replaces the lower one). Each member can earn at most 300 bonus points in total from this offer.",
+   "finish": {
+    "readback": "On every purchase (SPEND activity), the member earns bonus points equal to 10% of the transaction amount. If the purchase is $1000 or more, they earn 20% instead (the higher rate replaces the lower one). Each member can earn at most 300 bonus points in total from this offer.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "What start and end dates should the offer have? None were given, so it currently has no date limits.",
+     "Should bonus points go to the 'Points' account with the BONUS tag? That is the only account available."
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "bands": true,
+   "max_points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S02_tiered_plus_cap",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.3,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 122,
+  "out_tok": 604,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "tiers",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [
+      {
+       "gt": null,
+       "ge": 0,
+       "lt": 1000,
+       "le": null,
+       "multiplier": 0.1,
+       "rate": null
+      },
+      {
+       "gt": null,
+       "ge": 1000,
+       "lt": null,
+       "le": null,
+       "multiplier": 0.2,
+       "rate": null
+      }
+     ],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "bands": [
+       {
+        "lower": 0,
+        "lower_inclusive": true,
+        "has_upper": true,
+        "upper": 1000,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 0.1
+       },
+       {
+        "lower": 1000,
+        "lower_inclusive": true,
+        "has_upper": false,
+        "upper": 0,
+        "upper_inclusive": false,
+        "factor_kind": "multiplier",
+        "factor": 0.2
+       }
+      ]
+     }
+    },
+    {
+     "kind": "cap",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": 300,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "max_points": 300
+     }
+    }
+   ],
+   "questions": [
+    "What start and end dates should the offer have?",
+    "Should bonus points go into the 'Points' account (id 1, BONUS tag)?"
+   ],
+   "unsupported": [],
+   "readback": "On every SPEND (purchase) transaction, the member earns bonus points of 10% of the transaction amount when it is under $1000, or 20% when it is $1000 or more. Only one rate applies to each purchase. Each member can earn at most 300 bonus points in total from this offer.",
+   "finish": {
+    "readback": "On every SPEND (purchase) transaction, the member earns bonus points of 10% of the transaction amount when it is under $1000, or 20% when it is $1000 or more. Only one rate applies to each purchase. Each member can earn at most 300 bonus points in total from this offer.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "What start and end dates should the offer have?",
+     "Should bonus points go into the 'Points' account (id 1, BONUS tag)?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "bands": true,
+   "max_points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S03_combined_weekend_gold_locations",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.1,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 110,
+  "out_tok": 670,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "bonus_if",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "member",
+       "attribute": "tier",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "GOLD",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_type",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "SPEND",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_amount",
+       "dimension": "NONE",
+       "op": ">=",
+       "value": "50",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "in",
+       "value": "",
+       "values": [
+        "6",
+        "7"
+       ]
+      },
+      {
+       "object": "activity",
+       "attribute": "h_location",
+       "dimension": "NONE",
+       "op": "in",
+       "value": "",
+       "values": [
+        "L1",
+        "L2"
+       ]
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 100,
+      "privilege_id": null
+     },
+     "raw": {
+      "conditions": [
+       {
+        "object": "member",
+        "attribute": "tier",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "GOLD",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "SPEND",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_amount",
+        "dimension": "NONE",
+        "op": ">=",
+        "value": "50",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_date",
+        "dimension": "DAY_OF_WEEK",
+        "op": "in",
+        "value": "",
+        "values": [
+         "6",
+         "7"
+        ]
+       },
+       {
+        "object": "activity",
+        "attribute": "h_location",
+        "dimension": "NONE",
+        "op": "in",
+        "value": "",
+        "values": [
+         "L1",
+         "L2"
+        ]
+       }
+      ],
+      "reward": {
+       "kind": "points",
+       "points": 100,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "What are the offer start and end dates?",
+    "Should the bonus be limited per member (e.g., once per weekend or a total maximum), or awarded on every qualifying spend?"
+   ],
+   "unsupported": [],
+   "readback": "Gold-tier members get a flat 100 bonus points on any SPEND transaction of $50 or more made on a Saturday or Sunday at the Downtown Store (L1) or the Mall Store (L2).",
+   "finish": {
+    "readback": "Gold-tier members get a flat 100 bonus points on any SPEND transaction of $50 or more made on a Saturday or Sunday at the Downtown Store (L1) or the Mall Store (L2).",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "What are the offer start and end dates?",
+     "Should the bonus be limited per member (e.g., once per weekend or a total maximum), or awarded on every qualifying spend?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "points": true,
+   "cond_attrs": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S03_combined_weekend_gold_locations",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.2,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 110,
+  "out_tok": 684,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "bonus_if",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "member",
+       "attribute": "tier",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "GOLD",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_type",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "SPEND",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "in",
+       "value": "",
+       "values": [
+        "6",
+        "7"
+       ]
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_amount",
+       "dimension": "NONE",
+       "op": ">=",
+       "value": "50",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_location",
+       "dimension": "NONE",
+       "op": "in",
+       "value": "",
+       "values": [
+        "L1",
+        "L2"
+       ]
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 100,
+      "privilege_id": null
+     },
+     "raw": {
+      "conditions": [
+       {
+        "object": "member",
+        "attribute": "tier",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "GOLD",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "SPEND",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_date",
+        "dimension": "DAY_OF_WEEK",
+        "op": "in",
+        "value": "",
+        "values": [
+         "6",
+         "7"
+        ]
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_amount",
+        "dimension": "NONE",
+        "op": ">=",
+        "value": "50",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_location",
+        "dimension": "NONE",
+        "op": "in",
+        "value": "",
+        "values": [
+         "L1",
+         "L2"
+        ]
+       }
+      ],
+      "reward": {
+       "kind": "points",
+       "points": 100,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "What start and end dates should the offer have? None were given, so it currently has no date limits.",
+    "Should there be a limit on how many times each member can get the bonus (for example, once per weekend or once in total)? Right now there is no limit."
+   ],
+   "unsupported": [],
+   "readback": "Gold-tier members get a flat 100 bonus points on any SPEND transaction of $50 or more made on a Saturday or Sunday at Downtown Store (L1) or Mall Store (L2).",
+   "finish": {
+    "readback": "Gold-tier members get a flat 100 bonus points on any SPEND transaction of $50 or more made on a Saturday or Sunday at Downtown Store (L1) or Mall Store (L2).",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "What start and end dates should the offer have? None were given, so it currently has no date limits.",
+     "Should there be a limit on how many times each member can get the bonus (for example, once per weekend or once in total)? Right now there is no limit."
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "points": true,
+   "cond_attrs": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S03_combined_weekend_gold_locations",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.1,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 110,
+  "out_tok": 668,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "bonus_if",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "member",
+       "attribute": "tier",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "GOLD",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_type",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "SPEND",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "in",
+       "value": "",
+       "values": [
+        "6",
+        "7"
+       ]
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_amount",
+       "dimension": "NONE",
+       "op": ">=",
+       "value": "50",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_location",
+       "dimension": "NONE",
+       "op": "in",
+       "value": "",
+       "values": [
+        "L1",
+        "L2"
+       ]
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 100,
+      "privilege_id": null
+     },
+     "raw": {
+      "conditions": [
+       {
+        "object": "member",
+        "attribute": "tier",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "GOLD",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "SPEND",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_date",
+        "dimension": "DAY_OF_WEEK",
+        "op": "in",
+        "value": "",
+        "values": [
+         "6",
+         "7"
+        ]
+       },
+       {
+        "object": "activity",
+        "attribute": "h_bit_amount",
+        "dimension": "NONE",
+        "op": ">=",
+        "value": "50",
+        "values": []
+       },
+       {
+        "object": "activity",
+        "attribute": "h_location",
+        "dimension": "NONE",
+        "op": "in",
+        "value": "",
+        "values": [
+         "L1",
+         "L2"
+        ]
+       }
+      ],
+      "reward": {
+       "kind": "points",
+       "points": 100,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "What start and end dates should this offer have?",
+    "Can a member earn the 100 points on every qualifying spend, or should there be a limit (e.g. once per weekend or once per member)?"
+   ],
+   "unsupported": [],
+   "readback": "Gold-tier members get a fixed 100 bonus points on each spend of $50 or more made on a Saturday or Sunday at the Downtown Store (L1) or Mall Store (L2).",
+   "finish": {
+    "readback": "Gold-tier members get a fixed 100 bonus points on each spend of $50 or more made on a Saturday or Sunday at the Downtown Store (L1) or Mall Store (L2).",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "What start and end dates should this offer have?",
+     "Can a member earn the 100 points on every qualifying spend, or should there be a limit (e.g. once per weekend or once per member)?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "points": true,
+   "cond_attrs": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S04_happy_hour_or",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 9.6,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 104,
+  "out_tok": 1002,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": 2,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "==",
+       "value": "5",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "HOUR_OF_DAY",
+       "op": ">=",
+       "value": "17",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "HOUR_OF_DAY",
+       "op": "<",
+       "value": "19",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "==",
+       "value": "7",
+       "values": []
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "multiplier",
+      "factor": 2,
+      "conditions": [],
+      "or_groups": [
+       [
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "DAY_OF_WEEK",
+         "op": "==",
+         "value": "5",
+         "values": []
+        },
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "HOUR_OF_DAY",
+         "op": ">=",
+         "value": "17",
+         "values": []
+        },
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "HOUR_OF_DAY",
+         "op": "<",
+         "value": "19",
+         "values": []
+        }
+       ],
+       [
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "DAY_OF_WEEK",
+         "op": "==",
+         "value": "7",
+         "values": []
+        }
+       ]
+      ]
+     }
+    }
+   ],
+   "questions": [
+    "Should 'double points' be 2x the amount in total, or an extra 1x bonus on top of the base points members already earn? (Right now it's set to 2x the amount.)",
+    "Is 7pm the end of the window (so 17:00\u201318:59), or should transactions at 19:00\u201319:59 count too?",
+    "Should this apply only to SPEND transactions, or also to STAY or BOOKING?",
+    "Are there start/end dates or a per-member cap?"
+   ],
+   "unsupported": [],
+   "readback": "On spend transactions, members earn points equal to 2x the transaction amount when the transaction happens on a Friday from 17:00 up to 18:59 (5pm\u20137pm), or at any time on a Sunday. No points from this offer at other times.",
+   "finish": {
+    "readback": "On spend transactions, members earn points equal to 2x the transaction amount when the transaction happens on a Friday from 17:00 up to 18:59 (5pm\u20137pm), or at any time on a Sunday. No points from this offer at other times.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should 'double points' be 2x the amount in total, or an extra 1x bonus on top of the base points members already earn? (Right now it's set to 2x the amount.)",
+     "Is 7pm the end of the window (so 17:00\u201318:59), or should transactions at 19:00\u201319:59 count too?",
+     "Should this apply only to SPEND transactions, or also to STAY or BOOKING?",
+     "Are there start/end dates or a per-member cap?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "multiplier": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S04_happy_hour_or",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 9.1,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 104,
+  "out_tok": 958,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": 2,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "==",
+       "value": "5",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "HOUR_OF_DAY",
+       "op": ">=",
+       "value": "17",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "HOUR_OF_DAY",
+       "op": "<",
+       "value": "19",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "==",
+       "value": "7",
+       "values": []
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "multiplier",
+      "factor": 2,
+      "conditions": [],
+      "or_groups": [
+       [
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "DAY_OF_WEEK",
+         "op": "==",
+         "value": "5",
+         "values": []
+        },
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "HOUR_OF_DAY",
+         "op": ">=",
+         "value": "17",
+         "values": []
+        },
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "HOUR_OF_DAY",
+         "op": "<",
+         "value": "19",
+         "values": []
+        }
+       ],
+       [
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "DAY_OF_WEEK",
+         "op": "==",
+         "value": "7",
+         "values": []
+        }
+       ]
+      ]
+     }
+    }
+   ],
+   "questions": [
+    "I assumed this applies only to SPEND activities. Should it also cover STAY or BOOKING?",
+    "I read '5pm to 7pm' as 17:00 up to, but not including, 19:00. Is that right?",
+    "When should the offer start and end? Should there be a limit on how often each member can use it, or on total points?",
+    "Does 'double points' mean bonus points equal to the transaction amount x 2? Or should it be an extra 1x on top of base earn, so the member gets 2x in total?"
+   ],
+   "unsupported": [],
+   "readback": "Members earn double points (transaction amount x 2) on transactions made on Fridays from 17:00 to 18:59, or at any time on Sundays.",
+   "finish": {
+    "readback": "Members earn double points (transaction amount x 2) on transactions made on Fridays from 17:00 to 18:59, or at any time on Sundays.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "I assumed this applies only to SPEND activities. Should it also cover STAY or BOOKING?",
+     "I read '5pm to 7pm' as 17:00 up to, but not including, 19:00. Is that right?",
+     "When should the offer start and end? Should there be a limit on how often each member can use it, or on total points?",
+     "Does 'double points' mean bonus points equal to the transaction amount x 2? Or should it be an extra 1x on top of base earn, so the member gets 2x in total?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "multiplier": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S04_happy_hour_or",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 8.5,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 104,
+  "out_tok": 920,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": 2,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "==",
+       "value": "5",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "HOUR_OF_DAY",
+       "op": ">=",
+       "value": "17",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "HOUR_OF_DAY",
+       "op": "<",
+       "value": "19",
+       "values": []
+      },
+      {
+       "object": "activity",
+       "attribute": "h_bit_date",
+       "dimension": "DAY_OF_WEEK",
+       "op": "==",
+       "value": "7",
+       "values": []
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "multiplier",
+      "factor": 2,
+      "conditions": [],
+      "or_groups": [
+       [
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "DAY_OF_WEEK",
+         "op": "==",
+         "value": "5",
+         "values": []
+        },
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "HOUR_OF_DAY",
+         "op": ">=",
+         "value": "17",
+         "values": []
+        },
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "HOUR_OF_DAY",
+         "op": "<",
+         "value": "19",
+         "values": []
+        }
+       ],
+       [
+        {
+         "object": "activity",
+         "attribute": "h_bit_date",
+         "dimension": "DAY_OF_WEEK",
+         "op": "==",
+         "value": "7",
+         "values": []
+        }
+       ]
+      ]
+     }
+    }
+   ],
+   "questions": [
+    "Should this apply only to SPEND transactions, or also to STAY/BOOKING activities?",
+    "What start and end dates should the offer have? None were given.",
+    "The Friday window is set to 17:00\u201318:59 (it ends just before 7pm). Is that right?"
+   ],
+   "unsupported": [],
+   "readback": "Members get double points (transaction amount x 2) on SPEND transactions made on Fridays from 5:00pm to 6:59pm, or at any time on Sundays. There is no end date, no cap and no usage limit.",
+   "finish": {
+    "readback": "Members get double points (transaction amount x 2) on SPEND transactions made on Fridays from 5:00pm to 6:59pm, or at any time on Sundays. There is no end date, no cap and no usage limit.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should this apply only to SPEND transactions, or also to STAY/BOOKING activities?",
+     "What start and end dates should the offer have? None were given.",
+     "The Friday window is set to 17:00\u201318:59 (it ends just before 7pm). Is that right?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "multiplier": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S05_category_per_item",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 5.9,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 100,
+  "out_tok": 611,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "line_item",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "product_attribute": "category",
+      "values": [
+       "SNACKS"
+      ],
+      "factor_kind": "points_per_unit",
+      "factor": 5
+     }
+    },
+    {
+     "kind": "line_item",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "product_attribute": "category",
+      "values": [
+       "DRINKS"
+      ],
+      "factor_kind": "multiplier_on_line_amount",
+      "factor": 2
+     }
+    }
+   ],
+   "questions": [
+    "Does '2x points on drinks' mean the drink line amount \u00d7 2 as bonus points, or doubling the base earn (i.e. an extra 1x on top of base points)?",
+    "What start and end dates should the offer have?"
+   ],
+   "unsupported": [],
+   "readback": "On each purchase, members earn 5 bonus points per unit of any Snacks item (line quantity \u00d7 5), plus points equal to 2\u00d7 the line amount for every Drinks line item.",
+   "finish": {
+    "readback": "On each purchase, members earn 5 bonus points per unit of any Snacks item (line quantity \u00d7 5), plus points equal to 2\u00d7 the line amount for every Drinks line item.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Does '2x points on drinks' mean the drink line amount \u00d7 2 as bonus points, or doubling the base earn (i.e. an extra 1x on top of base points)?",
+     "What start and end dates should the offer have?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "count": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S05_category_per_item",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.2,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 100,
+  "out_tok": 662,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "line_item",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "product_attribute": "category",
+      "values": [
+       "SNACKS"
+      ],
+      "factor_kind": "points_per_unit",
+      "factor": 5
+     }
+    },
+    {
+     "kind": "line_item",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "product_attribute": "category",
+      "values": [
+       "DRINKS"
+      ],
+      "factor_kind": "multiplier_on_line_amount",
+      "factor": 2
+     }
+    }
+   ],
+   "questions": [
+    "Does '2x points on drinks' mean 2 points per currency unit of the drink line amount in total, or an extra 1x on top of base earn (i.e. a 1x bonus)? I've set it to 2 x line amount.",
+    "Should the offer have a start/end date or a per-member usage limit or cap?"
+   ],
+   "unsupported": [],
+   "readback": "For each line item in the Snacks category, the member gets 5 bonus points per unit bought (based on line quantity). For each line item in the Drinks category, the member gets points equal to 2 times the line amount. No dates, usage limits or caps are set.",
+   "finish": {
+    "readback": "For each line item in the Snacks category, the member gets 5 bonus points per unit bought (based on line quantity). For each line item in the Drinks category, the member gets points equal to 2 times the line amount. No dates, usage limits or caps are set.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Does '2x points on drinks' mean 2 points per currency unit of the drink line amount in total, or an extra 1x on top of base earn (i.e. a 1x bonus)? I've set it to 2 x line amount.",
+     "Should the offer have a start/end date or a per-member usage limit or cap?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "count": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S05_category_per_item",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 5.9,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 100,
+  "out_tok": 638,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "line_item",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "product_attribute": "category",
+      "values": [
+       "SNACKS"
+      ],
+      "factor_kind": "points_per_unit",
+      "factor": 5
+     }
+    },
+    {
+     "kind": "line_item",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "product_attribute": "category",
+      "values": [
+       "DRINKS"
+      ],
+      "factor_kind": "multiplier_on_line_amount",
+      "factor": 2
+     }
+    }
+   ],
+   "questions": [
+    "Is '2x points on drinks' meant as 2x the drink line amount in total, or as an extra 1x on top of the base points (so the member ends up with double)?",
+    "Should the offer have a start date, an end date, or a cap on bonus points per member?"
+   ],
+   "unsupported": [],
+   "readback": "On each purchase, the member gets 5 bonus points for every unit of a Snacks item bought, based on line quantity. They also get points equal to 2x the line amount of every Drinks item. No dates, caps or usage limits are set.",
+   "finish": {
+    "readback": "On each purchase, the member gets 5 bonus points for every unit of a Snacks item bought, based on line quantity. They also get points equal to 2x the line amount of every Drinks item. No dates, caps or usage limits are set.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Is '2x points on drinks' meant as 2x the drink line amount in total, or as an extra 1x on top of the base points (so the member ends up with double)?",
+     "Should the offer have a start date, an end date, or a cap on bonus points per member?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "count": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S06_collect_all_categories",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.4,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 108,
+  "out_tok": 453,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "collect_all",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [
+      [
+       "SNACKS"
+      ],
+      [
+       "DRINKS"
+      ],
+      [
+       "BAKERY"
+      ]
+     ],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "product_attribute": "category",
+      "groups": [
+       [
+        "SNACKS"
+       ],
+       [
+        "DRINKS"
+       ],
+       [
+        "BAKERY"
+       ]
+      ],
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "What start and end dates should the offer have? Should only purchases made after the start date count toward the three categories?"
+   ],
+   "unsupported": [],
+   "readback": "Once a member has bought at least one product from each of Snacks, Drinks and Bakery, across any number of visits, they get one Free Coffee voucher. Each member can get it only once.",
+   "finish": {
+    "readback": "Once a member has bought at least one product from each of Snacks, Drinks and Bakery, across any number of visits, they get one Free Coffee voucher. Each member can get it only once.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "What start and end dates should the offer have? Should only purchases made after the start date count toward the three categories?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "privilege": true,
+   "groups": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S06_collect_all_categories",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 108,
+  "out_tok": 479,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "collect_all",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [
+      [
+       "SNACKS"
+      ],
+      [
+       "DRINKS"
+      ],
+      [
+       "BAKERY"
+      ]
+     ],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "product_attribute": "category",
+      "groups": [
+       [
+        "SNACKS"
+       ],
+       [
+        "DRINKS"
+       ],
+       [
+        "BAKERY"
+       ]
+      ],
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "What start and end dates should the offer have? None were given, so it currently runs with no date limits.",
+    "Should only SPEND activities count toward collecting the categories? I assumed SPEND."
+   ],
+   "unsupported": [],
+   "readback": "Once a member has bought products from each of the Snacks, Drinks and Bakery categories, in any number of visits, they get one Free Coffee voucher. Each member can get it only once.",
+   "finish": {
+    "readback": "Once a member has bought products from each of the Snacks, Drinks and Bakery categories, in any number of visits, they get one Free Coffee voucher. Each member can get it only once.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "What start and end dates should the offer have? None were given, so it currently runs with no date limits.",
+     "Should only SPEND activities count toward collecting the categories? I assumed SPEND."
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "privilege": true,
+   "groups": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S06_collect_all_categories",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 108,
+  "out_tok": 463,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "collect_all",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [
+      [
+       "SNACKS"
+      ],
+      [
+       "DRINKS"
+      ],
+      [
+       "BAKERY"
+      ]
+     ],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "product_attribute": "category",
+      "groups": [
+       [
+        "SNACKS"
+       ],
+       [
+        "DRINKS"
+       ],
+       [
+        "BAKERY"
+       ]
+      ],
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "What start and end dates should the offer have? None were given.",
+    "Should only SPEND activities count toward the categories, or other activity types too?"
+   ],
+   "unsupported": [],
+   "readback": "Once a member has bought products from each of the Snacks, Drinks and Bakery categories (in any number of visits), they get one Free Coffee voucher. Each member can get it only once.",
+   "finish": {
+    "readback": "Once a member has bought products from each of the Snacks, Drinks and Bakery categories (in any number of visits), they get one Free Coffee voucher. Each member can get it only once.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "What start and end dates should the offer have? None were given.",
+     "Should only SPEND activities count toward the categories, or other activity types too?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "privilege": true,
+   "groups": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S07_every_5th_visit",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 7.4,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 91,
+  "out_tok": 593,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "nth_activity",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 5,
+     "repeat": true,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "n": 5,
+      "repeat": true,
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Which activity types count as a 'visit'? I assumed SPEND only. Should STAY or BOOKING count too?",
+    "Should a visit need a minimum transaction amount, or be limited to certain stores?",
+    "Should the offer have a start date, an end date, or a limit on how many vouchers one member can earn?"
+   ],
+   "unsupported": [],
+   "readback": "On every 5th qualifying visit (the 5th, 10th, 15th and so on), the member gets one Free Coffee voucher (privilege 501). For now, a visit means a SPEND activity. There is no start date, end date or per-member limit.",
+   "finish": {
+    "readback": "On every 5th qualifying visit (the 5th, 10th, 15th and so on), the member gets one Free Coffee voucher (privilege 501). For now, a visit means a SPEND activity. There is no start date, end date or per-member limit.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Which activity types count as a 'visit'? I assumed SPEND only. Should STAY or BOOKING count too?",
+     "Should a visit need a minimum transaction amount, or be limited to certain stores?",
+     "Should the offer have a start date, an end date, or a limit on how many vouchers one member can earn?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "repeat": true,
+   "privilege": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S07_every_5th_visit",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.1,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 91,
+  "out_tok": 634,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "nth_activity",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 5,
+     "repeat": true,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "n": 5,
+      "repeat": true,
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "What counts as a 'visit'? I assumed SPEND transactions. Should STAY or BOOKING activities count too?",
+    "Should a visit need a minimum spend, or be limited to certain stores (Downtown, Mall, Harbour, Airport T1/T2), to count?",
+    "Should the offer have start/end dates, or a cap on how many free coffees a member can earn?"
+   ],
+   "unsupported": [],
+   "readback": "On every 5th qualifying visit (the 5th, 10th, 15th and so on), the member gets one Free Coffee voucher (privilege 501). A visit is counted as a SPEND activity. There is no minimum spend, no store restriction and no limit on how many vouchers a member can earn. The offer has no start or end date.",
+   "finish": {
+    "readback": "On every 5th qualifying visit (the 5th, 10th, 15th and so on), the member gets one Free Coffee voucher (privilege 501). A visit is counted as a SPEND activity. There is no minimum spend, no store restriction and no limit on how many vouchers a member can earn. The offer has no start or end date.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "What counts as a 'visit'? I assumed SPEND transactions. Should STAY or BOOKING activities count too?",
+     "Should a visit need a minimum spend, or be limited to certain stores (Downtown, Mall, Harbour, Airport T1/T2), to count?",
+     "Should the offer have start/end dates, or a cap on how many free coffees a member can earn?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "repeat": true,
+   "privilege": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S07_every_5th_visit",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 6.0,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 91,
+  "out_tok": 587,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "nth_activity",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 5,
+     "repeat": true,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "n": 5,
+      "repeat": true,
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Which activity counts as a 'visit'? I assumed SPEND transactions. Should STAY or BOOKING count too?",
+    "Should every visit count, or only visits with a minimum spend or at certain stores?",
+    "Should the offer have start/end dates or a limit on vouchers per member?"
+   ],
+   "unsupported": [],
+   "readback": "On every 5th qualifying visit (the 5th, 10th, 15th and so on), the member gets a Free Coffee voucher (privilege 501). A visit is counted as a SPEND transaction. There is no end date and no limit on how many vouchers a member can earn.",
+   "finish": {
+    "readback": "On every 5th qualifying visit (the 5th, 10th, 15th and so on), the member gets a Free Coffee voucher (privilege 501). A visit is counted as a SPEND transaction. There is no end date and no limit on how many vouchers a member can earn.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Which activity counts as a 'visit'? I assumed SPEND transactions. Should STAY or BOOKING count too?",
+     "Should every visit count, or only visits with a minimum spend or at certain stores?",
+     "Should the offer have start/end dates or a limit on vouchers per member?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "repeat": true,
+   "privilege": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S08_spend_milestone_once",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.9,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 105,
+  "out_tok": 446,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "milestone",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": 1000,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 500,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "threshold": 1000,
+      "reward": {
+       "kind": "points",
+       "points": 500,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Should the cumulative spend count only from the offer start date, or include spend from before the offer launched?",
+    "Are there start/end dates for this offer?"
+   ],
+   "unsupported": [],
+   "readback": "The offer adds up each member's spend amounts (h_bit_amount) on SPEND activities. When the running total first reaches $1000 or more, the member gets 500 bonus points, one time only.",
+   "finish": {
+    "readback": "The offer adds up each member's spend amounts (h_bit_amount) on SPEND activities. When the running total first reaches $1000 or more, the member gets 500 bonus points, one time only.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "Should the cumulative spend count only from the offer start date, or include spend from before the offer launched?",
+     "Are there start/end dates for this offer?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "threshold": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S08_spend_milestone_once",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 105,
+  "out_tok": 440,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "milestone",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": 1000,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 500,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "threshold": 1000,
+      "reward": {
+       "kind": "points",
+       "points": 500,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Should spend before the offer starts count toward the $1000 total, or only spend after it starts?",
+    "Does the offer have a start or end date?"
+   ],
+   "unsupported": [],
+   "readback": "The offer adds up each member's spend amounts (h_bit_amount) on SPEND activities. When their total reaches $1,000 or more, they get 500 bonus points one time only.",
+   "finish": {
+    "readback": "The offer adds up each member's spend amounts (h_bit_amount) on SPEND activities. When their total reaches $1,000 or more, they get 500 bonus points one time only.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "Should spend before the offer starts count toward the $1000 total, or only spend after it starts?",
+     "Does the offer have a start or end date?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "threshold": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S08_spend_milestone_once",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.5,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 105,
+  "out_tok": 439,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "milestone",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": 1000,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 500,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "threshold": 1000,
+      "reward": {
+       "kind": "points",
+       "points": 500,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Should cumulative spend count from the offer start date only, or include spend made before the offer began?",
+    "Do you want a start or end date for this offer?"
+   ],
+   "unsupported": [],
+   "readback": "When a member's total transaction amount, added up across all their SPEND activities, reaches $1000 or more, they get 500 bonus points one time. Each member can only get this reward once.",
+   "finish": {
+    "readback": "When a member's total transaction amount, added up across all their SPEND activities, reaches $1000 or more, they get 500 bonus points one time. Each member can only get this reward once.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "Should cumulative spend count from the offer start date only, or include spend made before the offer began?",
+     "Do you want a start or end date for this offer?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "threshold": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S09_unique_locations",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 5.1,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 96,
+  "out_tok": 461,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "unique_count",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 3,
+     "repeat": null,
+     "threshold": null,
+     "dimension": "h_location",
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 300,
+      "privilege_id": null
+     },
+     "raw": {
+      "dimension": "h_location",
+      "n": 3,
+      "reward": {
+       "kind": "points",
+       "points": 300,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Should only SPEND activities count as a store visit, or should other activity types (e.g. REDEMPTION) count too?",
+    "Is there a minimum spend for a visit to count?",
+    "What start and end dates should the offer have?"
+   ],
+   "unsupported": [],
+   "readback": "Once a member has made transactions at 3 different stores (any of Downtown, Mall, Harbour, Airport T1, Airport T2), they get 300 bonus points one time.",
+   "finish": {
+    "readback": "Once a member has made transactions at 3 different stores (any of Downtown, Mall, Harbour, Airport T1, Airport T2), they get 300 bonus points one time.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "Should only SPEND activities count as a store visit, or should other activity types (e.g. REDEMPTION) count too?",
+     "Is there a minimum spend for a visit to count?",
+     "What start and end dates should the offer have?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "dimension": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S09_unique_locations",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.7,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 96,
+  "out_tok": 448,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "unique_count",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 3,
+     "repeat": null,
+     "threshold": null,
+     "dimension": "h_location",
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 300,
+      "privilege_id": null
+     },
+     "raw": {
+      "dimension": "h_location",
+      "n": 3,
+      "reward": {
+       "kind": "points",
+       "points": 300,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Which activity types count as a 'visit'? I assumed SPEND only. Should STAY or BOOKING also count?",
+    "Should all 5 locations count, including Airport T1 and T2? Or only some stores?",
+    "What are the start and end dates for the offer?"
+   ],
+   "unsupported": [],
+   "readback": "When a member has made transactions at 3 different stores (h_location), they get 300 bonus points once.",
+   "finish": {
+    "readback": "When a member has made transactions at 3 different stores (h_location), they get 300 bonus points once.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "Which activity types count as a 'visit'? I assumed SPEND only. Should STAY or BOOKING also count?",
+     "Should all 5 locations count, including Airport T1 and T2? Or only some stores?",
+     "What are the start and end dates for the offer?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "dimension": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S09_unique_locations",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 96,
+  "out_tok": 485,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "unique_count",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 3,
+     "repeat": null,
+     "threshold": null,
+     "dimension": "h_location",
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 300,
+      "privilege_id": null
+     },
+     "raw": {
+      "dimension": "h_location",
+      "n": 3,
+      "reward": {
+       "kind": "points",
+       "points": 300,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Should only SPEND transactions count as a 'visit', or should other activity types (e.g. STAY, BOOKING) count too?",
+    "What are the offer's start and end dates? Should only visits made after the start date count?",
+    "Should all 5 stores count, including the Airport T1 and T2 stores?"
+   ],
+   "unsupported": [],
+   "readback": "When a member has made transactions at 3 different stores (any of Downtown, Mall, Harbour, Airport T1, Airport T2), they get 300 bonus points one time.",
+   "finish": {
+    "readback": "When a member has made transactions at 3 different stores (any of Downtown, Mall, Harbour, Airport T1, Airport T2), they get 300 bonus points one time.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 1,
+    "frequency": "total",
+    "questions": [
+     "Should only SPEND transactions count as a 'visit', or should other activity types (e.g. STAY, BOOKING) count too?",
+     "What are the offer's start and end dates? Should only visits made after the start date count?",
+     "Should all 5 stores count, including the Airport T1 and T2 stores?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "dimension": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S10_unlock_then_earn",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 7.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 99,
+  "out_tok": 780,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "unlock",
+     "measure": null,
+     "multiplier": 2,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_bit_type",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "BOOKING",
+       "values": []
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "trigger": [
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "STAY",
+        "values": []
+       }
+      ],
+      "then_conditions": [
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "BOOKING",
+        "values": []
+       }
+      ],
+      "multiplier": 2
+     }
+    }
+   ],
+   "questions": [
+    "The catalog has one BOOKING activity type and no attribute that marks a booking as a flight. Should all BOOKING activities get double points, or is there a way to identify flight bookings only?",
+    "Should 'double points' be 2x the transaction amount (the base earn doubled), or an extra 1x bonus on top of the base earn?",
+    "Should the doubled earn on bookings last for a limited time after the stay (for example 30 days), or stay unlocked for good? And should only stays with a minimum amount count as the trigger?",
+    "Are there start and end dates for this offer, or any limit per member?"
+   ],
+   "unsupported": [],
+   "readback": "Once a member completes a hotel stay (a STAY activity), every BOOKING activity they make after that earns double points (2x the transaction amount). The offer has no start date, end date or per-member usage limit.",
+   "finish": {
+    "readback": "Once a member completes a hotel stay (a STAY activity), every BOOKING activity they make after that earns double points (2x the transaction amount). The offer has no start date, end date or per-member usage limit.",
+    "activity_types": [
+     "STAY",
+     "BOOKING"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "The catalog has one BOOKING activity type and no attribute that marks a booking as a flight. Should all BOOKING activities get double points, or is there a way to identify flight bookings only?",
+     "Should 'double points' be 2x the transaction amount (the base earn doubled), or an extra 1x bonus on top of the base earn?",
+     "Should the doubled earn on bookings last for a limited time after the stay (for example 30 days), or stay unlocked for good? And should only stays with a minimum amount count as the trigger?",
+     "Are there start and end dates for this offer, or any limit per member?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "multiplier": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S10_unlock_then_earn",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 7.1,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 99,
+  "out_tok": 685,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "unlock",
+     "measure": null,
+     "multiplier": 2,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_bit_type",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "BOOKING",
+       "values": []
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "trigger": [
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "STAY",
+        "values": []
+       }
+      ],
+      "then_conditions": [
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "BOOKING",
+        "values": []
+       }
+      ],
+      "multiplier": 2
+     }
+    }
+   ],
+   "questions": [
+    "The catalog has one BOOKING activity type and no attribute that marks a booking as a flight. Should all BOOKING activities get double points, or is there another way to tell flight bookings apart?",
+    "Does every BOOKING after the first stay get double points with no end, or should the unlock run out (for example, after one booking or after a set number of days)?",
+    "Do you want a start date, an end date, or a per-member usage limit for this offer?"
+   ],
+   "unsupported": [],
+   "readback": "Once a member has completed a hotel stay (activity type STAY), any BOOKING activity they make after that earns double points (booking amount x 2).",
+   "finish": {
+    "readback": "Once a member has completed a hotel stay (activity type STAY), any BOOKING activity they make after that earns double points (booking amount x 2).",
+    "activity_types": [
+     "STAY",
+     "BOOKING"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "The catalog has one BOOKING activity type and no attribute that marks a booking as a flight. Should all BOOKING activities get double points, or is there another way to tell flight bookings apart?",
+     "Does every BOOKING after the first stay get double points with no end, or should the unlock run out (for example, after one booking or after a set number of days)?",
+     "Do you want a start date, an end date, or a per-member usage limit for this offer?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "multiplier": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S10_unlock_then_earn",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 7.4,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 99,
+  "out_tok": 755,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "unlock",
+     "measure": null,
+     "multiplier": 2,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_bit_type",
+       "dimension": "NONE",
+       "op": "==",
+       "value": "BOOKING",
+       "values": []
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "trigger": [
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "STAY",
+        "values": []
+       }
+      ],
+      "then_conditions": [
+       {
+        "object": "activity",
+        "attribute": "h_bit_type",
+        "dimension": "NONE",
+        "op": "==",
+        "value": "BOOKING",
+        "values": []
+       }
+      ],
+      "multiplier": 2
+     }
+    }
+   ],
+   "questions": [
+    "The catalog has a general BOOKING activity type but no way to tell flight bookings from other bookings. Should double points apply to all BOOKING activities, or is there another attribute that marks flights?",
+    "Does 'double points' mean the base points times 2 in total, or an extra 1x bonus on top of base points?",
+    "Should the unlock last forever after one stay, only for a set time after the stay (for example 30 days), or only for the next booking?",
+    "Does this offer have start and end dates, a limit per member, or a points cap?"
+   ],
+   "unsupported": [],
+   "readback": "Once a member has completed a hotel stay (a STAY activity), every BOOKING activity they make after that earns double points (transaction amount \u00d7 2). There are no dates, usage limits or caps.",
+   "finish": {
+    "readback": "Once a member has completed a hotel stay (a STAY activity), every BOOKING activity they make after that earns double points (transaction amount \u00d7 2). There are no dates, usage limits or caps.",
+    "activity_types": [
+     "STAY",
+     "BOOKING"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "The catalog has a general BOOKING activity type but no way to tell flight bookings from other bookings. Should double points apply to all BOOKING activities, or is there another attribute that marks flights?",
+     "Does 'double points' mean the base points times 2 in total, or an extra 1x bonus on top of base points?",
+     "Should the unlock last forever after one stay, only for a set time after the stay (for example 30 days), or only for the next booking?",
+     "Does this offer have start and end dates, a limit per member, or a points cap?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "multiplier": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S11_monthly_streak",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.3,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 103,
+  "out_tok": 446,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "streak",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 3,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": "MONTH",
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 1000,
+      "privilege_id": null
+     },
+     "raw": {
+      "period": "MONTH",
+      "n": 3,
+      "reward": {
+       "kind": "points",
+       "points": 1000,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Should the 1000 points be awarded only once per member, or again for each new run of 3 consecutive months?",
+    "Is there a minimum purchase amount for a month to count toward the streak?",
+    "What start and end dates should the offer have?"
+   ],
+   "unsupported": [],
+   "readback": "Members who make at least one purchase (SPEND activity) in each of 3 consecutive calendar months get 1000 bonus points.",
+   "finish": {
+    "readback": "Members who make at least one purchase (SPEND activity) in each of 3 consecutive calendar months get 1000 bonus points.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should the 1000 points be awarded only once per member, or again for each new run of 3 consecutive months?",
+     "Is there a minimum purchase amount for a month to count toward the streak?",
+     "What start and end dates should the offer have?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "period": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S11_monthly_streak",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.7,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 103,
+  "out_tok": 449,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "streak",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 3,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": "MONTH",
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 1000,
+      "privilege_id": null
+     },
+     "raw": {
+      "period": "MONTH",
+      "n": 3,
+      "reward": {
+       "kind": "points",
+       "points": 1000,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Is the 1000-point streak bonus awarded only once per member, or again for every further run of 3 consecutive months?",
+    "Is there a minimum purchase amount for a month to count toward the streak?",
+    "What start and end dates should the offer have?"
+   ],
+   "unsupported": [],
+   "readback": "Members who make a purchase (SPEND activity) in each of 3 consecutive calendar months receive 1000 bonus points.",
+   "finish": {
+    "readback": "Members who make a purchase (SPEND activity) in each of 3 consecutive calendar months receive 1000 bonus points.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Is the 1000-point streak bonus awarded only once per member, or again for every further run of 3 consecutive months?",
+     "Is there a minimum purchase amount for a month to count toward the streak?",
+     "What start and end dates should the offer have?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "period": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S11_monthly_streak",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.7,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 103,
+  "out_tok": 439,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "streak",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": 3,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": "MONTH",
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": 1000,
+      "privilege_id": null
+     },
+     "raw": {
+      "period": "MONTH",
+      "n": 3,
+      "reward": {
+       "kind": "points",
+       "points": 1000,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Can a member earn the 1000 points only once, or again for each new run of 3 consecutive months?",
+    "Is there a minimum purchase amount for a month to count?",
+    "What are the offer's start and end dates?"
+   ],
+   "unsupported": [],
+   "readback": "Members who make at least one purchase (SPEND activity) in each of 3 consecutive calendar months get 1000 bonus points.",
+   "finish": {
+    "readback": "Members who make at least one purchase (SPEND activity) in each of 3 consecutive calendar months get 1000 bonus points.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Can a member earn the 1000 points only once, or again for each new run of 3 consecutive months?",
+     "Is there a minimum purchase amount for a month to count?",
+     "What are the offer's start and end dates?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "n": true,
+   "period": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S12_birthday_window_once_per_year",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.4,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 106,
+  "out_tok": 449,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "occasion",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": "date_of_birth",
+     "window_days": 20,
+     "max_points": null,
+     "reward": {
+      "points": 500,
+      "privilege_id": null
+     },
+     "raw": {
+      "date_attribute": "date_of_birth",
+      "window_days": 20,
+      "reward": {
+       "kind": "points",
+       "points": 500,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Is there a minimum purchase amount to qualify, or does any purchase count?",
+    "Should the offer have a start or end date, or run with no end date?"
+   ],
+   "unsupported": [],
+   "readback": "When a member makes a purchase (SPEND activity) within 20 days before or after their birthday (date_of_birth), they get 500 bonus points. They can get this once per birthday window, so once a year.",
+   "finish": {
+    "readback": "When a member makes a purchase (SPEND activity) within 20 days before or after their birthday (date_of_birth), they get 500 bonus points. They can get this once per birthday window, so once a year.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Is there a minimum purchase amount to qualify, or does any purchase count?",
+     "Should the offer have a start or end date, or run with no end date?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "window_days": true,
+   "date_attribute": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S12_birthday_window_once_per_year",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.7,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 106,
+  "out_tok": 450,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "occasion",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": "date_of_birth",
+     "window_days": 20,
+     "max_points": null,
+     "reward": {
+      "points": 500,
+      "privilege_id": null
+     },
+     "raw": {
+      "date_attribute": "date_of_birth",
+      "window_days": 20,
+      "reward": {
+       "kind": "points",
+       "points": 500,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Is there a minimum purchase amount to qualify, or does any purchase count?",
+    "Should the offer have a start or end date, or run with no end date?"
+   ],
+   "unsupported": [],
+   "readback": "When a member makes a purchase (SPEND activity) within 20 days before or after their birthday (date_of_birth), they get 500 bonus points. This happens once per birthday window, so at most once a year.",
+   "finish": {
+    "readback": "When a member makes a purchase (SPEND activity) within 20 days before or after their birthday (date_of_birth), they get 500 bonus points. This happens once per birthday window, so at most once a year.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Is there a minimum purchase amount to qualify, or does any purchase count?",
+     "Should the offer have a start or end date, or run with no end date?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "window_days": true,
+   "date_attribute": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S12_birthday_window_once_per_year",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.9,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 106,
+  "out_tok": 448,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "occasion",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": "date_of_birth",
+     "window_days": 20,
+     "max_points": null,
+     "reward": {
+      "points": 500,
+      "privilege_id": null
+     },
+     "raw": {
+      "date_attribute": "date_of_birth",
+      "window_days": 20,
+      "reward": {
+       "kind": "points",
+       "points": 500,
+       "privilege_id": ""
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Should there be a minimum purchase amount to qualify, or does any purchase count?",
+    "Should the offer have a start or end date, or run with no end?"
+   ],
+   "unsupported": [],
+   "readback": "Members get 500 bonus points on a purchase (SPEND activity) made within 20 days before or after their birthday (date_of_birth). They can get it once per birthday window, so at most once a year.",
+   "finish": {
+    "readback": "Members get 500 bonus points on a purchase (SPEND activity) made within 20 days before or after their birthday (date_of_birth). They can get it once per birthday window, so at most once a year.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should there be a minimum purchase amount to qualify, or does any purchase count?",
+     "Should the offer have a start or end date, or run with no end?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "window_days": true,
+   "date_attribute": true,
+   "points": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S13_enrolment_anniversary",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 106,
+  "out_tok": 469,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "occasion",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": "enrollment_date",
+     "window_days": 3,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "date_attribute": "enrollment_date",
+      "window_days": 3,
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Which activity types should trigger the anniversary voucher (e.g. SPEND only, or any activity)?",
+    "Should the offer have a start or end date, or run with no end date?"
+   ],
+   "unsupported": [],
+   "readback": "Each year, when a member has an activity within 3 days before or after their membership enrolment anniversary (a 7-day window), they get one Free Coffee voucher (privilege 501). They can get it once per anniversary, so once a year.",
+   "finish": {
+    "readback": "Each year, when a member has an activity within 3 days before or after their membership enrolment anniversary (a 7-day window), they get one Free Coffee voucher (privilege 501). They can get it once per anniversary, so once a year.",
+    "activity_types": [],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Which activity types should trigger the anniversary voucher (e.g. SPEND only, or any activity)?",
+     "Should the offer have a start or end date, or run with no end date?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "window_days": true,
+   "date_attribute": true,
+   "privilege": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S13_enrolment_anniversary",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.9,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 106,
+  "out_tok": 478,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "occasion",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": "enrollment_date",
+     "window_days": 3,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "date_attribute": "enrollment_date",
+      "window_days": 3,
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Which activity types should qualify for the anniversary reward (e.g. SPEND only, or any activity)? Right now any activity counts.",
+    "Should the offer have a start date or end date? Right now it runs with no end date."
+   ],
+   "unsupported": [],
+   "readback": "Each year, when a member has an activity within 3 days either side of their membership enrolment anniversary (a 7-day window), they get one Free Coffee voucher (privilege 501). This happens once per anniversary each year.",
+   "finish": {
+    "readback": "Each year, when a member has an activity within 3 days either side of their membership enrolment anniversary (a 7-day window), they get one Free Coffee voucher (privilege 501). This happens once per anniversary each year.",
+    "activity_types": [],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Which activity types should qualify for the anniversary reward (e.g. SPEND only, or any activity)? Right now any activity counts.",
+     "Should the offer have a start date or end date? Right now it runs with no end date."
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "window_days": true,
+   "date_attribute": true,
+   "privilege": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S13_enrolment_anniversary",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 5.6,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 106,
+  "out_tok": 508,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "occasion",
+     "measure": null,
+     "multiplier": null,
+     "rate_per_unit": null,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": "enrollment_date",
+     "window_days": 3,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": "501"
+     },
+     "raw": {
+      "date_attribute": "enrollment_date",
+      "window_days": 3,
+      "reward": {
+       "kind": "privilege",
+       "points": 0,
+       "privilege_id": "501"
+      }
+     }
+    }
+   ],
+   "questions": [
+    "Which activity types should trigger the anniversary voucher (e.g. SPEND, STAY, BOOKING)? Right now any activity in the window counts.",
+    "Should members get the voucher in the year they enrol (anniversary year 0), or only from their first full anniversary onward?",
+    "When should the offer start and end? No dates were given."
+   ],
+   "unsupported": [],
+   "readback": "Each year, when a member has an activity within 3 days either side of their membership enrolment anniversary (a 7-day window), they get one Free Coffee voucher. They can get it once per anniversary.",
+   "finish": {
+    "readback": "Each year, when a member has an activity within 3 days either side of their membership enrolment anniversary (a 7-day window), they get one Free Coffee voucher. They can get it once per anniversary.",
+    "activity_types": [],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Which activity types should trigger the anniversary voucher (e.g. SPEND, STAY, BOOKING)? Right now any activity in the window counts.",
+     "Should members get the voucher in the year they enrol (anniversary year 0), or only from their first full anniversary onward?",
+     "When should the offer start and end? No dates were given."
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "window_days": true,
+   "date_attribute": true,
+   "privilege": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S14_simple_sanity",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.7,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 86,
+  "out_tok": 441,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": 10,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "rate_per_unit",
+      "factor": 10,
+      "conditions": [],
+      "or_groups": []
+     }
+    }
+   ],
+   "questions": [
+    "Should this offer have a start/end date, or run indefinitely?"
+   ],
+   "unsupported": [],
+   "readback": "Members earn 10 points for every dollar of transaction amount on SPEND activities. No date limits, conditions, caps or per-member usage limits.",
+   "finish": {
+    "readback": "Members earn 10 points for every dollar of transaction amount on SPEND activities. No date limits, conditions, caps or per-member usage limits.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should this offer have a start/end date, or run indefinitely?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "rate_per_unit": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S14_simple_sanity",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 86,
+  "out_tok": 464,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": 10,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "rate_per_unit",
+      "factor": 10,
+      "conditions": [],
+      "or_groups": []
+     }
+    }
+   ],
+   "questions": [
+    "Should the offer have a start/end date, or run indefinitely starting now?",
+    "Should it apply to all locations and member tiers?"
+   ],
+   "unsupported": [],
+   "readback": "Members earn 10 points for every dollar of transaction amount (h_bit_amount) on SPEND activities. No dates, usage limits or caps are set.",
+   "finish": {
+    "readback": "Members earn 10 points for every dollar of transaction amount (h_bit_amount) on SPEND activities. No dates, usage limits or caps are set.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should the offer have a start/end date, or run indefinitely starting now?",
+     "Should it apply to all locations and member tiers?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "rate_per_unit": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S14_simple_sanity",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 4.5,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 86,
+  "out_tok": 465,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": null,
+     "rate_per_unit": 10,
+     "conditions": [],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "rate_per_unit",
+      "factor": 10,
+      "conditions": [],
+      "or_groups": []
+     }
+    }
+   ],
+   "questions": [
+    "Should the offer have a start or end date, or run indefinitely starting today?",
+    "Should it apply to all member tiers and all locations?"
+   ],
+   "unsupported": [],
+   "readback": "Members earn 10 points for every dollar of transaction amount (h_bit_amount) on SPEND activities. No end date, no usage limit, no cap.",
+   "finish": {
+    "readback": "Members earn 10 points for every dollar of transaction amount (h_bit_amount) on SPEND activities. No end date, no usage limit, no cap.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Should the offer have a start or end date, or run indefinitely starting today?",
+     "Should it apply to all member tiers and all locations?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "kinds": true,
+   "rate_per_unit": true,
+   "no_spurious_unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S15_ambiguous_store",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 11.4,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 90,
+  "out_tok": 1139,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": 3,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_location",
+       "dimension": "NONE",
+       "op": "in",
+       "value": "",
+       "values": [
+        "AP1",
+        "AP2"
+       ]
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "multiplier",
+      "factor": 3,
+      "conditions": [
+       {
+        "object": "activity",
+        "attribute": "h_location",
+        "dimension": "NONE",
+        "op": "in",
+        "value": "",
+        "values": [
+         "AP1",
+         "AP2"
+        ]
+       }
+      ],
+      "or_groups": []
+     }
+    }
+   ],
+   "questions": [
+    "'The airport store' matches two locations: Airport T1 Store (AP1) and Airport T2 Store (AP2). Should the offer cover both, or only one? (Both are included for now.)",
+    "Does 'triple points' mean 3x in total, with base points included (so this offer adds 2x on top of base), or 3x bonus on top of the normal base earn? This draft gives 3x the amount as bonus.",
+    "Is 'this weekend' Saturday 24 to Sunday 25 October 2026, or should Friday be included too?"
+   ],
+   "unsupported": [],
+   "readback": "This weekend only (Saturday 24 to Sunday 25 October 2026), spend transactions at the airport stores earn triple points: points = transaction amount \u00d7 3. For now this covers both Airport T1 (AP1) and Airport T2 (AP2) until you confirm which one you mean.",
+   "finish": {
+    "readback": "This weekend only (Saturday 24 to Sunday 25 October 2026), spend transactions at the airport stores earn triple points: points = transaction amount \u00d7 3. For now this covers both Airport T1 (AP1) and Airport T2 (AP2) until you confirm which one you mean.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "2026-10-24",
+    "end_date": "2026-10-25",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "'The airport store' matches two locations: Airport T1 Store (AP1) and Airport T2 Store (AP2). Should the offer cover both, or only one? (Both are included for now.)",
+     "Does 'triple points' mean 3x in total, with base points included (so this offer adds 2x on top of base), or 3x bonus on top of the normal base earn? This draft gives 3x the amount as bonus.",
+     "Is 'this weekend' Saturday 24 to Sunday 25 October 2026, or should Friday be included too?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "asked": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S15_ambiguous_store",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 10.6,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 90,
+  "out_tok": 1092,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": 3,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_location",
+       "dimension": "NONE",
+       "op": "in",
+       "value": "",
+       "values": [
+        "AP1",
+        "AP2"
+       ]
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "multiplier",
+      "factor": 3,
+      "conditions": [
+       {
+        "object": "activity",
+        "attribute": "h_location",
+        "dimension": "NONE",
+        "op": "in",
+        "value": "",
+        "values": [
+         "AP1",
+         "AP2"
+        ]
+       }
+      ],
+      "or_groups": []
+     }
+    }
+   ],
+   "questions": [
+    "\"The airport store\" matches two locations: Airport T1 Store (AP1) and Airport T2 Store (AP2). I've included both for now. Should it be both, or only one of them?",
+    "Should 'triple points' mean 3\u00d7 the transaction amount in total (base included), or 2\u00d7 bonus on top of the normal base earn? I set it to 3\u00d7 the transaction amount.",
+    "I took 'this weekend' to mean Sat 24 \u2013 Sun 25 Oct 2026. Is that right?"
+   ],
+   "unsupported": [],
+   "readback": "On spend transactions at the Airport stores (Airport T1 Store \u2013 AP1 and Airport T2 Store \u2013 AP2) from Saturday 24 Oct 2026 through Sunday 25 Oct 2026, members earn points equal to 3 \u00d7 the transaction amount. There is no per-member usage limit and no cap.",
+   "finish": {
+    "readback": "On spend transactions at the Airport stores (Airport T1 Store \u2013 AP1 and Airport T2 Store \u2013 AP2) from Saturday 24 Oct 2026 through Sunday 25 Oct 2026, members earn points equal to 3 \u00d7 the transaction amount. There is no per-member usage limit and no cap.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "2026-10-24",
+    "end_date": "2026-10-25",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "\"The airport store\" matches two locations: Airport T1 Store (AP1) and Airport T2 Store (AP2). I've included both for now. Should it be both, or only one of them?",
+     "Should 'triple points' mean 3\u00d7 the transaction amount in total (base included), or 2\u00d7 bonus on top of the normal base earn? I set it to 3\u00d7 the transaction amount.",
+     "I took 'this weekend' to mean Sat 24 \u2013 Sun 25 Oct 2026. Is that right?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "asked": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S15_ambiguous_store",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 10.6,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 90,
+  "out_tok": 1057,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [
+    {
+     "kind": "earn",
+     "measure": "h_bit_amount",
+     "multiplier": 3,
+     "rate_per_unit": null,
+     "conditions": [
+      {
+       "object": "activity",
+       "attribute": "h_location",
+       "dimension": "NONE",
+       "op": "in",
+       "value": "",
+       "values": [
+        "AP1",
+        "AP2"
+       ]
+      }
+     ],
+     "bands": [],
+     "groups": [],
+     "n": null,
+     "repeat": null,
+     "threshold": null,
+     "dimension": null,
+     "period": null,
+     "date_attribute": null,
+     "window_days": null,
+     "max_points": null,
+     "reward": {
+      "points": null,
+      "privilege_id": null
+     },
+     "raw": {
+      "measure": "h_bit_amount",
+      "factor_kind": "multiplier",
+      "factor": 3,
+      "conditions": [
+       {
+        "object": "activity",
+        "attribute": "h_location",
+        "dimension": "NONE",
+        "op": "in",
+        "value": "",
+        "values": [
+         "AP1",
+         "AP2"
+        ]
+       }
+      ],
+      "or_groups": []
+     }
+    }
+   ],
+   "questions": [
+    "'The airport store' could mean two locations: Airport T1 Store (AP1) and Airport T2 Store (AP2). I've included both. Should the offer apply to only one of them?",
+    "Should 'triple points' be 3x points in total (base plus 2x bonus), or a 3x bonus added on top of base points? Right now the offer awards 3 \u00d7 the transaction amount.",
+    "I've taken 'this weekend' to mean Saturday 24 October to Sunday 25 October 2026. Is that right?"
+   ],
+   "unsupported": [],
+   "readback": "On spend transactions at the Airport T1 Store (AP1) or the Airport T2 Store (AP2) from Saturday 24 October 2026 to Sunday 25 October 2026, members earn points equal to 3 \u00d7 the transaction amount.",
+   "finish": {
+    "readback": "On spend transactions at the Airport T1 Store (AP1) or the Airport T2 Store (AP2) from Saturday 24 October 2026 to Sunday 25 October 2026, members earn points equal to 3 \u00d7 the transaction amount.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "2026-10-24",
+    "end_date": "2026-10-25",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "'The airport store' could mean two locations: Airport T1 Store (AP1) and Airport T2 Store (AP2). I've included both. Should the offer apply to only one of them?",
+     "Should 'triple points' be 3x points in total (base plus 2x bonus), or a 3x bonus added on top of base points? Right now the offer awards 3 \u00d7 the transaction amount.",
+     "I've taken 'this weekend' to mean Saturday 24 October to Sunday 25 October 2026. Is that right?"
+    ],
+    "unsupported": []
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "asked": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S16_unsupported_referral",
+  "run": 0,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 7.9,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 101,
+  "out_tok": 728,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [],
+   "questions": [
+    "Is there a referral attribute (e.g. referred_by / referrer member ID) or referral activity type we can add to the catalog? None exists today.",
+    "Should 'each' friend mean 1000 points per qualifying friend, or 1000 points once all referred friends have each spent $100?",
+    "Does 'within a month' mean within 30 days of the friend's enrolment, or within a calendar month?",
+    "Would an alternative work: rewarding the new (referred) member themselves with a milestone bonus when their cumulative spend reaches $100 within their first month?"
+   ],
+   "unsupported": [
+    {
+     "phrase": "members whose referred friends each spend $100 within a month",
+     "reason": "The reward depends on other members' (referred friends') transactions, but offers are evaluated only on a single member's own activities. The catalog also has no referral relationship attribute.",
+     "alternative": "Reward the referred friend directly with a milestone (cumulative h_bit_amount >= 100) restricted to their first month after enrollment_date. Or have the referral system post a referral activity on the referrer's account when a friend qualifies, then award 1000 points with bonus_if on that activity type."
+    }
+   ],
+   "readback": "No rules were created. This offer gives the referring member 1000 points based on what their referred friends spend. The platform only evaluates a member's own transactions, and the catalog has no referral link between members, so this can't be built as written.",
+   "finish": {
+    "readback": "No rules were created. This offer gives the referring member 1000 points based on what their referred friends spend. The platform only evaluates a member's own transactions, and the catalog has no referral link between members, so this can't be built as written.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Is there a referral attribute (e.g. referred_by / referrer member ID) or referral activity type we can add to the catalog? None exists today.",
+     "Should 'each' friend mean 1000 points per qualifying friend, or 1000 points once all referred friends have each spent $100?",
+     "Does 'within a month' mean within 30 days of the friend's enrolment, or within a calendar month?",
+     "Would an alternative work: rewarding the new (referred) member themselves with a milestone bonus when their cumulative spend reaches $100 within their first month?"
+    ],
+    "unsupported": [
+     {
+      "phrase": "members whose referred friends each spend $100 within a month",
+      "reason": "The reward depends on other members' (referred friends') transactions, but offers are evaluated only on a single member's own activities. The catalog also has no referral relationship attribute.",
+      "alternative": "Reward the referred friend directly with a milestone (cumulative h_bit_amount >= 100) restricted to their first month after enrollment_date. Or have the referral system post a referral activity on the referrer's account when a friend qualifies, then award 1000 points with bonus_if on that activity type."
+     }
+    ]
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S16_unsupported_referral",
+  "run": 1,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 9.3,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 101,
+  "out_tok": 852,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [],
+   "questions": [
+    "Does the system record referrals in any way, such as a referrer member attribute or a referral activity type? The catalog has none, so the referrer can't be linked to the friend's spend.",
+    "Do you want the bonus to be earned when each friend spends $100, or only once all referred friends have spent $100?",
+    "Does 'within a month' start from the friend's enrolment date or from the date of the referral?",
+    "Would a different offer work instead? For example, give the referred friend a bonus when they spend at least $100 within 30 days of enrolling, or credit the referrer manually or through a separate referral process."
+   ],
+   "unsupported": [
+    {
+     "phrase": "members whose referred friends each spend $100 within a month",
+     "reason": "The reward goes to one member (the referrer) based on other members' transactions (the referred friends). Offer rules only look at a member's own activities, and the catalog has no referral relationship attribute.",
+     "alternative": "Reward the referred friend on their own spend instead, e.g. a bonus when one transaction or their total spend reaches at least $100 within 30 days of their enrolment date. Or use a referral-program feature or an external process to credit the referrer with 1000 points."
+    }
+   ],
+   "readback": "No rules were created. This offer pays the referring member based on what their referred friends spend. Rules can only look at a single member's own transactions, and the catalog has no referral link between members. So the offer can't be built as described. See the unsupported note and questions for other ways to set it up.",
+   "finish": {
+    "readback": "No rules were created. This offer pays the referring member based on what their referred friends spend. Rules can only look at a single member's own transactions, and the catalog has no referral link between members. So the offer can't be built as described. See the unsupported note and questions for other ways to set it up.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Does the system record referrals in any way, such as a referrer member attribute or a referral activity type? The catalog has none, so the referrer can't be linked to the friend's spend.",
+     "Do you want the bonus to be earned when each friend spends $100, or only once all referred friends have spent $100?",
+     "Does 'within a month' start from the friend's enrolment date or from the date of the referral?",
+     "Would a different offer work instead? For example, give the referred friend a bonus when they spend at least $100 within 30 days of enrolling, or credit the referrer manually or through a separate referral process."
+    ],
+    "unsupported": [
+     {
+      "phrase": "members whose referred friends each spend $100 within a month",
+      "reason": "The reward goes to one member (the referrer) based on other members' transactions (the referred friends). Offer rules only look at a member's own activities, and the catalog has no referral relationship attribute.",
+      "alternative": "Reward the referred friend on their own spend instead, e.g. a bonus when one transaction or their total spend reaches at least $100 within 30 days of their enrolment date. Or use a referral-program feature or an external process to credit the referrer with 1000 points."
+     }
+    ]
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ },
+ {
+  "scenario": "S16_unsupported_referral",
+  "run": 2,
+  "model": "us.anthropic.claude-opus-5-5",
+  "effort": "medium",
+  "latency_s": 8.8,
+  "stop": "tool_use",
+  "repairs": 0,
+  "in_tok": 101,
+  "out_tok": 755,
+  "cache_read": 6399,
+  "output": {
+   "primitives": [],
+   "questions": [
+    "Is there a referral attribute (e.g. referrer member ID or referral date) that could be added to the catalog? Neither the member nor the activity attributes currently include one.",
+    "Does 'within a month' mean within 30 days of the friend enrolling, or within the calendar month?",
+    "Should the referrer get 1000 points per qualifying friend, or 1000 points once all referred friends have each spent $100?"
+   ],
+   "unsupported": [
+    {
+     "phrase": "members whose referred friends each spend $100 within a month",
+     "reason": "The reward goes to one member based on transactions made by other members (the referred friends). An offer rule can only evaluate a single member's own transactions, and the catalog has no referral relationship attribute.",
+     "alternative": "Reward the referred friend instead: a milestone of 1000 points when the new member's cumulative h_bit_amount reaches 100, limited to their first month after enrollment_date (set the targeting and duration in offer settings). Or have the referral system post a dedicated activity on the referrer's account when the friend qualifies, and give a bonus_if 1000 points on that activity type."
+    }
+   ],
+   "readback": "No rules were created. This offer pays the referring member based on what their referred friends spend, which means evaluating other members' transactions. Each offer rule here can only look at one member's own activity, and the catalog has no referral link between members, so this can't be built as described.",
+   "finish": {
+    "readback": "No rules were created. This offer pays the referring member based on what their referred friends spend, which means evaluating other members' transactions. Each offer rule here can only look at one member's own activity, and the catalog has no referral link between members, so this can't be built as described.",
+    "activity_types": [
+     "SPEND"
+    ],
+    "start_date": "",
+    "end_date": "",
+    "max_usage_per_user": 0,
+    "frequency": "none",
+    "questions": [
+     "Is there a referral attribute (e.g. referrer member ID or referral date) that could be added to the catalog? Neither the member nor the activity attributes currently include one.",
+     "Does 'within a month' mean within 30 days of the friend enrolling, or within the calendar month?",
+     "Should the referrer get 1000 points per qualifying friend, or 1000 points once all referred friends have each spent $100?"
+    ],
+    "unsupported": [
+     {
+      "phrase": "members whose referred friends each spend $100 within a month",
+      "reason": "The reward goes to one member based on transactions made by other members (the referred friends). An offer rule can only evaluate a single member's own transactions, and the catalog has no referral relationship attribute.",
+      "alternative": "Reward the referred friend instead: a milestone of 1000 points when the new member's cumulative h_bit_amount reaches 100, limited to their first month after enrollment_date (set the targeting and duration in offer settings). Or have the referral system post a dedicated activity on the referrer's account when the friend qualifies, and give a bonus_if 1000 points on that activity type."
+     }
+    ]
+   },
+   "validation_errors": []
+  },
+  "checks": {
+   "unsupported": true,
+   "schema_valid": true
+  },
+  "status": "PASS"
+ }
+]
