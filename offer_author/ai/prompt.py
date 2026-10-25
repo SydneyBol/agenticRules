@@ -132,12 +132,19 @@ def intro(prompt, parts, context=None, existing=None):
     names = {"offer_main": "Offer Main (set_offer_main)", "segment": "the member segment (segment canvas), if the "
              "offer is limited to certain members", "rules": "the rules (rules canvas)"}
     text = prompt + "\n\nBuild: " + "; ".join(names[p] for p in parts) + "."
-    if "offer_main" not in parts:
-        text += (" Offer Main is set on its own screen: never build dates or limits into a canvas; when the description"
-                 " states some, name them in an offer_main assumption so the manager sets them there.")
-    if "segment" not in parts:
-        text += (" No segment is built in this job: a member limit the description states (\"for Gold members\") that is"
-                 " not listed below as already handled is built in the rules as a member condition, never dropped.")
+    if tuple(parts) == ("rules",) and not context:
+        text += (" Nothing else of this offer exists for this job: no Offer Main settings and no member segment. Build"
+                 " every restriction the description states in the rules: a member limit (\"for Gold members\") as a"
+                 " member condition in the On Activity filter, a per-member limit (\"once\", \"up to 3 times\") with an"
+                 " offer counter. Never build dates into a canvas; name stated dates and per-member limits in an"
+                 " offer_main assumption as well, so the manager can also set them on Offer Main.")
+    else:
+        if "offer_main" not in parts:
+            text += (" Offer Main is set on its own screen: never build its dates or limits into a canvas; when the"
+                     " description states some that are not listed below, name them in an offer_main assumption.")
+        if "segment" not in parts:
+            text += (" No segment is built in this job: a member limit the description states (\"for Gold members\") that"
+                     " is not listed below as already handled is built in the rules as a member condition, never dropped.")
     if context:
         text += f"\n\n{context}"
     if existing and existing.get("counters"):
