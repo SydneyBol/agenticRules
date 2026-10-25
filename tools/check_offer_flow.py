@@ -1,14 +1,14 @@
 """Full offer flow vs the individual component APIs, through the running backend, the stock UI and the engine.
 
   full        the combination is the OFFER MAIN prompt. As the stock wizard does:
-                POST /ai/pulsar/offer/metadata {category offer}       -> Offer Main fields (+ the plan)
-                POST /ai/pulsar/{id}/prompt/offermain                  -> the prompt store splits it
+                POST /ai/pulsar/offer/metadata {category offer}       -> Offer Main fields (+ what the agent set)
+                POST /ai/pulsar/{id}/prompt/offermain                  -> links the offer to that one agent run
                 GET  /ai/pulsar/{id}/prompt/offerrules|offersegmentation -> each screen's own prompt
                 POST /ai/pulsar/offer/metadata {category segment}     -> segment name / description
                 POST /ai/pulsar/segment/rules  (segment stage prompt)  -> segment XML
-                POST /ai/pulsar/offer/rules    (rules stage prompt)    -> rules XML, built with the plan as context
+                POST /ai/pulsar/offer/rules    (rules stage prompt)    -> rules XML from the same run
   individual  each component API alone with its own prompt: /offer/rules with the combination prompt (no Offer Main
-              prompt, no plan), so every condition must be in the rules.
+              prompt, no Offer Main), so every condition must be in the rules.
 
 Rules XML -> the stock rules screen (mock-run.mjs --tenant=devintam1, same DRL as the hosted screen) -> DRL.
 Segment XML -> the stock segment screen (segment-run.mjs) -> segment DRL -> the engine's segment executor (harness
@@ -71,14 +71,13 @@ def call(cl, method, path, body=None):
 def full_flow(cl, c, oid):
     row, p = {"offer_id": oid}, c["prompt"]
     st, md = call(cl, "POST", "/ai/pulsar/offer/metadata", {"prompt": p, "category": "offer"})
-    row["metadata_status"], row["metadata"], plan = st, md.get("metadata"), md.get("plan") or {}
-    row["plan"] = plan
+    row["metadata_status"], row["metadata"], om = st, md.get("metadata"), md.get("offer_main") or {}
+    row["offer_main"] = om
     call(cl, "POST", f"/ai/pulsar/{oid}/prompt/offermain/", {"prompt": p, "offer_status": "planning"})
     rules_p = call(cl, "GET", f"/ai/pulsar/{oid}/prompt/offerrules/")[1].get("prompt", "")
     seg_p = call(cl, "GET", f"/ai/pulsar/{oid}/prompt/offersegmentation/")[1].get("prompt", "")
     row["stage_prompts"] = {"offerrules": rules_p, "offersegmentation": seg_p}
-    row["stage_prompts_match_plan"] = (rules_p == (plan.get("rules") or {}).get("prompt", "")
-                                       and seg_p == (plan.get("segment") or {}).get("prompt", ""))
+    row["stage_prompts_match_offer_main"] = rules_p == om.get("rules_prompt", "") and seg_p == om.get("segment_prompt", "")
     if seg_p.strip():
         row["segment_metadata"] = call(cl, "POST", "/ai/pulsar/offer/metadata", {"prompt": seg_p, "category": "segment"})[1].get("metadata")
         st, s = call(cl, "POST", "/ai/pulsar/segment/rules", {"prompt": seg_p, "sponsor_id": SPONSOR, "id": oid, "type": "reward", "rule_id": c["id"]})
@@ -230,7 +229,7 @@ def check(mode, cases, rows):
             if r.get("segment_drl"):
                 base["segment_drl"] = r["segment_drl"]
                 base["segment_id"] = re.search(r'addValidatedSegmentId\("([^"]+)"\)', r["segment_drl"]).group(1)
-            meta = dict(r.get("metadata") or {}, stated=(r.get("plan") or {}).get("metadata")) if mode == "full" else None
+            meta = dict(r.get("metadata") or {}, stated=r.get("offer_main")) if mode == "full" else None
             out = run_sequence(base, bits, meta, f"flow_{mode}__{c['id']}__{qi}")
             if out.get("compile") != "ok":
                 print(f"   seq{qi} COMPILE {out.get('compile')} {json.dumps(out.get('messages'))[:200]}")

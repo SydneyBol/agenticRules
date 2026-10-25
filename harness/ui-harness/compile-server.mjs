@@ -3,7 +3,7 @@
 // rules: canonical XML, DRL, validation messages, exceptions, dropped/changed fields, and the counters the upload
 // dialog created (the offer starts with none); segment: the add-segment screen's saved XML, DRL, target_json, error.
 // POST /introspect {types, tenant?} -> the dropdown options the screen offers per block field (tools/block_reference.py --live).
-// usage: node compile-server.mjs [--port=8078] [--pool=2] [--headful]   (needs ng serve of gravty-ui on :4200)
+// usage: node compile-server.mjs [--port=8078] [--pool=2] [--busy=4] [--headful]   (needs ng serve of gravty-ui on :4200)
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -15,21 +15,34 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] 
 const PORT = Number(args.port || 8078);
 const POOL = Number(args.pool || 2);
 
-const browser = await puppeteer.launch({
-  executablePath: CHROME, headless: !args.headful, protocolTimeout: 120000,
-  userDataDir: fs.mkdtempSync(path.join(HERE, 'tmp-profile-compile-')), args: CHROME_ARGS,
-});
+const BUSY = Number(args.busy || 4);  // compiles at once; more queue (a crowded Chrome crashes under load)
+
+// The browser survives nothing it does not have to: when Chrome dies, the pools are dropped and the next request
+// launches a fresh one; a request that was in flight gets a 'not loaded' answer, never a dead server.
+let browser = null;
+async function getBrowser() {
+  if (!browser) {
+    browser = puppeteer.launch({
+      executablePath: CHROME, headless: !args.headful, protocolTimeout: 120000,
+      userDataDir: fs.mkdtempSync(path.join(HERE, 'tmp-profile-compile-')), args: CHROME_ARGS,
+    });
+    const b = await browser.catch((e) => { browser = null; throw e; });
+    b.on('disconnected', () => { console.log('chrome disconnected: relaunching on the next request'); browser = null; spares.clear(); });
+  }
+  return browser;
+}
 
 // ready screens per (screen, tenant) ('' = fixture): each is used once (an upload creates counters on its offer), then
 // closed
 const spares = new Map();
+const failed = (e) => ({ error: `screen did not open: ${String(e && e.message || e).slice(0, 300)}`, console: [], context: { close: async () => {} } });
 function warm(tenant, screen = 'rules') {
   const key = `${screen}:${tenant}`;
   const list = spares.get(key) || [];
   spares.set(key, list);
   while (list.length < POOL) {
     const ctx = { counters: [], drlGet: [], posted: [] };
-    list.push(openScreen(browser, { tenant: tenant || null, ctx, screen }));
+    list.push(getBrowser().then((b) => openScreen(b, { tenant: tenant || null, ctx, screen })).catch(failed));
   }
 }
 async function take(tenant, screen = 'rules') {
@@ -38,6 +51,15 @@ async function take(tenant, screen = 'rules') {
   warm(tenant, screen);
   return s;
 }
+
+let running = 0;
+const waiting = [];
+async function limited(fn) {
+  if (running >= BUSY) await new Promise((ok) => waiting.push(ok));
+  running += 1;
+  try { return await fn(); } finally { running -= 1; waiting.shift()?.(); }
+}
+process.on('unhandledRejection', (e) => console.log('unhandled rejection (kept running):', String(e && e.message || e).slice(0, 300)));
 
 async function compile({ xml, tenant = '', canvas = 'rules', path: loadPath = 'upload' }) {
   const t0 = Date.now();
@@ -114,10 +136,10 @@ async function introspect({ tenant = '', types = [] }) {
   }
 }
 
-const routes = { '/compile': compile, '/introspect': introspect };
+const routes = { '/compile': (b) => limited(() => compile(b)), '/introspect': (b) => limited(() => introspect(b)) };
 http.createServer((req, res) => {
   const send = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
-  if (req.method === 'GET' && req.url === '/health') return send(200, { ok: true, pool: Object.fromEntries([...spares].map(([k, v]) => [k, v.length])) });
+  if (req.method === 'GET' && req.url === '/health') return send(200, { ok: true, running, waiting: waiting.length, pool: Object.fromEntries([...spares].map(([k, v]) => [k, v.length])) });
   const fn = routes[req.url];
   if (req.method !== 'POST' || !fn) return send(404, { error: 'POST /compile or /introspect' });
   let body = '';

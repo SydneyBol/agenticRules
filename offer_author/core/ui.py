@@ -5,6 +5,7 @@ the engine will run, and creates the offer counters the XML refers to. Nothing h
 """
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 
@@ -15,16 +16,19 @@ class CompileUnavailable(Exception):
     pass
 
 
-def compile_xml(xml, tenant=None, url=None, timeout=120, canvas="rules"):
+def compile_xml(xml, tenant=None, url=None, timeout=120, canvas="rules", retries=1):
     """canvas 'rules': the offer-rules screen through Upload Rules; 'segment': the add-segment screen."""
     body = {"xml": xml, "tenant": tenant or "", "canvas": canvas}
     req = urllib.request.Request((url or URL) + "/compile", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"}, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read())
-    except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
-        raise CompileUnavailable(f"compile service at {url or URL} not reachable: {e}") from e
+    for attempt in range(retries + 1):  # a compile in flight when the service's Chrome died: once more on a fresh one
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read())
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            if attempt == retries:
+                raise CompileUnavailable(f"compile service at {url or URL} not reachable: {e}") from e
+            time.sleep(3)
 
 
 def problems(res):
