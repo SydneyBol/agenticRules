@@ -44,7 +44,8 @@ def write(res, xml_path, plain):
         xml = ascii_xml(rules["xml"]) if plain else ui_xml(res)
         with open(xml_path, "w", encoding="ascii") as f:
             f.write(xml)
-    side = {k: res.get(k) for k in ("status", "message", "readback", "assumptions", "blocking_questions", "unsupported", "offer_settings")}
+    side = {k: res.get(k) for k in ("status", "message", "readback", "assumptions", "blocking_questions", "unsupported", "by_part",
+                                    "offer_settings")}
     side.update(counters=rules.get("counters", []), rule_count=rules.get("rule_count"), block_count=rules.get("block_count"),
                 latency_s=(res.get("diagnostics") or {}).get("latency_s"), repairs=(res.get("diagnostics") or {}).get("repairs"))
     with open(os.path.splitext(xml_path)[0] + ".json", "w") as f:

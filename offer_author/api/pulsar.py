@@ -12,12 +12,15 @@ What the UI already does (newui develop):
 
 The Offer Main prompt is the prompt for the whole offer: ONE agent run (agent.py) builds Offer Main, the segment and
 the rules; /offer/metadata answers as soon as the agent has set Offer Main, the prompt stages show the segment and
-rules prompts it wrote, and /segment/rules and /offer/rules hand out its canvases. A prompt the manager edits on a
-screen gets its own run for that canvas only, told what the rest of the offer already covers.
+rules prompts it wrote, and /segment/rules and /offer/rules hand out its canvases. Each screen's answer carries only
+its own part (core.session.part_view): the rules answer has the rules' assumptions, questions, unsupported items and
+counters (no Offer Main settings), the segment answer the segment's. A prompt the manager edits on a screen gets its
+own run for that canvas only, told what the rest of the offer already covers.
 
 So this module stores the results per offer, serves them in that contract, and shapes the XML for the upload path:
 ASCII only (the upload path deletes every char outside 0x20-0x7E; we use character references), and the
-readback/assumptions/questions travel as a Blockly comment on the Offer block, the only place the stock UI shows text.
+readback and the rules' own assumptions/questions travel as a Blockly comment on the Offer block, the only place the
+stock UI shows text.
 """
 import base64
 import hashlib
@@ -32,6 +35,7 @@ from flask import Blueprint, jsonify, request
 from ..ai.agent import run as run_agent
 from ..ai.prompt import rules_context
 from ..core.counters import Guard, normalize, notes as counter_notes
+from ..core.session import part_view
 
 log = logging.getLogger("offer_author.pulsar")
 
@@ -65,19 +69,17 @@ def esc(s):
 
 
 def comment_text(res):
+    """The note on the rules canvas: the rules part's own items (Offer Main and the segment answer on their screens)."""
+    v = part_view(res, "rules")
     parts = ["AI draft: " + (res.get("readback") or "")]
-    if res.get("assumptions"):
-        parts.append("Assumptions:\n" + "\n".join("- " + a for a in res["assumptions"]))
-    if res.get("blocking_questions"):
-        parts.append("Please confirm:\n" + "\n".join("- " + q for q in res["blocking_questions"]))
-    if res.get("unsupported"):
-        parts.append("Not built:\n" + "\n".join(f"- {u['phrase']}: {u['reason']}" for u in res["unsupported"]))
+    if v["assumptions"]:
+        parts.append("Assumptions:\n" + "\n".join("- " + a for a in v["assumptions"]))
+    if v["blocking_questions"]:
+        parts.append("Please confirm:\n" + "\n".join("- " + q for q in v["blocking_questions"]))
+    if v["unsupported"]:
+        parts.append("Not built:\n" + "\n".join(f"- {u['phrase']}: {u['reason']}" for u in v["unsupported"]))
     if res.get("counter_notes"):
         parts.append("Counters:\n" + "\n".join("- " + n for n in res["counter_notes"]))
-    s = res.get("offer_settings") or {}
-    settings = ", ".join(f"{k}={v}" for k, v in s.items() if v)
-    if settings:
-        parts.append("Suggested offer settings (set on Offer Main): " + settings)
     return "\n\n".join(parts)
 
 
@@ -89,13 +91,13 @@ def ui_xml(res):
     return ascii_xml(xml).replace("\n", "&#10;")
 
 
-def error_message(res):
+def error_message(res, part):
+    """Why that part was not built, in its own items."""
     if res["status"] == "error":
         return res.get("message") or "The rule generator failed. Please try again."
-    lines = []
-    if res.get("blocking_questions"):
-        lines += res["blocking_questions"]
-    for u in res.get("unsupported") or []:
+    v = part_view(res, part)
+    lines = list(v["blocking_questions"])
+    for u in v["unsupported"]:
         lines.append(f"Can't build '{u['phrase']}': {u['reason']}" + (f" Try: {u['alternative']}" if u.get("alternative") else ""))
     return " ".join(lines) or "I couldn't turn this into rules. Could you describe who earns what, and when?"
 
@@ -163,13 +165,12 @@ def pulsar_blueprint(llm, catalog_for, store=None, counters_for=None):
 
     def answer(res):
         if res.get("rules"):
-            xml = ui_xml(res)
+            xml, v = ui_xml(res), part_view(res, "rules")
             return jsonify({"result": "Generated", "xml": base64.b64encode(xml.encode("ascii")).decode(),
-                            "status": res["status"], "readback": res["readback"], "assumptions": res["assumptions"],
-                            "blocking_questions": res["blocking_questions"], "unsupported": res["unsupported"],
-                            "offer_settings": res["offer_settings"], "counter_report": res["rules"].get("counter_report"),
-                            "counter_notes": res.get("counter_notes", [])})
-        return err(error_message(res), 503 if res["status"] == "error" else 422)
+                            "status": v["status"], "readback": res["readback"], "assumptions": v["assumptions"],
+                            "blocking_questions": v["blocking_questions"], "unsupported": v["unsupported"],
+                            "counter_report": res["rules"].get("counter_report"), "counter_notes": res.get("counter_notes", [])})
+        return err(error_message(res, "rules"), 503 if res["status"] == "error" else 422)
 
     def existing_counters(body, auth):
         """The offer's counters before generating: from the request (harness) or bolapi with the caller's JWT."""
@@ -280,7 +281,7 @@ def pulsar_blueprint(llm, catalog_for, store=None, counters_for=None):
         if not om:
             res = job.get("result") or {}
             if res and res.get("status") != "error":
-                return err(error_message(res), 422)
+                return err(error_message(res, "offer_main"), 422)
             return err(res.get("message") or "Offer details are still being generated. Please try again.", 503)
         catalog = catalog_for(None, None, auth)
         return jsonify(success=True, metadata=offer_main_metadata(om, catalog.today or time.strftime("%Y-%m-%d")),
@@ -301,13 +302,14 @@ def pulsar_blueprint(llm, catalog_for, store=None, counters_for=None):
         if not job["event"].wait(HOLD_S):
             return jsonify({"result": "Generating"})
         r = job["result"]
-        seg = r.get("segment")
+        seg, v = r.get("segment"), part_view(r, "segment")
         if seg:
             raw = ascii_xml(seg["xml"])
             return jsonify({"xml": base64.b64encode(raw.encode("ascii")).decode(), "raw": raw, "rule_id": body.get("rule_id"),
-                            "name": seg["name"], "description": seg["description"], "assumptions": r["assumptions"],
-                            "blocking_questions": r["blocking_questions"], "unsupported": r["unsupported"]})
-        msg = " ".join(r.get("blocking_questions") or []) or " ".join(f"{u['phrase']}: {u['reason']}" for u in r.get("unsupported") or [])
+                            "name": seg["name"], "description": seg["description"], "status": v["status"],
+                            "assumptions": v["assumptions"], "blocking_questions": v["blocking_questions"],
+                            "unsupported": v["unsupported"]})
+        msg = " ".join(v["blocking_questions"]) or " ".join(f"{u['phrase']}: {u['reason']}" for u in v["unsupported"])
         return jsonify({"error": {"code": "SEGMENT_NOT_BUILT", "message": msg or r.get("message") or "No member conditions found."}}), \
             503 if r.get("status") == "error" else 422
 

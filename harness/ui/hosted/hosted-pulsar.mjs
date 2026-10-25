@@ -89,6 +89,9 @@ const loaderUp = () => page.evaluate(() => [...document.querySelectorAll('*')].s
   && /Loading Please Wait|Generating/i.test(e.textContent || '') && e.offsetParent !== null));
 const blocks = () => page.evaluate(() => document.querySelectorAll('.blocklyBlockCanvas g.blocklyDraggable').length);
 
+const dismissToasts = () => page.evaluate(() => document.querySelectorAll('[class*="toast"] [class*="close"], .toast-close-button')
+  .forEach((x) => x.click()));
+
 async function clickSave() {
   const h = await page.evaluateHandle(() => [...document.querySelectorAll('gravty-button, button')].find((e) =>
     /^(Select Offer Preview|Save|Save Changes|Multilingual Support)$/i.test(e.innerText.trim()) && !/launch/i.test(e.innerText) && e.offsetParent !== null) || null);
@@ -245,7 +248,7 @@ try {
           if (n !== last) { last = n; quietSince = Date.now(); } else if (Date.now() - quietSince > 8000 && Date.now() - t0 > 10000) break;
         }
         res.screen_bolapi_calls = last;
-        await page.evaluate(() => document.querySelectorAll('[class*="toast"] [class*="close"], .toast-close-button').forEach((x) => x.click()));
+        await dismissToasts();
         await page.evaluate(() => document.querySelector('img[title="Upload Rules"]').click());
         await sleep(1500);
         // "upload new rules?" confirm, only shown when the offer already has rules
@@ -287,7 +290,7 @@ try {
         await shown('[class*="gen-ai-main-logo"]', 60000);
         await sleep(4000);
         // AI-Trust notifications sit over the top-right corner where the GenAI button is: dismiss them, then click it
-        await page.evaluate(() => document.querySelectorAll('[class*="toast"] [class*="close"], .toast-close-button').forEach((x) => x.click()));
+        await dismissToasts();
         await sleep(800);
         await page.evaluate(() => document.querySelector('[class*="gen-ai-main-logo"]').click());
         await sleep(3000);
@@ -327,6 +330,7 @@ try {
         throw new Error(`generation failed (${gen ? gen.status + ' ' + gen.result : 'no POST /offer/rules'}); not saving`);
       }
       if (WATCH) await sleep(WATCH);
+      await dismissToasts();
       res.save_clicked = await clickSave();
       if (res.save_clicked === 'disabled') {
         say(`${item.key}: SAVE FAILED: Save is disabled (edit-offer permission off for this role); stopping`);
@@ -334,6 +338,12 @@ try {
         break;
       }
       for (let i = 0; i < 60 && !drlCalls.some((c) => c.status); i++) await sleep(500);
+      if (!drlCalls.length) {  // the click sent no DRL save (seen once under an "Offer Test Run Generated" notice): once more
+        say(`${item.key}: no DRL save after 30s; clicking Save again`);
+        await dismissToasts();
+        res.save_retried = await clickSave();
+        for (let i = 0; i < 60 && !drlCalls.some((c) => c.status); i++) await sleep(500);
+      }
       await sleep(2000);
       const call = drlCalls.find((c) => c.status);
       const savedOk = call && call.status < 300;

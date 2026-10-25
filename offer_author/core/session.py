@@ -202,16 +202,46 @@ def finish_blockers(s, parts, x):
     return out
 
 
+NOTE_KEYS = ("assumptions", "blocking_questions", "unsupported")
+
+
+def notes_by_part(fin, parts):
+    """The finish items per part of the job: {part: {assumptions: [text], blocking_questions: [text],
+    unsupported: [{phrase, reason, alternative?}]}}. An item naming no part, or a part outside the job, belongs to
+    every part of the job."""
+    out = {p: {k: [] for k in NOTE_KEYS} for p in parts}
+    for key in NOTE_KEYS:
+        for item in fin.get(key) or []:
+            item = {"text": item} if isinstance(item, str) else item
+            value = {k: v for k, v in item.items() if k != "part"} if key == "unsupported" else item.get("text", "")
+            for p in [item["part"]] if item.get("part") in out else parts:
+                out[p][key].append(value)
+    return out
+
+
+def part_view(res, part):
+    """What one screen's API returns: its part's assumptions, questions and unsupported items, and its status (built:
+    draft, or needs_input when that part asks something; not built: unsupported or needs_input)."""
+    notes = (res.get("by_part") or {}).get(part) or {k: res.get(k) or [] for k in NOTE_KEYS}
+    if res.get("status") == "error":
+        return dict(notes, status="error")
+    built = {"offer_main": res.get("offer_main"), "segment": res.get("segment"), "rules": res.get("rules")}[part]
+    status = ("needs_input" if notes["blocking_questions"] else "draft") if built else \
+        "unsupported" if notes["unsupported"] else "needs_input"
+    return dict(notes, status=status)
+
+
 def outcome(s, fin, parts, offer_id):
     """The run's result from what the tools built and the model's finish (None: it never finished).
-    -> {status, readback, assumptions, blocking_questions, unsupported, offer_main, offer_settings, segment, rules,
-        counter_notes, diagnostics}"""
+    -> {status, readback, assumptions, blocking_questions, unsupported (all parts), by_part (each part's own),
+        offer_main, offer_settings, segment, rules, counter_notes, diagnostics}"""
     finished = fin is not None
     fin = dict({"readback": "", "segment_name": "", "segment_description": "", "assumptions": [], "blocking_questions": [],
                 "unsupported": []}, **(fin or {}))
-    assumptions, unsupported, questions = list(fin["assumptions"]), list(fin["unsupported"]), list(fin["blocking_questions"])
+    by_part = notes_by_part(fin, parts)
     if not finished:
-        assumptions.append("The generator ran out of steps before finishing; review the draft carefully.")
+        for p in parts:
+            by_part[p]["assumptions"].append("The generator ran out of steps before finishing; review the draft carefully.")
 
     rules = segment = None
     done = s.clean.get("rules") or s.last.get("rules")
@@ -227,8 +257,14 @@ def outcome(s, fin, parts, offer_id):
         segment = {"xml": seg["xml"], "name": fin["segment_name"] or "Offer members",
                    "description": fin["segment_description"], "problems": seg["problems"]}
         if rules:
-            assumptions.append(f"Who qualifies is the member segment '{segment['name']}': create and select it on Select "
-                               "Members, otherwise every member qualifies.")
+            by_part["rules"]["assumptions"].append(f"Who qualifies is the member segment '{segment['name']}': create and "
+                                                   "select it on Select Members, otherwise every member qualifies.")
+    # the whole offer's items (CLI, a full-offer reader): each once, in part order
+    assumptions = list(dict.fromkeys(a for p in parts for a in by_part[p]["assumptions"]))
+    questions = list(dict.fromkeys(q for p in parts for q in by_part[p]["blocking_questions"]))
+    unsupported = []
+    for p in parts:
+        unsupported += [u for u in by_part[p]["unsupported"] if u not in unsupported]
     built = rules if "rules" in parts else segment if "segment" in parts else s.offer_main
     if built:
         status = "needs_input" if questions else "draft"
@@ -236,11 +272,14 @@ def outcome(s, fin, parts, offer_id):
         status = "unsupported"
     else:
         status = "needs_input"
-        questions = questions or ["I couldn't turn this into an offer. Could you describe who earns what, and when?"]
+        if not questions:
+            questions = ["I couldn't turn this into an offer. Could you describe who earns what, and when?"]
+            for p in parts:
+                by_part[p]["blocking_questions"] += questions
     sims = [b for sm in s.sims for b in (sm["result"].get("bits") or [])]
     return {"status": status, "readback": fin["readback"], "assumptions": assumptions, "blocking_questions": questions,
-            "unsupported": unsupported, "offer_main": s.offer_main, "offer_settings": offer_settings(s.offer_main),
-            "segment": segment, "rules": rules, "counter_notes": counter_notes(rules["counter_report"]) if rules else [],
+            "unsupported": unsupported, "by_part": by_part, "offer_main": s.offer_main,
+            "offer_settings": offer_settings(s.offer_main), "segment": segment, "rules": rules, "counter_notes": counter_notes(rules["counter_report"]) if rules else [],
             "diagnostics": {"parts": list(parts), "tool_calls": s.counts, "lookups": s.lookups,
                             "simulated_bits": len(sims), "simulated_ok": sum(1 for b in sims if b.get("ok")),
                             "last_sim": s.sims[-1] if s.sims else None, "trace": s.trace,
@@ -249,4 +288,4 @@ def outcome(s, fin, parts, offer_id):
 
 def error_result(message):
     return {"status": "error", "message": message, "readback": "", "assumptions": [], "blocking_questions": [], "unsupported": [],
-            "offer_main": None, "offer_settings": None, "segment": None, "rules": None, "counter_notes": [], "diagnostics": {}}
+            "by_part": {}, "offer_main": None, "offer_settings": None, "segment": None, "rules": None, "counter_notes": [], "diagnostics": {}}

@@ -89,3 +89,33 @@ def test_metadata_without_offer_main_says_why(fixture_catalog):
     r = client(ScriptedLLM([turn]), fixture_catalog).post(
         "/ai/pulsar/offer/metadata", json={"prompt": "Double points this weekend for everyone", "category": "offer"})
     assert r.status_code == 422 and "Which weekend" in r.get_json()["error"]["message"]
+
+
+def test_each_screen_gets_only_its_own_part(fixture_catalog):
+    """Metadata answers for the whole offer; the segment and rules APIs return only their own part's assumptions,
+    questions and unsupported items, and the rules answer carries no Offer Main settings. A question about the
+    segment leaves the rules a draft."""
+    fin = finish(readback="Bronze members earn 2x at Downtown", segment_name="Bronze members", segment_description="Bronze tier.",
+                 assumptions=[{"part": "offer_main", "text": "No start date was stated."},
+                              {"part": "segment", "text": "Bronze is the tier class BRONZE."},
+                              {"part": "rules", "text": "'2x' means points = amount x 2."}],
+                 blocking_questions=[{"part": "segment", "text": "Bronze tier or Bronze test tier?"}])
+    cl = client(ScriptedLLM([[MAIN], [SEG, EARN], [fin]]), fixture_catalog)
+    cl.post("/ai/pulsar/offer/metadata", json={"prompt": MASTER, "category": "offer"})
+    cl.post("/ai/pulsar/9/prompt/offermain/", json={"prompt": MASTER, "offer_status": "planning"})
+    r = cl.post("/ai/pulsar/offer/rules/?regenerate=false", json={"prompt": MASTER, "sponsor_id": 10, "id": 9, "type": "reward"}).get_json()
+    assert r["status"] == "draft" and r["blocking_questions"] == [] and "offer_settings" not in r
+    assert r["assumptions"][0] == "'2x' means points = amount x 2." and not any("start date" in a or "tier class" in a for a in r["assumptions"])
+    note = base64.b64decode(r["xml"]).decode()
+    assert "amount x 2" in note and "Bronze tier or" not in note and "No start date" not in note
+    s = cl.post("/ai/pulsar/segment/rules", json={"prompt": "Bronze members", "sponsor_id": 10, "id": 9, "type": "reward"}).get_json()
+    assert s["status"] == "needs_input" and s["assumptions"] == ["Bronze is the tier class BRONZE."]
+    assert s["blocking_questions"] == ["Bronze tier or Bronze test tier?"]
+
+
+def test_untagged_items_belong_to_every_part():
+    from offer_author.core.session import notes_by_part
+    out = notes_by_part({"assumptions": ["plain", {"part": "rules", "text": "r"}, {"part": "offer_main", "text": "o"}],
+                         "unsupported": [{"part": "segment", "phrase": "friends", "reason": "not own data"}]}, ("segment", "rules"))
+    assert out["rules"]["assumptions"] == ["plain", "r", "o"] and out["segment"]["assumptions"] == ["plain", "o"]
+    assert out["segment"]["unsupported"] == [{"phrase": "friends", "reason": "not own data"}] and out["rules"]["unsupported"] == []

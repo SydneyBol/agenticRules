@@ -84,7 +84,7 @@ def rules_result(row, st, r):
     row["rules_status"] = st
     row["rules_xml"] = base64.b64decode(r["xml"]).decode("ascii") if r.get("xml") else None
     row["rules_error"] = None if r.get("xml") else r.get("error")
-    for k in ("status", "assumptions", "blocking_questions", "unsupported", "offer_settings"):
+    for k in ("status", "assumptions", "blocking_questions", "unsupported"):
         row["rules_" + k] = r.get(k)
     return row
 

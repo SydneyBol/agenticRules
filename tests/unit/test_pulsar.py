@@ -13,7 +13,7 @@ from offer_author.api.service import create_app
 
 pytestmark = pytest.mark.usefixtures("fake_ui")
 EARN = ("compile", golden("S03_combined_weekend_gold_locations"))  # 2x at the Downtown and Mall stores (L1, L2)
-MAIN = offer_main(start_date="2026-11-01")  # a rules-only run still suggests the dates it was told
+MAIN = offer_main(start_date="2026-11-01")  # Offer Main settings: answered by the metadata API, never by the rules
 FIN = finish(readback="2x points at the Downtown Store – weekends only", assumptions=["'2x' means total points"])
 RUN = [[MAIN, EARN], [FIN]]  # the model's turns for one rules generation
 NS = "{https://developers.google.com/blockly/xml}"
@@ -66,7 +66,8 @@ def test_xml_survives_the_stock_upload_filter_and_carries_the_note(fixture_catal
     offer = root.find(NS + "block")
     note = offer.find(NS + "comment").text
     assert offer.get("type") == "offer_generic" and note.startswith("AI draft: 2x points at the Downtown Store – weekends")
-    assert "\n\nAssumptions:\n- '2x' means total points" in note and "start_date=2026-11-01" in note
+    assert "\n\nAssumptions:\n- '2x' means total points" in note
+    assert "start_date" not in note and "offer_settings" not in rules_req(client_for(ScriptedLLM(RUN), fixture_catalog)).get_json()
     assert 'value="L1,L2"' in raw and 'visible_value="Downtown Store,Mall Store"' in raw
 
 

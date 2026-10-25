@@ -3,6 +3,9 @@ code (core/session.py) and never import this."""
 from ..core.tree import COUNTER_LEVELS
 
 S, I, STRS = {"type": "string"}, {"type": "integer"}, {"type": "array", "items": {"type": "string"}}
+PART = {"type": "string", "enum": ["offer_main", "segment", "rules"],
+        "description": "the part it is about; each screen's API returns only its own part's items"}
+NOTES = {"type": "array", "items": {"type": "object", "properties": {"part": PART, "text": S}, "required": ["part", "text"]}}
 
 
 def tool(name, desc, props, required=None):
@@ -57,8 +60,9 @@ TOOLS = [
          {"readback": {"type": "string", "description": "Plain-English description of what the offer will do"},
           "segment_name": {"type": "string", "description": "under 50 characters, when a segment was built"},
           "segment_description": S,
-          "assumptions": STRS, "blocking_questions": STRS,
-          "unsupported": {"type": "array", "items": {"type": "object", "properties": {"phrase": S, "reason": S, "alternative": S},
-                                                      "required": ["phrase", "reason"]}}},
+          "assumptions": NOTES, "blocking_questions": NOTES,
+          "unsupported": {"type": "array", "items": {"type": "object", "properties": {"part": PART, "phrase": S, "reason": S,
+                                                                                       "alternative": S},
+                                                      "required": ["part", "phrase", "reason"]}}},
          required=["readback", "assumptions", "blocking_questions", "unsupported"]),
 ]

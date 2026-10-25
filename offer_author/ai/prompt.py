@@ -72,6 +72,8 @@ Offer semantics:
 - blueprint_variable blocks in the blueprints are template placeholders: never emit them; put concrete values there.
 - Points go to the loyalty account and reward tag the catalog names.
 - When the message says a part is already handled elsewhere, build only what you are asked to build.
+- Every assumption, blocking question and unsupported item names its part (offer_main, segment, rules): the part it
+  is about, i.e. the screen where the manager acts on it. Each screen shows only its own part's items.
 - assumptions: interpretations the manager should glance at. An assumption never drops or widens something the manager
   stated: a stated restriction or measure the toolbox or catalog cannot express goes in `unsupported`, with a reason.
 - blocking_questions: ONLY when no sensible draft is possible without the answer, or when a phrase matches several
@@ -131,8 +133,8 @@ def intro(prompt, parts, context=None, existing=None):
              "offer is limited to certain members", "rules": "the rules (rules canvas)"}
     text = prompt + "\n\nBuild: " + "; ".join(names[p] for p in parts) + "."
     if "offer_main" not in parts:
-        text += (" Offer Main is set on its own screen: still call set_offer_main when the description states dates or"
-                 " limits, so they are suggested there, but never build them into a canvas.")
+        text += (" Offer Main is set on its own screen: never build dates or limits into a canvas; when the description"
+                 " states some, name them in an offer_main assumption so the manager sets them there.")
     if "segment" not in parts:
         text += (" No segment is built in this job: a member limit the description states (\"for Gold members\") that is"
                  " not listed below as already handled is built in the rules as a member condition, never dropped.")
