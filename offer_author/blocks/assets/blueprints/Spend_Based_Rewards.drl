@@ -1,0 +1,16 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Reward Points on Activity";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+            		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "Reward Points on Activity", "REWARD_POINTS", "${loyalty_account}", (((bitHeader.readAttributeN("h_bit_amount"))*(${multiplier}))), bit);
+
+
+
+    end

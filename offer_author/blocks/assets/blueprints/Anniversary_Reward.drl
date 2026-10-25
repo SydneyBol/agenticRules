@@ -1,0 +1,23 @@
+  rule "activity-${offer_id}-2" ${offer_priority}
+                  when
+                    $activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity_type}"))) )
+                  then
+                    String ruleTag = "";
+                    ReadHelper bitHeader = null;
+                    ReadHelper bit = null;
+                    ReadHelper bitPayment = null;
+                      ruleTag = "Reward for Transacting in Wedding Anniversary Month";
+              bitHeader = $activity.getHeaderReadHelper();
+              bit = $activity.getHeaderReadHelper();
+              if(($activity.readAttributeD("h_bit_date", "MONTH") == ($activity.readMemberAttributeD("MONTH","MA_P", "wedding_anniversary", "${offer_id}")))){
+                  		$activity.getActionHelper().pointsAction("${tag}", ${offer_id}, "Reward for Transacting in Wedding Anniversary Month", "REWARD_POINTS", "${loyalty_account}", (((${bonus_points_})*(bitHeader.readAttributeN("h_bit_amount")))), bit);
+
+              }
+    ruleTag = "Reward for Transacting on Wedding Anniversary ";
+              bitHeader = $activity.getHeaderReadHelper();
+              bit = $activity.getHeaderReadHelper();
+              if(($activity.readAttributeD("h_bit_date", "DAY_OF_YEAR") == ($activity.readMemberAttributeD("DAY_OF_YEAR","MA_P", "wedding_anniversary", "${offer_id}")))){
+                  		$activity.getActionHelper().pointsAction("${tag}", ${offer_id}, "Reward for Transacting on Wedding Anniversary ", "REWARD_POINTS", "${loyalty_account}", (((${wedding_anniversary_date_multiplier})*(bitHeader.readAttributeN("h_bit_amount")))), bit);
+
+              }
+                end

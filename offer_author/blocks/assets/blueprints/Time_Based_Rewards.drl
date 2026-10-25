@@ -1,0 +1,28 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Reward on Transaction in Slot-1";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeD("h_bit_date", "HOUR_OF_DAY") >= (${unique_transaction_target_1})) && ($activity.readAttributeD("h_bit_date", "HOUR_OF_DAY") < (${unique_transaction_target_2}))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward on Transaction in Slot-1", "${voucher_1}", "${product_usage_policy_1}", (${voucher_1_value}), (${voucher_1_quantity}),null,null, bit);
+
+        }ruleTag = "Reward on Transaction in Slot-2";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeD("h_bit_date", "HOUR_OF_DAY") >= (${unique_transaction_target_3})) && ($activity.readAttributeD("h_bit_date", "HOUR_OF_DAY") < (${midday_timeslot_end_time}))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward on Transaction in Slot-2", "${voucher_2}", "${product_usage_policy_2}", (${voucher_2_value}), (${voucher_2_quantity}),null,null, bit);
+
+        }ruleTag = "Reward on Transaction in Slot-3";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeD("h_bit_date", "HOUR_OF_DAY") >= (${afternoon_timeslot_start_time})) && ($activity.readAttributeD("h_bit_date", "HOUR_OF_DAY") < (${afternoon_timeslot_end_time}))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward on Transaction in Slot-3", "${voucher_3}", "${product_usage_policy_3}", (${voucher_3_value}), (${voucher_3_quantity}),null,null, bit);
+
+        }
+    end

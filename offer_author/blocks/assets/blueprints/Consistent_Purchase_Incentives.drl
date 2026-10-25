@@ -1,0 +1,54 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Track Purchases";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Track Purchases", "MA_O", "# of Transactions", (1), "INCREMENT_BY", bit);
+
+
+
+    end
+
+
+
+    rule "event-${offer_id}-2"
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && readAttributeS("h_bit_type") == "EVENT")
+    	then
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		String offerTag = "2";
+    		String ruleTag = "";
+    	    ruleTag = "Track Consecutive Purchases ";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "# of Transactions", "${offer_id}") >= (1))){
+        	    		$activity.getActionHelper().updateMTA(${offer_id}, "Track Consecutive Purchases ", "MA_O", "# of Consecutive Purchases", (1), "INCREMENT_BY", bit);
+
+        }ruleTag = "Reward on Consecutive Purchases";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "# of Consecutive Purchases", "${offer_id}") == (${streak_limit}))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "Reward on Consecutive Purchases", "REWARD_POINTS", "${loyalty_account}", (${bonus_points}), bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Reward on Consecutive Purchases", "MA_O", "# of Consecutive Purchases", 0, "RESET", bit);
+
+        }ruleTag = "Reset Tracker on Breaking the Streak";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "# of Transactions", "${offer_id}") == (0))){
+        	    		$activity.getActionHelper().updateMTA(${offer_id}, "Reset Tracker on Breaking the Streak", "MA_O", "# of Consecutive Purchases", 0, "RESET", bit);
+
+        }ruleTag = "Reset Transactions Count";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Reset Transactions Count", "MA_O", "# of Transactions", 0, "RESET", bit);
+
+
+
+    end

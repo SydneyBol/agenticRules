@@ -1,0 +1,17 @@
+  rule "activity-${offer_id}-2" ${offer_priority}
+                  when
+                    $activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && (readAttributeS("h_bit_type") == "BOOKING" &&
+    ((DateUtils.getDate(readAttributeS("h_date_of_booking")).compareTo(DateUtils.getDate("${promotion_start_date}"))>0)&&(DateUtils.getDate(readAttributeS("h_date_of_booking")).compareTo(DateUtils.getDate("${promotion_end_date}"))<0))) )
+                  then
+                    String ruleTag = "";
+                    ReadHelper bitHeader = null;
+                    ReadHelper bit = null;
+                    ReadHelper bitPayment = null;
+                      ruleTag = "Track ";
+              bitHeader = $activity.getHeaderReadHelper();
+              bit = $activity.getHeaderReadHelper();
+              if(($activity.existInListS(bitHeader.readAttributeS("h_bit_source"), "${booking_channel}"))){
+                  		$activity.getActionHelper().assignPrivilege(${offer_id}, "Track ", "${voucher}", "${voucher_usage_policy}", (${voucher_value}), (${voucher_quantity}),null,null, bit);
+
+              }
+                end

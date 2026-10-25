@@ -1,0 +1,23 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Track Points Redeemed";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if((bitHeader.readAttributeS("h_bit_type").contentEquals("PAYMENT_WITH_POINTS"))){
+        	    		$activity.getActionHelper().updateMTA(${offer_id}, "Track Points Redeemed", "MA_O", "Total Points Redeemed", (bitHeader.readAttributeS("")), "INCREMENT_BY", bit);
+
+        }ruleTag = "Reward on Achieving Points Redemption - Milestone";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.existInListS(bitHeader.readAttributeS("h_bit_type"), "${activity}")) && ($activity.readAttributeN("member",null,"MA_O", "Total Points Redeemed", "${offer_id}") >= (${milestone_1})) && (!($activity.readAttributeS("member",null,"MA_O", "Reward Received", "${offer_id}").contentEquals("Yes")))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "Reward on Achieving Points Redemption - Milestone", "REWARD_POINTS", "${loyalty_account}", (${bonus_points}), bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Reward on Achieving Points Redemption - Milestone", "MA_O", "Reward Received", (String.valueOf("Yes")), "SET", bit);
+
+        }
+    end

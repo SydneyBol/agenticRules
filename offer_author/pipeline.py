@@ -4,6 +4,7 @@ Always returns a result the UI can show: a draft, a draft with blocking question
 unsupported, or an error message. Never an empty response (the Pulsar failure mode).
 """
 import json
+import os
 import time
 
 from . import grammar
@@ -125,7 +126,12 @@ def offer_settings(fin):
 
 def generate(prompt, catalog, llm, offer_id=None, account_id=None, tag=None, max_repairs=1, context=None, existing=None):
     """context: what the offer plan already placed in Offer Main / the segment (planner.rules_context).
-    existing: {offer_status, counters} already on the offer (counters.py); None = not known."""
+    existing: {offer_status, counters} already on the offer (counters.py); None = not known.
+    OFFER_AUTHOR_ENGINE=blocks: the model writes the block XML itself (blocks/agent.py), same result shape."""
+    if os.environ.get("OFFER_AUTHOR_ENGINE") == "blocks":
+        from .blocks.agent import generate as generate_blocks
+        return generate_blocks(prompt, catalog, llm, offer_id=offer_id, account_id=account_id, tag=tag, context=context,
+                               existing=existing)
     t0 = time.time()
     system = system_blocks(catalog, account_id)
     messages = [{"role": "user", "content": prompt + (f"\n\n{context}" if context else "")}]

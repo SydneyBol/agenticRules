@@ -1,0 +1,37 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Track Total Miles Flown";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Track Total Miles Flown", "MA_O", "Total Miles Flown", ($activity.getActionHelper().getAirportPairValues(${offer_id}, "distance_flown")), "INCREMENT_BY", bit);
+
+
+        ruleTag = "Reward for Miles Flown - Milestone 1";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "Total Miles Flown", "${offer_id}") >= (${unique_transaction_target_1})) && (!($activity.readAttributeS("member",null,"MA_O", "Milestone 1 Reward Received", "${offer_id}").contentEquals("Yes")))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward for Miles Flown - Milestone 1", "${voucher_1}", "${product_usage_policy_1}", (${voucher_1_value}), (${voucher_1_quantity}),null,null, bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Reward for Miles Flown - Milestone 1", "MA_O", "Milestone 1 Reward Received", (String.valueOf("Yes")), "SET", bit);
+
+        }ruleTag = "Reward for Miles Flown - Milestone 2";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "Total Miles Flown", "${offer_id}") >= (${unique_transaction_target_2})) && (!($activity.readAttributeS("member",null,"MA_O", "Milestone 2 Reward Received", "${offer_id}").contentEquals("Yes")))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward for Miles Flown - Milestone 2", "${voucher_2}", "${product_usage_policy_2}", (${voucher_2_value}), (${voucher_2_quantity}),null,null, bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Reward for Miles Flown - Milestone 2", "MA_O", "Milestone 2 Reward Received", (String.valueOf("Yes")), "SET", bit);
+
+        }ruleTag = "Reward for Miles Flown - Milestone 3";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "Total Miles Flown", "${offer_id}") >= (${unique_transaction_target_3})) && (!($activity.readAttributeS("member",null,"MA_O", "Milestone 3 Reward Received", "${offer_id}").contentEquals("Yes")))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward for Miles Flown - Milestone 3", "${voucher_3}", "${product_usage_policy_3}", (${voucher_3_value}), (${voucher_3_quantity}),null,null, bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Reward for Miles Flown - Milestone 3", "MA_O", "Milestone 3 Reward Received", (String.valueOf("Yes")), "SET", bit);
+
+        }
+    end

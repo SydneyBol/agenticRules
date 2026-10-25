@@ -1,0 +1,22 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Offer Eligibility";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.existInListS(bitHeader.readAttributeS("h_sponsor_id"), "${sponsor_names_for_unlock}"))){
+        	    		$activity.getActionHelper().updateMTA(${offer_id}, "Offer Eligibility", "MA_O", "Unlock Sponsor Transaction", (String.valueOf("Yes")), "SET", bit);
+
+        }ruleTag = "Reward for Next Eligible Transaction";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.existInListS(bitHeader.readAttributeS("h_sponsor_id"), "${reward_sponsor_names}")) && ($activity.readAttributeS("member",null,"MA_O", "Unlock Sponsor Transaction", "${offer_id}").contentEquals("Yes"))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "Reward for Next Eligible Transaction", "REWARD_POINTS", "${loyalty_account}", (((bitHeader.readAttributeN("h_bit_amount"))*(${multiplier}))), bit);
+
+        }
+    end

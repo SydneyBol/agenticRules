@@ -1,0 +1,139 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Grid 1 Product Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.existInListS(bit.readAttributeS("l_product_external_id"), "${grid_1_product}"))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 1 Product Check", String.valueOf(bit.readAttributeS("l_product_external_id")), "MA_O", "Grid 1 SKU", (1), "INCREMENT_BY", bit,"bit","l_product_external_id");
+
+        	}
+        }ruleTag = "Grid 1 Quantity Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.readAttributeN("member", String.valueOf(bit.readAttributeS("l_product_external_id")),"MA_O", "Grid 1 SKU", "${offer_id}") == (1))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 1 Quantity Check", "MA_O", "Grid 1 Quantity Purchased", (1), "INCREMENT_BY", bit);
+
+        	}
+        }ruleTag = "Grid 1 Qualification Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.readAttributeN("member",null,"MA_O", "Grid 1 Quantity Purchased", "${offer_id}") >= (${grid_1_quantity})) && (!($activity.readAttributeS("member",null,"MA_O", "Grid 1 Completion", "${offer_id}").contentEquals("Yes")))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 1 Qualification Check", "MA_O", "Grids Completed", (1), "INCREMENT_BY", bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 1 Qualification Check", "MA_O", "Grid 1 Completion", (String.valueOf("Yes")), "SET", bit);
+
+        	}
+        }ruleTag = "Grid 2 Product Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.existInListS(bit.readAttributeS("l_product_external_id"), "${grid_2_products}"))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 2 Product Check", String.valueOf(bit.readAttributeS("l_product_external_id")), "MA_O", "Grid 2 SKU", (1), "INCREMENT_BY", bit,"bit","l_product_external_id");
+
+        	}
+        }ruleTag = "Grid 2 Quantity Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.readAttributeN("member", String.valueOf(bit.readAttributeS("l_product_external_id")),"MA_O", "Grid 2 SKU", "${offer_id}") == (1))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 2 Quantity Check", "MA_O", "Grid 2 Quantity Purchased", (1), "INCREMENT_BY", bit);
+
+        	}
+        }ruleTag = "Grid 2 Qualification Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.readAttributeN("member",null,"MA_O", "Grid 2 Quantity Purchased", "${offer_id}") >= (${grid_2_quantity})) && (!($activity.readAttributeS("member",null,"MA_O", "Grid 2 Completion", "${offer_id}").contentEquals("Yes")))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 2 Qualification Check", "MA_O", "Grids Completed", (1), "INCREMENT_BY", bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 2 Qualification Check", "MA_O", "Grid 2 Completion", (String.valueOf("Yes")), "SET", bit);
+
+        	}
+        }ruleTag = "Grid 3 Product Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.existInListS(bit.readAttributeS("l_product_external_id"), "${grid_3_product}"))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 3 Product Check", String.valueOf(bit.readAttributeS("l_product_external_id")), "MA_O", "Grid 3 SKU", (1), "INCREMENT_BY", bit,"bit","l_product_external_id");
+
+        	}
+        }ruleTag = "Grid 3 Quantity Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.readAttributeN("member", String.valueOf(bit.readAttributeS("l_product_external_id")),"MA_O", "Grid 3 SKU", "${offer_id}") == (1))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 3 Quantity Check", "MA_O", "Grid 3 Quantity Purchased", (1), "INCREMENT_BY", bit);
+
+        	}
+        }ruleTag = "Grid 3 Qualification Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.readAttributeN("member",null,"MA_O", "Grid 3 Quantity Purchased", "${offer_id}") >= (${grid_3_quantity})) && (!($activity.readAttributeS("member",null,"MA_O", "Grid 3 Completion", "${offer_id}").contentEquals("Yes")))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 3 Qualification Check", "MA_O", "Grids Completed", (1), "INCREMENT_BY", bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 3 Qualification Check", "MA_O", "Grid 3 Completion", (String.valueOf("Yes")), "SET", bit);
+
+        	}
+        }ruleTag = "Grid 4 Product Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.existInListS(bit.readAttributeS("l_product_external_id"), "${grid_4_products}"))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 4 Product Check", String.valueOf(bit.readAttributeS("l_product_external_id")), "MA_O", "Grid 4 SKU", (1), "INCREMENT_BY", bit,"bit","l_product_external_id");
+
+        	}
+        }ruleTag = "Grid 4 Quantity Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.readAttributeN("member", String.valueOf(bit.readAttributeS("l_product_external_id")),"MA_O", "Grid 4 SKU", "${offer_id}") == (1))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 4 Quantity Check", "MA_O", "Grid 4 Quantity Purchased", (1), "INCREMENT_BY", bit);
+
+        	}
+        }ruleTag = "Grid 4 Qualification Check";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.readAttributeN("member",null,"MA_O", "Grid 4 Quantity Purchased", "${offer_id}") >= (${grid_4_quantity})) && (!($activity.readAttributeS("member",null,"MA_O", "Grid 4 Completion", "${offer_id}").contentEquals("Yes")))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 4 Qualification Check", "MA_O", "Grids Completed", (1), "INCREMENT_BY", bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Grid 4 Qualification Check", "MA_O", "Grid 4 Completion", (String.valueOf("Yes")), "SET", bit);
+
+        	}
+        }ruleTag = "Wildcard Completion";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.existInListS(bit.readAttributeS("l_product_external_id"), "${wildcard_product}")) && (!($activity.readAttributeS("member",null,"MA_O", "Wildcard Completion", "${offer_id}").contentEquals("Yes")))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Wildcard Completion", "MA_O", "Grids Completed", (1), "INCREMENT_BY", bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Wildcard Completion", "MA_O", "Wildcard Completion", (String.valueOf("Yes")), "SET", bit);
+
+        	}
+        }ruleTag = "Grid Reward";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "Grids Completed", "${offer_id}") >= (4)) && (!($activity.readAttributeS("member",null,"MA_O", "Challenge Completed", "${offer_id}").contentEquals("Yes")))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag_}", ${offer_id}, "Grid Reward", "REWARD_POINTS", "${loyalty_account_}", (${points_to_be_rewarded}), bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Grid Reward", "MA_O", "Challenge Completed", (String.valueOf("Yes")), "SET", bit);
+
+        }
+    end

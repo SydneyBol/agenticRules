@@ -1,0 +1,16 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Happy Hour Rewards";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeD("h_bit_date", "DAY_OF_WEEK") == (${weekday_number_1})) && (($activity.readAttributeD("h_bit_date", "HOUR_OF_DAY") > (${hour_1_selection}))&&($activity.readAttributeD("h_bit_date", "HOUR_OF_DAY") < (${hour_2_selection})))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "Happy Hour Rewards", "REWARD_POINTS", "${loyalty_account}", (((${points_multiplier})*(bitHeader.readAttributeN("h_bit_amount")))), bit);
+
+        }
+    end

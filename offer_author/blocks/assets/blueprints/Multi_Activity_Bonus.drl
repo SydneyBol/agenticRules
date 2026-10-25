@@ -1,0 +1,29 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity_1}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Tracking the Activity Performed by the Member";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if((!($activity.readAttributeS("member",null,"MA_O", "Bonus Rewarded", "${offer_id}").contentEquals("Yes")))){
+        	    		$activity.getActionHelper().updateMTA(${offer_id}, "Tracking the Activity Performed by the Member", String.valueOf(bitHeader.readAttributeS("h_bit_type")), "MA_O", "# of Activities Performed", (1), "INCREMENT_BY", bit,"bit","h_bit_type");
+
+        }ruleTag = "Track the Unique Activity Performed by the Member";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member", String.valueOf(bitHeader.readAttributeS("h_bit_type")),"MA_O", "# of Activities Performed", "${offer_id}") == 1) && (!($activity.readAttributeS("member",null,"MA_O", "Bonus Rewarded", "${offer_id}").contentEquals("Yes")))){
+        	    		$activity.getActionHelper().updateMTA(${offer_id}, "Track the Unique Activity Performed by the Member", "MA_O", "# of Unique Activities Performed", (1), "INCREMENT_BY", bit);
+
+        }ruleTag = "Reward Member on Completing the Milestone";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "# of Unique Activities Performed", "${offer_id}") == (${number_of_of_unique_activities_to_perform})) && (!($activity.readAttributeS("member",null,"MA_O", "Bonus Rewarded", "${offer_id}").contentEquals("Yes")))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward Member on Completing the Milestone", "${voucher}", (${voucher_value}), (${voucher_quantity}),null,null, bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Reward Member on Completing the Milestone", "MA_O", "Bonus Rewarded", (String.valueOf("Yes")), "SET", bit);
+
+        }
+    end

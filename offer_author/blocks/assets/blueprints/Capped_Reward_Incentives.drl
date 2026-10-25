@@ -1,0 +1,30 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Calculate Possible Points that can be earned from Activity";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "Points Rewarded to Date", "${offer_id}") < (${points_limit}))){
+        	    		$activity.getActionHelper().updateMTA(${offer_id}, "Calculate Possible Points that can be earned from Activity", "MA_A", "Points Earned for Activity", (((${points_multiplier})*(bitHeader.readAttributeN("h_bit_amount")))), "SET", bit);
+
+        }ruleTag = "For Points Earned > Points Cap";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_A", "Points Earned for Activity", "${offer_id}") > (((${points_limit})-($activity.readAttributeN("member",null,"MA_O", "Points Rewarded to Date", "${offer_id}")))))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "For Points Earned > Points Cap", "REWARD_POINTS", "${loyalty_account}", (((${points_limit})-($activity.readAttributeN("member",null,"MA_O", "Points Rewarded to Date", "${offer_id}")))), bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "For Points Earned > Points Cap", "MA_O", "Points Rewarded to Date", (((${points_limit})-($activity.readAttributeN("member",null,"MA_O", "Points Rewarded to Date", "${offer_id}")))), "INCREMENT_BY", bit);
+
+        }ruleTag = "For Points Earned < Points Cap";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_A", "Points Earned for Activity", "${offer_id}") <= (((${points_limit})-($activity.readAttributeN("member",null,"MA_O", "Points Rewarded to Date", "${offer_id}")))))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "For Points Earned < Points Cap", "REWARD_POINTS", "${loyalty_account}", ($activity.readAttributeN("member",null,"MA_A", "Points Earned for Activity", "${offer_id}")), bit);
+            		$activity.getActionHelper().updateMTA(${offer_id}, "For Points Earned < Points Cap", "MA_O", "Points Rewarded to Date", ($activity.readAttributeN("member",null,"MA_A", "Points Earned for Activity", "${offer_id}")), "INCREMENT_BY", bit);
+
+        }
+    end

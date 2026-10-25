@@ -22,8 +22,9 @@ from offer_author.pulsar import ui_xml
 from offer_author.rule_xml import offer_xml
 
 pytestmark = pytest.mark.e2e
-LIVE = os.path.join(ROOT, "tests", ".live")
-IN_DIR, UI_DIR = "proto_catalog", "ui_proto_catalog"
+BLOCKS = os.environ.get("OFFER_AUTHOR_ENGINE") == "blocks"  # blocks mode: its own live results and harness dirs
+LIVE = os.path.join(ROOT, "tests", ".live" + ("_blocks" if BLOCKS else ""))
+IN_DIR, UI_DIR = ("blocks_catalog", "ui_blocks_catalog") if BLOCKS else ("proto_catalog", "ui_proto_catalog")
 JAR = os.path.join(SPIKE, "engine-harness", "target", "harness.jar")
 SKU_CATEGORY = {"SNK-1": "SNACKS", "SNK-2": "SNACKS", "DRK-1": "DRINKS", "BAK-1": "BAKERY"}
 MEMBER = {"tier": "GOLD", "date_of_birth": "1990-06-15"}

@@ -1,0 +1,22 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity_1}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Reward for Transacting in Birthday Month";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeD("h_bit_date", "MONTH") == ($activity.readMemberAttributeD("MONTH","MA_P", "date_of_birth", "${offer_id}", "${targeted_segment}")))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "Reward for Transacting in Birthday Month", "REWARD_POINTS", "${loyalty_account}", (((${points_multiplier_1})*(bitHeader.readAttributeN("h_bit_amount")))), bit);
+
+        }ruleTag = "Reward for Transacting on Birthday";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeD("h_bit_date", "DAY_OF_YEAR") == ($activity.readMemberAttributeD("DAY_OF_YEAR","MA_P", "date_of_birth", "${offer_id}", "${targeted_segment}")))){
+        	    		$activity.getActionHelper().pointsAction("${loyalty_account_tag}", ${offer_id}, "Reward for Transacting on Birthday", "REWARD_POINTS", "${loyalty_account}", (((${points_multiplier})*(bitHeader.readAttributeN("h_bit_amount")))), bit);
+
+        }
+    end

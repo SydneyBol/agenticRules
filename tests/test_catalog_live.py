@@ -18,7 +18,7 @@ from offer_author.pipeline import generate
 from offer_author.pulsar import ui_xml
 
 pytestmark = pytest.mark.live
-LIVE = os.path.join(ROOT, "tests", ".live")
+LIVE = os.path.join(ROOT, "tests", ".live" + ("_blocks" if os.environ.get("OFFER_AUTHOR_ENGINE") == "blocks" else ""))
 PROMPT_CASES = [c for c in catalog.load() if c.get("prompt")]
 
 

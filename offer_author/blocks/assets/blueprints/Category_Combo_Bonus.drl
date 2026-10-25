@@ -1,0 +1,34 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Track Purchase in Product Category 1";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.existInListS(bit.readAttributeS("category"), "${target_product_1}"))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Track Purchase in Product Category 1", "MA_A", "Category 1 Purchase Completed", (String.valueOf("Yes")), "SET", bit);
+
+        	}
+        }ruleTag = "Track Purchase in Product Category 2";
+
+        for(int line = 0; line < $activity.getBitLines().size(); line++){
+        	bitHeader = $activity.getHeaderReadHelper();
+        	bit = $activity.getLineReadHelper(line);
+        	if(${line_eligibility_check} && ($activity.existInListS(bit.readAttributeS("category"), "${target_product_2}"))) {
+        		    		$activity.getActionHelper().updateMTA(${offer_id}, "Track Purchase in Product Category 2", "MA_A", "Category 2 Purchase Completed", (String.valueOf("Yes")), "SET", bit);
+
+        	}
+        }ruleTag = "Reward on Completing Purchase in 2 Categories";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeS("member",null,"MA_A", "Category 1 Purchase Completed", "${offer_id}").contentEquals("Yes")) && ($activity.readAttributeS("member",null,"MA_A", "Category 2 Purchase Completed", "${offer_id}").contentEquals("Yes"))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward on Completing Purchase in 2 Categories", "${voucher}", (${voucher_value}), (${voucher_quantity}),null,null, bit);
+
+        }
+    end

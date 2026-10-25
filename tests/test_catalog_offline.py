@@ -34,9 +34,17 @@ SLOT_PAIRS = [(slot, child) for slot, kids in catalog.slots().items() for child 
 
 @pytest.mark.parametrize("slot,child", SLOT_PAIRS, ids=[f"{s}<-{c}" for s, c in SLOT_PAIRS])
 def test_slot_pair_builds(slot, child):
-    """Every container input with every child its setCheck allows must be buildable and serialisable."""
-    try:
-        from offer_author import blocks  # noqa: F401  the spec-driven block builder (not built yet)
-    except ImportError:
-        pytest.xfail("no block-level builder yet: the compiler only emits the shapes its 12 primitives use")
-    raise AssertionError("block builder present but this test is not wired to it yet")
+    """Every container input with every child its setCheck allows is accepted by blocks mode's offline check, whose
+    connection rules come from the block reference generated from the UI source (tools/block_reference.py)."""
+    from offer_author.blocks.check import check, reference
+    parent, inp = slot.split(".")
+    ref = reference()
+    kind = "statement" if inp in {i["name"] for i in ref[parent]["statement_inputs"]} else "value"
+    inner = f'<block type="{child}" id="c"/>'
+    body = f'<block type="{parent}" id="p"><{kind} name="{inp}">{inner}</{kind}></block>'
+    # place the parent where it belongs so only the pair under test is judged
+    ctx = {"offer_generic": "{}", "activity": '<block type="offer_generic"><statement name="activities">{}</statement></block>',
+           "event": '<block type="offer_generic"><statement name="events">{}</statement></block>'}
+    xml = '<xml xmlns="https://developers.google.com/blockly/xml">' + ctx.get(parent, '<block type="offer_generic">{}</block>').format(body) + "</xml>"
+    problems = [p for p in check(xml, None, ref) if f"{child} cannot plug in" in p or "has no" in p]
+    assert not problems, problems

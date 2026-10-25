@@ -1,0 +1,29 @@
+    rule "activity-${offer_id}-2" ${offer_priority}
+    	when
+    		$activity : BitExecutionContext(${header_eligibility_check} && (readAttributeS("h_bit_type") != "EVENT")  && ((existInListS(readAttributeS("h_bit_type"), "${activity}"))) )
+    	then
+    		String ruleTag = "";
+    		ReadHelper bitHeader = null;
+    		ReadHelper bit = null;
+    		ReadHelper bitPayment = null;
+    		    ruleTag = "Track Activities and Spend with Sponsors";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Track Activities and Spend with Sponsors", String.valueOf(bitHeader.readAttributeS("h_sponsor_id")), "MA_O", "# of Visits per Sponsor", (1), "INCREMENT_BY", bit,"bit","h_sponsor_id");
+            		$activity.getActionHelper().updateMTA(${offer_id}, "Track Activities and Spend with Sponsors", "MA_O", "Total Amount Spent", (bitHeader.readAttributeN("h_bit_amount")), "INCREMENT_BY", bit);
+
+
+        ruleTag = "Track Activities with Unique Sponsors";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member", String.valueOf(bitHeader.readAttributeS("h_sponsor_id")),"MA_O", "# of Visits per Sponsor", "${offer_id}") == 1)){
+        	    		$activity.getActionHelper().updateMTA(${offer_id}, "Track Activities with Unique Sponsors", "MA_O", "# of Unique Sponsors Transacted with", (1), "INCREMENT_BY", bit);
+
+        }ruleTag = "Reward on Achieving the Milestone";
+        bitHeader = $activity.getHeaderReadHelper();
+        bit = $activity.getHeaderReadHelper();
+        if(($activity.readAttributeN("member",null,"MA_O", "# of Unique Sponsors Transacted with", "${offer_id}") == (${unique_transaction_count})) && ($activity.readAttributeN("member",null,"MA_O", "Total Amount Spent", "${offer_id}") >= (${amount_spent}))){
+        	    		$activity.getActionHelper().assignPrivilege(${offer_id}, "Reward on Achieving the Milestone", "${voucher}", (${voucher_value}), (${voucher_quantity}),null,null, bit);
+
+        }
+    end
