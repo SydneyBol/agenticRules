@@ -27,10 +27,10 @@ class BedrockLLM:
     QA (2026-10-25); OFFER_AUTHOR_MODEL=us.anthropic.claude-opus-5-5 switches back.
     """
 
-    def __init__(self, model=None, region=None, effort="medium", max_tokens=16000, retries=2, client=None):
+    def __init__(self, model=None, region=None, effort="medium", thinking=None, max_tokens=16000, retries=2, client=None):
         from anthropic import AnthropicBedrock
         self.model = model or os.environ.get("OFFER_AUTHOR_MODEL", DEFAULT_MODEL)
-        self.effort, self.max_tokens, self.retries = effort, max_tokens, retries
+        self.effort, self.thinking, self.max_tokens, self.retries = effort, thinking, max_tokens, retries
         self.client = client or AnthropicBedrock(aws_region=region or os.environ.get("AWS_REGION", "us-west-2"))
 
     def turn(self, system, messages, tools=None):
@@ -38,7 +38,8 @@ class BedrockLLM:
         for attempt in range(self.retries + 1):
             try:
                 r = self.client.messages.create(model=self.model, max_tokens=self.max_tokens, output_config={"effort": self.effort},
-                                                tools=tools, tool_choice={"type": "auto"}, system=system, messages=messages)
+                                                tools=tools, tool_choice={"type": "auto"}, system=system, messages=messages,
+                                                **({"thinking": self.thinking} if self.thinking else {}))
                 break
             except RateLimitError as e:
                 err = e
@@ -153,7 +154,12 @@ class ConverseLLM:
 
 
 def make_llm(**kw):
-    """The model client: OFFER_AUTHOR_CLIENT=converse (LangChain, Converse API) or invoke (AnthropicBedrock, default)."""
+    """The model client from the environment: OFFER_AUTHOR_CLIENT=converse (LangChain, Converse API) or invoke
+    (AnthropicBedrock, default); OFFER_AUTHOR_EFFORT (default medium); OFFER_AUTHOR_THINKING = a thinking type
+    (adaptive, or between_tools: thinking off on Sonnet 5.5), default the model's own (adaptive)."""
+    kw.setdefault("effort", os.environ.get("OFFER_AUTHOR_EFFORT", "medium"))
+    if os.environ.get("OFFER_AUTHOR_THINKING"):
+        kw.setdefault("thinking", {"type": os.environ["OFFER_AUTHOR_THINKING"]})
     return ConverseLLM(**kw) if os.environ.get("OFFER_AUTHOR_CLIENT", "invoke") == "converse" else BedrockLLM(**kw)
 
 
