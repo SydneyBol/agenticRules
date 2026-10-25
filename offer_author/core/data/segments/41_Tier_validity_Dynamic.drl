@@ -1,6 +1,0 @@
-rule "segmentation-tier_validity_dynamic_ncsp3y38"
-when
-    $segment : MemberSegmentExecutionContext(evaluateTierNumberAttribute("10", ">", "tier_validity", "TIER", "Elite_Levels") && evaluateNumberAttribute("100", "<", "age", "PROGRAM"))
-then
-    $segment.addValidatedSegmentId("tier_validity_dynamic_ncsp3y38");
-end

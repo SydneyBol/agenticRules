@@ -1,6 +1,0 @@
-rule "segmentation-junior_members485860"
-when
-    $segment : MemberSegmentExecutionContext(evaluateNumberAttribute("10", ">", "age", "PROGRAM"))
-then
-    $segment.addValidatedSegmentId("junior_members485860");
-end

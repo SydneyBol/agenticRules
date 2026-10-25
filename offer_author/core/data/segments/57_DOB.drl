@@ -1,6 +1,0 @@
-rule "segmentation-dobke9zu6w2"
-when
-    $segment : MemberSegmentExecutionContext(( evaluateDateAttribute("2024-06-01", ">=", "date_of_joining", "PROGRAM", "DATE") && evaluateDateAttribute("2026-06-09", "<=", "date_of_joining", "PROGRAM", "DATE") ) && evaluateCoBrandDateAttribute("2026-06-01", "!=", "closing_date", "COBRANDCARD", "CALENDAR_DATE" , "1") && evaluateTierDateAttribute("2026-06-09", "<=", "tier_start_date", "TIER", "DATE" , "Elite_Levels"))
-then
-    $segment.addValidatedSegmentId("dobke9zu6w2");
-end

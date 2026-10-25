@@ -1,6 +1,0 @@
-rule "segmentation-tklt8ijkwm"
-when
-    $segment : MemberSegmentExecutionContext(evaluateTextAttribute("0", "is_null", "gender", "PROGRAM"))
-then
-    $segment.addValidatedSegmentId("tklt8ijkwm");
-end

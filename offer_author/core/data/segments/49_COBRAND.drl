@@ -1,6 +1,0 @@
-rule "segmentation-cobrand619569"
-when
-    $segment : MemberSegmentExecutionContext(( evaluateTextAttribute("1", "=", "ACTIVE_CARDS", "COBRANDCARD", "ACTIVE_CARDS") || evaluateTextAttribute("9", "=", "ACTIVE_CARDS", "COBRANDCARD", "ACTIVE_CARDS") ))
-then
-    $segment.addValidatedSegmentId("cobrand619569");
-end

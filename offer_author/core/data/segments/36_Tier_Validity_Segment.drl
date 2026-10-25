@@ -1,6 +1,0 @@
-rule "segmentation-tier_date_segment_7c223su72"
-when
-    $segment : MemberSegmentExecutionContext(evaluateTierNumberAttribute("11", ">", "tier_validity", "TIER", "Elite_Levels") && !evaluateNumberAttribute("0", "is_null", "age", "PROGRAM"))
-then
-    $segment.addValidatedSegmentId("tier_date_segment_7c223su72");
-end

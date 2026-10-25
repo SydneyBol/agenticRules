@@ -1,6 +1,0 @@
-rule "segmentation-location_attributes_checkm7i9yaoc"
-when
-    $segment : MemberSegmentExecutionContext(evaluateTextAttribute("239", "=", "country", "PROGRAM") && evaluateTextAttribute("1", "=", "membership_stage", "PROGRAM"))
-then
-    $segment.addValidatedSegmentId("location_attributes_checkm7i9yaoc");
-end

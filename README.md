@@ -6,7 +6,6 @@ It replaces Pulsar behind the same `/ai/pulsar/...` API.
 
 ```bash
 offer-xml "Gold tier members get 100 bonus points on weekend spends of at least \$50" -o gold.xml
-offer-xml --batch examples/prompts.txt --out-dir out/
 offer-xml-server --catalog-dir catalogs/devintbf2/bolapi --tenant devintbf2 --sponsor 1 --account 9 --tag BASE
 ```
 
@@ -34,29 +33,24 @@ One Claude agent (Bedrock, Sonnet 5.5 by default) builds the offer with tools; c
 The model picks blocks and field values; it never writes mutations, never sees compiled rules (DRL), and never gets
 an XML through that the stock screen did not accept. Design: `~/Documents/Gravty/ai-agent/AIRulesAgent-Design.md`.
 
-## Layout
+## Layout (only what runs)
 
 | Path | What |
 |---|---|
-| `offer_author/ai/` | model-facing: the loop, prompt, tool schemas, Bedrock client, `context/*.md` |
-| `offer_author/core/` | deterministic: session (the tools), tree, checks, compile and engine clients, catalog, counters, `data/` |
-| `offer_author/api/` | HTTP service and CLI. Dependencies point one way: api → ai → core (`tests/unit/test_layout.py`) |
-| `harness/ui/compile/` | stock gravty-ui screens headless against a mocked backend: compile service, upload and segment runners |
-| `harness/ui/hosted/` | the signed-in debug Chrome on a tenant (:9222): QA offer save, simulation, catalog dump |
-| `harness/engine/` | Java harness that runs rules + BITs in the real Drools engine (`mvn -q package -DskipTests`) |
-| `tools/build/` | regenerate `ai/context` and `core/data`: `kt_prompt.py`, `block_reference.py` |
-| `tools/qa/` | QA through the backend, the stock UI and the engine: `check_offer_flow.py`, `check_hosted_combos.py`, ... |
-| `tools/bench/` | `scale_accuracy.py` (1,000-attribute catalog), `retrieval_bench.py` (attribute retrieval) |
-| `tests/unit/`, `e2e/`, `live/` | offline (default), stock UI + engine (`-m e2e`), Bedrock (`-m live`); helpers in `tests/support/` |
-| `tests/cases/` | prompt cases with expected blocks and BIT outcomes, hosted combinations, retrieval phrases |
-| `catalogs/` | tenant dumps (bolapi responses) and the fixture catalog |
+| `offer_author/ai/` | model-facing: the loop, prompt, tool schemas, Bedrock clients (`llm.py`: AnthropicBedrock, or LangChain Converse with `OFFER_AUTHOR_CLIENT=converse`), `context/*.md` |
+| `offer_author/core/` | deterministic: session (the tools), tree, checks, compile and engine clients, catalog, counters, `data/` (block reference, saved blueprint and segment XML) |
+| `offer_author/api/` | HTTP service and CLI. Dependencies point one way: api → ai → core |
+| `harness/ui/compile/` | the `compile` tool's service: stock gravty-ui screens, headless, against a mocked backend |
+| `harness/engine/` | the `simulate` tool: Java harness that runs rules + BITs in the real Drools engine (`mvn -q package -DskipTests`) |
+| `catalogs/<tenant>/bolapi/` | tenant catalog dumps (the CLI, the local backend, the compile screen's catalog calls); production reads bolapi live |
 
-Outputs go to `harness/results/` and `tests/.live/` (not committed).
+Tests, QA tools, batch and hosted scripts, case files and their outputs live in the dev workspace
+`~/Documents/Gravty/offer-xml-generator-dev/` (see its README); they run against this checkout.
 
 ## Setup
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -c requirements-lock.txt -e '.[test]'
+python3 -m venv .venv && .venv/bin/pip install -c requirements-lock.txt -e .
 ```
 
 ```bash
@@ -66,26 +60,6 @@ cd harness/ui && npm ci
 AWS: an SSO session for a profile with Bedrock access (`aws sso login --profile MLCoreDeveloperAccess-384853870836`).
 Model: `OFFER_AUTHOR_MODEL` (default `us.anthropic.claude-sonnet-5-5`). The compile service needs `ng serve` of
 gravty-ui on :4200, then `npm --prefix harness/ui run compile-server` (:8078).
-
-## Tests
-
-```bash
-.venv/bin/python -m pytest
-```
-
-```bash
-.venv/bin/python -m pytest -m e2e
-```
-
-```bash
-AWS_PROFILE=MLCoreDeveloperAccess-384853870836 AWS_REGION=us-west-2 .venv/bin/python -m pytest -m live
-```
-
-Offer flow through the running backend, stock screens and engine (whole offer vs each screen alone):
-
-```bash
-AWS_PROFILE=MLCoreDeveloperAccess-384853870836 AWS_REGION=us-west-2 .venv/bin/python -I tools/qa/check_offer_flow.py both --tenant=devintbf2
-```
 
 Hosted QA on a tenant is the `rulesGenerationQA` Claude skill (`~/.claude/skills/rulesGenerationQA/`). Results and
 error logs: `~/Documents/Gravty/`.

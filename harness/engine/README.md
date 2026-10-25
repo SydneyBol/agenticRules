@@ -11,9 +11,8 @@ access is Maven resolving its build plugins the first time you build.
 # (com/gravty/bit_processor/2.17.0/bit_processor-2.17.0-jar-with-dependencies.jar)
 cd harness/engine
 mvn -q package -DskipTests          # -> target/harness.jar + target/lib/{engine.jar,jdk-compat-shim.jar}
-java -jar target/harness.jar cases/spend_based_rewards.json            # JSON result on stdout
-java -jar target/harness.jar cases/visit_counter.json --show-drl       # also print the decoded DRL
-./selftest.sh                                                          # run all bundled cases
+java -jar target/harness.jar <case.json>                  # JSON result on stdout (--show-drl also prints the decoded DRL)
+# self-test cases and selftest.sh: ~/Documents/Gravty/offer-xml-generator-dev/harness/engine
 ```
 
 * Use `-Dengine.jar=/path/to/bit_processor-…-jar-with-dependencies.jar` at build time to point at another engine build.
@@ -162,4 +161,4 @@ ByteBuddy bundled in the fat jar does not support JDK 25.
   production, `offer_id` and the blueprint variables are substituted at offer creation.
 * **Reward re-issue in `Progressive_Spend_Bonus`.** The blueprint's `== N` level checks have no "already rewarded"
   guard. A later BIT that does not move the counter (amount below the threshold) re-issues the reward for the current
-  level. `cases/progressive_spend_bonus.json` encodes this.
+  level. The dev workspace's `harness/engine/cases/progressive_spend_bonus.json` encodes this.

@@ -1,6 +1,0 @@
-rule "segmentation-womens_be191zcji"
-when
-    $segment : MemberSegmentExecutionContext(((!evaluateTextAttribute("0", "is_null", "membership_stage", "PROGRAM")) || (evaluateTextAttribute("female", "=", "gender", "PROGRAM"))))
-then
-    $segment.addValidatedSegmentId("womens_be191zcji");
-end

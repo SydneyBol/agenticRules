@@ -1,6 +1,0 @@
-rule "segmentation-test990856"
-when
-    $segment : MemberSegmentExecutionContext(evaluateSubscriptionTextAttribute("ACTIVE", "=", "plan_status", "SUBSCRIPTION", "1"))
-then
-    $segment.addValidatedSegmentId("test990856");
-end

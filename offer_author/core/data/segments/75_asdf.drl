@@ -1,6 +1,0 @@
-rule "segmentation-asdf1veiqar3"
-when
-    $segment : MemberSegmentExecutionContext(evaluateTextAttribute("male", "=", "gender", "PROGRAM"))
-then
-    $segment.addValidatedSegmentId("asdf1veiqar3");
-end

@@ -1,6 +1,0 @@
-rule "segmentation-target_age_above_45v5u149d6"
-when
-    $segment : MemberSegmentExecutionContext(evaluateDateAttribute("1980", ">=", "date_of_joining", "PROGRAM", "YEAR"))
-then
-    $segment.addValidatedSegmentId("target_age_above_45v5u149d6");
-end

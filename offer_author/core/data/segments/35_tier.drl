@@ -1,6 +1,0 @@
-rule "segmentation-tier33028"
-when
-    $segment : MemberSegmentExecutionContext(evaluateTierTextAttribute("Bronze", "=", "name", "TIER", "Elite_Levels"))
-then
-    $segment.addValidatedSegmentId("tier33028");
-end

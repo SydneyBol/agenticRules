@@ -1,6 +1,0 @@
-rule "segmentation-city579492"
-when
-    $segment : MemberSegmentExecutionContext(evaluateCoBrandDateAttribute(readCoBrandAttributeD("CALENDAR_DATE", "closing_date", "COBRANDCARD", "9"), "=", "closing_date", "COBRANDCARD", "CALENDAR_DATE" , "1"))
-then
-    $segment.addValidatedSegmentId("city579492");
-end

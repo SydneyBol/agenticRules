@@ -1,6 +1,0 @@
-rule "segmentation-seg2t8vspniw8"
-when
-    $segment : MemberSegmentExecutionContext(evaluateDateAttribute("1950", ">=", "date_of_joining", "PROGRAM", "YEAR"))
-then
-    $segment.addValidatedSegmentId("seg2t8vspniw8");
-end

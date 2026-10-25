@@ -9,9 +9,6 @@ description = "English description of a Gravty reward offer -> Blockly rule XML 
 requires-python = ">=3.11"
 dependencies = ["anthropic[bedrock]>=1.17", "langchain-aws==1.8.1", "langchain-core==1.6.9", "Flask>=3.1", "jsonschema>=4.26", "httpx>=0.28"]
 
-[project.optional-dependencies]
-test = ["pytest>=8", "PyYAML>=6"]
-
 [project.scripts]
 offer-xml = "offer_author.api.cli:main"
 offer-xml-server = "offer_author.api.service:main"
@@ -21,13 +18,4 @@ packages = ["offer_author", "offer_author.ai", "offer_author.core", "offer_autho
 
 [tool.setuptools.package-data]
 "offer_author.ai" = ["context/*.md"]
-"offer_author.core" = ["data/*.json", "data/blueprints/*", "data/segments/*"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
-addopts = "-q -m 'not live and not e2e'"
-markers = [
-    "live: calls Claude on Bedrock (needs AWS credentials; costs a few cents)",
-    "e2e: drives the real gravty-ui Blockly (ng serve on :4200), the compile service and the engine harness jar",
-]
+"offer_author.core" = ["data/*.json", "data/blueprints/*.xml", "data/segments/*.xml"]

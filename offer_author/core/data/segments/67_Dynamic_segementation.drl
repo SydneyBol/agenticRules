@@ -1,6 +1,0 @@
-rule "segmentation-dynamic_segementation990603"
-when
-    $segment : MemberSegmentExecutionContext(evaluateDateAttribute("2026-02-01", "=", "date_of_birth", "PROGRAM", "DATE") && !evaluateDateAttribute("2026-02-04", "=", "man_date", "PROGRAM", "DATE") && evaluateDateAttribute("2026-06-22", "<", "member_offer_date", "PROGRAM", "CALENDAR_DATE") && evaluateDateAttribute("2026-06-22", "=", "man_datetime", "PROGRAM", "CALENDAR_DATE"))
-then
-    $segment.addValidatedSegmentId("dynamic_segementation990603");
-end

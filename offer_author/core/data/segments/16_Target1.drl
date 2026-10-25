@@ -1,6 +1,0 @@
-rule "segmentation-target19ts3v86xk"
-when
-    $segment : MemberSegmentExecutionContext(evaluateDateAttribute("1999", ">=", "date_of_joining", "PROGRAM", "YEAR"))
-then
-    $segment.addValidatedSegmentId("target19ts3v86xk");
-end

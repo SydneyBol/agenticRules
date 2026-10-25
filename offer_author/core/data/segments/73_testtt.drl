@@ -1,6 +1,0 @@
-rule "segmentation-testttvff5y93zl"
-when
-    $segment : MemberSegmentExecutionContext(evaluateSubscriptionDateAttribute(readSubscriptionAttribute( "plan_status", "SUBSCRIPTION", "1"), "=", "plan_start_date", "SUBSCRIPTION", "DAY_OF_MONTH", "1"))
-then
-    $segment.addValidatedSegmentId("testttvff5y93zl");
-end

@@ -1,6 +1,0 @@
-rule "segmentation-males8m6hb4n5"
-when
-    $segment : MemberSegmentExecutionContext(evaluateTextAttribute("male", "=", "gender", "PROGRAM") && evaluateNumberAttribute("25", ">=", "age", "PROGRAM") && evaluateTierTextAttribute("Bronze", "=", "name", "TIER", "Elite_Levels"))
-then
-    $segment.addValidatedSegmentId("males8m6hb4n5");
-end

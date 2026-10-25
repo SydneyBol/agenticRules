@@ -1,6 +1,0 @@
-rule "segmentation-tier_date_segment_qwh5g3aua5"
-when
-    $segment : MemberSegmentExecutionContext(evaluateTierDateAttribute("2025-11-04", "<", "tier_start_date", "TIER", "DATE" , "Elite_Levels") && !evaluateTierDateAttribute("11", "=", "tier_start_date", "TIER", "MONTH" , "Elite_Levels") && !evaluateTierDateAttribute("2012", "=", "tier_start_date", "TIER", "YEAR" , "Elite_Levels") && evaluateTextAttribute("male", "=", "gender", "PROGRAM"))
-then
-    $segment.addValidatedSegmentId("tier_date_segment_qwh5g3aua5");
-end
