@@ -71,6 +71,25 @@ def method_text(src, name, until):
     return src[m.start():m.end() + n.start()] if n else body_of(src, name)
 
 
+def mutation_sources(body):
+    """attr -> {"fields": [...], "consts": [...], "derived": bool} from mutationToDom: where the UI takes each value
+    (a field read directly or through a local variable, a string constant, or something it computes)."""
+    var = dict(re.findall(r"(?:let|const|var)\s+(\w+)\s*=\s*this\.block\.getFieldValue\(\s*" + Q + r"\s*\)", body))
+    out = {}
+    for attr, val in re.findall(r"setAttribute\(\s*" + Q + r"\s*,\s*([^;]+?)\)\s*;", body):
+        e = out.setdefault(attr, {"fields": [], "consts": [], "derived": False})
+        val = val.strip()
+        m = re.fullmatch(r"this\.block\.getFieldValue\(\s*" + Q + r"\s*\)", val)
+        f = m.group(1) if m else var.get(val)
+        if f:
+            e["fields"] += [f] if f not in e["fields"] else []
+        elif literal(val) is not None:
+            e["consts"] += [literal(val)] if literal(val) not in e["consts"] else []
+        else:
+            e["derived"] = True
+    return out
+
+
 def mutation_order(static, signatures):
     """One attribute order for the serializer: mutationToDom's, with attributes only seen in saved XML inserted after
     the attribute that precedes them there."""
@@ -154,9 +173,10 @@ def static_shape(src):
     dummies = unique(re.findall(r"appendDummyInput\(" + Q + r"\)", src))
     mut = method_text(src, "mutationToDom", "domToMutation")
     attrs = unique(re.findall(r"setAttribute\(\s*" + Q, mut or src))
+    sources = mutation_sources(mut or "")
     read = unique(re.findall(r"getAttribute\(\s*" + Q, body_of(src, "domToMutation") or src))
     return {"type": btype.group(1) if btype else None, "connections": conn, "statement_inputs": stmts, "value_inputs": values,
-            "dummy_inputs": dummies, "fields": fields, "mutation_attributes": attrs,
+            "dummy_inputs": dummies, "fields": fields, "mutation_attributes": attrs, "mutation_sources": sources,
             "mutation_attributes_read_only": [a for a in read if a not in attrs]}
 
 
@@ -202,7 +222,7 @@ def evidence(xml_files):
             walk(ET.fromstring(open(f).read()), None)
         except ET.ParseError:
             continue
-    return {t: {"signatures": dict(e["signatures"].most_common(6)), "fields": {k: sorted(v) for k, v in e["fields"].items()},
+    return {t: {"signatures": dict(e["signatures"].most_common()), "fields": {k: sorted(v) for k, v in e["fields"].items()},
                 "inside": dict(e["inside"].most_common(6))} for t, e in ev.items()}
 
 
@@ -218,7 +238,10 @@ def build(ui, live_path, blueprint_dir):
     for b in blocks:
         b["live"] = live.get(b["type"])
         b["evidence"] = ev.get(b["type"])
-        b["mutation_order"] = mutation_order(b["mutation_attributes"], (b["evidence"] or {}).get("signatures", {}))
+        sigs = (b["evidence"] or {}).get("signatures", {})
+        b["mutation_order"] = mutation_order(b["mutation_attributes"], sigs)
+        # attributes every saved instance of the block carries: the UI writes them unconditionally ("null" if unset)
+        b["mutation_always"] = sorted(set.intersection(*[set(x.split()) for x in sigs])) if sigs else []
     return {"toolbox": blocks, "counter_patterns": counter_patterns(ui), "sources": {"ui": ui, "config": CONFIG, "upload": UPLOAD}}
 
 
@@ -274,7 +297,7 @@ def md(ref):
         if ev:
             if ev["inside"]:
                 out.append("- seen inside: " + ", ".join(f"{k} ({v})" for k, v in ev["inside"].items()))
-            for sig, n in ev["signatures"].items():
+            for sig, n in list(ev["signatures"].items())[:6]:
                 out.append(f"- saved mutation ({n}x): {sig}")
             if ev["fields"]:
                 out.append("- saved fields: " + "; ".join(f"{k}={'/'.join(v)}" for k, v in ev["fields"].items()))

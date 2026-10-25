@@ -25,6 +25,7 @@
    "dummy_inputs": [],
    "fields": [],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Offer Level Block",
    "cls": "OfferGenericBlock",
@@ -44,7 +45,8 @@
     "fields": {},
     "inside": {}
    },
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "activity",
@@ -80,6 +82,7 @@
    "dummy_inputs": [],
    "fields": [],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Offer Level Block",
    "cls": "OfferActivityBlock",
@@ -110,7 +113,8 @@
      "offer_generic.activities": 27
     }
    },
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "activity_criteria",
@@ -252,6 +256,205 @@
     "selected_partner_program",
     "selected_partner_program_attribute"
    ],
+   "mutation_sources": {
+    "object": {
+     "fields": [
+      "OBJECT"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute_level": {
+     "fields": [
+      "attribute_level"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute": {
+     "fields": [
+      "attribute"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "operators": {
+     "fields": [
+      "operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "payoperators": {
+     "fields": [
+      "payment_operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "fb_pages": {
+     "fields": [
+      "fb_pages"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "iscountertypevector": {
+     "fields": [],
+     "consts": [
+      "yes",
+      "no"
+     ],
+     "derived": false
+    },
+    "vector_counter_namespace": {
+     "fields": [
+      "vector_counter_namespace"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute_entity_map_level": {
+     "fields": [
+      "attribute_entity_map_level"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "value": {
+     "fields": [
+      "value",
+      "dummy_date_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "date_operator": {
+     "fields": [
+      "date_operator"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "datetime_operator": {
+     "fields": [
+      "datetime_operator"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "visible_value": {
+     "fields": [
+      "visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "pvalue": {
+     "fields": [
+      "payment_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "pvisiblevalue": {
+     "fields": [
+      "payment_visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    },
+    "target_type": {
+     "fields": [
+      "target_type_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mto_ladder_value": {
+     "fields": [
+      "mto_ladder_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "cardmainoption": {
+     "fields": [
+      "card_main_option"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "activecardsoperator": {
+     "fields": [
+      "activecard_mainoperators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "airporttypes": {
+     "fields": [
+      "airporttypes"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "file_upload_toggle": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "blueprinttypes": {
+     "fields": [
+      "blueprinttypes"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "tieroperator": {
+     "fields": [
+      "opperater"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "tiermainoption": {
+     "fields": [
+      "loyaltyaccount",
+      "tierdefault"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "selected_subscription_attribute": {
+     "fields": [
+      "selected_subscription_attribute"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "selected_partner_program": {
+     "fields": [
+      "selected_partner_program"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "selected_partner_program_attribute": {
+     "fields": [
+      "selected_partner_program_attribute"
+     ],
+     "consts": [],
+     "derived": false
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Offer Level Block",
    "cls": "FilterBlock",
@@ -426,6 +629,14 @@
     "selected_subscription_attribute",
     "selected_partner_program",
     "selected_partner_program_attribute"
+   ],
+   "mutation_always": [
+    "attribute",
+    "iscountertypevector",
+    "object",
+    "operators",
+    "payoperators",
+    "type"
    ]
   },
   {
@@ -455,6 +666,7 @@
    "dummy_inputs": [],
    "fields": [],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Offer Level Block",
    "cls": "EventBlock",
@@ -473,7 +685,8 @@
      "offer_generic.events": 3
     }
    },
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "or",
@@ -514,6 +727,7 @@
    "dummy_inputs": [],
    "fields": [],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Offer Level Block",
    "cls": "OrBlock",
@@ -555,7 +769,8 @@
     }
    },
    "evidence": null,
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "rule",
@@ -608,6 +823,7 @@
     "IDENTIFIER"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Rule Level Block",
    "cls": "RuleBlock",
@@ -659,7 +875,8 @@
      "rule.ACTION": 7
     }
    },
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "rule_line",
@@ -699,6 +916,7 @@
     "IDENTIFIER"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Rule Level Block",
    "cls": "LineRuleBlock",
@@ -739,7 +957,8 @@
      "activity.RULES": 22
     }
    },
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "payment_rule",
@@ -776,6 +995,7 @@
     "IDENTIFIER"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Rule Level Block",
    "cls": "PaymentRuleBlock",
@@ -792,7 +1012,8 @@
     }
    },
    "evidence": null,
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "if_generic_adaptive",
@@ -944,6 +1165,232 @@
     "file_upload_toggle",
     "blueprinttypes"
    ],
+   "mutation_sources": {
+    "object": {
+     "fields": [
+      "OBJECT"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "third_parties_dropdown": {
+     "fields": [
+      "third_parties_dropdown"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute_level": {
+     "fields": [
+      "attribute_level"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute": {
+     "fields": [
+      "attribute"
+     ],
+     "consts": [
+      "Segment"
+     ],
+     "derived": false
+    },
+    "fb_pages": {
+     "fields": [
+      "fb_pages"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "operators": {
+     "fields": [
+      "operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "payoperators": {
+     "fields": [
+      "payment_operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "visible_value": {
+     "fields": [
+      "visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "pvalue": {
+     "fields": [
+      "payment_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "pvisiblevalue": {
+     "fields": [
+      "payment_visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "iscountertypevector": {
+     "fields": [],
+     "consts": [
+      "yes",
+      "no"
+     ],
+     "derived": false
+    },
+    "vector_counter_namespace": {
+     "fields": [
+      "vector_counter_namespace"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute_entity_map_level": {
+     "fields": [
+      "attribute_entity_map_level"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "value": {
+     "fields": [
+      "value",
+      "dummy_date_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "date_operator": {
+     "fields": [
+      "date_operator"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "datetime_operator": {
+     "fields": [
+      "datetime_operator"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "prod_offer_select_val": {
+     "fields": [
+      "ProductOrOfferContext"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "airporttypes": {
+     "fields": [
+      "airporttypes"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    },
+    "target_type": {
+     "fields": [
+      "target_type_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mto_ladder_value": {
+     "fields": [
+      "mto_ladder_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "prodoffertype": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    },
+    "cardmainoption": {
+     "fields": [
+      "card_main_option"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "activecardsoperator": {
+     "fields": [
+      "activecard_mainoperators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "tieroperator": {
+     "fields": [
+      "opperater"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "tiermainoption": {
+     "fields": [
+      "tierdefault"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "selected_subscription_plan": {
+     "fields": [
+      "selected_subscription_plan"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "selected_subscription_attribute": {
+     "fields": [
+      "selected_subscription_attribute"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "selected_partner_program": {
+     "fields": [
+      "selected_partner_program"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "selected_partner_program_attribute": {
+     "fields": [
+      "selected_partner_program_attribute"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "file_upload_toggle": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "blueprinttypes": {
+     "fields": [
+      "blueprinttypes"
+     ],
+     "consts": [],
+     "derived": false
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Rule Level Block",
    "cls": "IfGenericBlock",
@@ -1121,7 +1568,13 @@
      "object attribute operators payoperators visible_value iscountertypevector value type blueprinttypes": 18,
      "object attribute_level attribute operators payoperators iscountertypevector type": 13,
      "object attribute operators payoperators iscountertypevector datetime_operator type": 12,
-     "object attribute_level attribute operators payoperators iscountertypevector vector_counter_namespace attribute_entity_map_level type target_type mto_ladder_value": 10
+     "object attribute_level attribute operators payoperators iscountertypevector vector_counter_namespace attribute_entity_map_level type target_type mto_ladder_value": 10,
+     "object attribute operators payoperators visible_value iscountertypevector value prod_offer_select_val type blueprinttypes": 5,
+     "object attribute_level attribute operators payoperators iscountertypevector value type target_type mto_ladder_value": 5,
+     "object attribute_level attribute operators payoperators iscountertypevector vector_counter_namespace attribute_entity_map_level value type target_type mto_ladder_value": 4,
+     "object attribute operators payoperators iscountertypevector type": 3,
+     "object attribute_level attribute operators payoperators iscountertypevector date_operator type target_type": 1,
+     "object attribute operators payoperators iscountertypevector value type": 1
     },
     "fields": {
      "OBJECT": [
@@ -1224,6 +1677,14 @@
     "selected_partner_program_attribute",
     "file_upload_toggle",
     "blueprinttypes"
+   ],
+   "mutation_always": [
+    "attribute",
+    "iscountertypevector",
+    "object",
+    "operators",
+    "payoperators",
+    "type"
    ]
   },
   {
@@ -1278,6 +1739,55 @@
     "file_upload_toggle",
     "type"
    ],
+   "mutation_sources": {
+    "payment_object": {
+     "fields": [
+      "payment_object"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "payment_attribute": {
+     "fields": [
+      "payment_attribute"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "operators": {
+     "fields": [
+      "operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "value": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "visible_value": {
+     "fields": [
+      "visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "file_upload_toggle": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Rule Level Block",
    "cls": "IfPaymentBlock",
@@ -1296,7 +1806,8 @@
     "visible_value",
     "file_upload_toggle",
     "type"
-   ]
+   ],
+   "mutation_always": []
   },
   {
    "type": "action",
@@ -1490,6 +2001,140 @@
     "selected_card_id",
     "blueprinttypes"
    ],
+   "mutation_sources": {
+    "iscountertypevector": {
+     "fields": [],
+     "consts": [
+      "yes",
+      "no"
+     ],
+     "derived": false
+    },
+    "vector_counter_namespace": {
+     "fields": [
+      "vector_counter_namespace"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "loyaltyaccountid": {
+     "fields": [
+      "LOYALTY_ACCOUNT"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "privilegetype": {
+     "fields": [
+      "SELECTED_PRIVILEGE"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "exployaltyacc": {
+     "fields": [
+      "SELECTED_EXPIRE_LOYALTY_ACC"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "expconditionopt": {
+     "fields": [
+      "SELECTED_EXP_OPERATOR"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "value": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "visible_value": {
+     "fields": [
+      "visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute_type_input": {
+     "fields": [
+      "action_type"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mta_type_value": {
+     "fields": [
+      "mta_type_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mta_attribute": {
+     "fields": [
+      "mta_attribute"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    },
+    "attribute_entity_map_level": {
+     "fields": [
+      "attribute_entity_map_level"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "target_type": {
+     "fields": [
+      "target_type_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mto_ladder_value": {
+     "fields": [
+      "mto_ladder_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "rhsValue": {
+     "fields": [
+      "RHS_INPUT_VALUE"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "action_operator": {
+     "fields": [
+      "action_operator"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "selected_card_id": {
+     "fields": [
+      "selected_card_id"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "blueprinttypes": {
+     "fields": [
+      "blueprinttypes"
+     ],
+     "consts": [],
+     "derived": false
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Rule Level Block",
    "cls": "ActionBlock",
@@ -1713,7 +2358,9 @@
      "iscountertypevector attribute_type_input mta_type_value mta_attribute type target_type": 25,
      "iscountertypevector attribute_type_input": 17,
      "iscountertypevector attribute_type_input mta_type_value mta_attribute type action_operator": 12,
-     "iscountertypevector vector_counter_namespace attribute_type_input mta_type_value mta_attribute type attribute_entity_map_level target_type mto_ladder_value action_operator": 10
+     "iscountertypevector vector_counter_namespace attribute_type_input mta_type_value mta_attribute type attribute_entity_map_level target_type mto_ladder_value action_operator": 10,
+     "iscountertypevector attribute_type_input mta_type_value mta_attribute type target_type mto_ladder_value action_operator": 6,
+     "iscountertypevector attribute_type_input mta_type_value mta_attribute type": 2
     },
     "fields": {
      "action_type": [
@@ -1798,6 +2445,10 @@
     "action_operator",
     "selected_card_id",
     "blueprinttypes"
+   ],
+   "mutation_always": [
+    "attribute_type_input",
+    "iscountertypevector"
    ]
   },
   {
@@ -1979,6 +2630,119 @@
     "iscountertypevector",
     "selected_card_id"
    ],
+   "mutation_sources": {
+    "third_parties_dropdown": {
+     "fields": [
+      "third_parties_dropdown"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "value": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "loyaltyaccountid": {
+     "fields": [
+      "LOYALTY_ACCOUNT"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "privilegetype": {
+     "fields": [
+      "SELECTED_PRIVILEGE"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute_type_input": {
+     "fields": [
+      "action_type"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mta_type_value": {
+     "fields": [
+      "mta_type_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mta_attribute": {
+     "fields": [
+      "mta_attribute"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    },
+    "attribute_entity_map_level": {
+     "fields": [
+      "attribute_entity_map_level"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "target_type": {
+     "fields": [
+      "target_type_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mto_ladder_value": {
+     "fields": [
+      "mto_ladder_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "rhsValue": {
+     "fields": [
+      "RHS_INPUT_VALUE"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "vector_counter_namespace": {
+     "fields": [
+      "vector_counter_namespace"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "action_operator": {
+     "fields": [
+      "action_operator"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "iscountertypevector": {
+     "fields": [],
+     "consts": [
+      "yes",
+      "no"
+     ],
+     "derived": false
+    },
+    "selected_card_id": {
+     "fields": [
+      "selected_card_id"
+     ],
+     "consts": [],
+     "derived": false
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Rule Level Block",
    "cls": "ThirdPartyActionBlock",
@@ -2173,7 +2937,8 @@
     "action_operator",
     "iscountertypevector",
     "selected_card_id"
-   ]
+   ],
+   "mutation_always": []
   },
   {
    "type": "static_value",
@@ -2193,6 +2958,7 @@
     "value"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "StaticValueBlock",
@@ -2220,7 +2986,8 @@
      "arithmetic_generic.RHS": 3
     }
    },
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "static_string_value",
@@ -2240,6 +3007,7 @@
     "value"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "StaticStringValueBlock",
@@ -2260,7 +3028,8 @@
      "action.RHS_INPUT": 27
     }
    },
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "arithmetic_generic",
@@ -2309,6 +3078,7 @@
     "operator"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "ArithmeticGenericBlock",
@@ -2578,7 +3348,8 @@
      "arithmetic_generic.LHS": 2
     }
    },
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "arithmetic_date",
@@ -2623,6 +3394,15 @@
    "mutation_attributes": [
     "opt"
    ],
+   "mutation_sources": {
+    "opt": {
+     "fields": [
+      "operator"
+     ],
+     "consts": [],
+     "derived": false
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "ArithmeticDateBlock",
@@ -2841,7 +3621,8 @@
    "evidence": null,
    "mutation_order": [
     "opt"
-   ]
+   ],
+   "mutation_always": []
   },
   {
    "type": "current_date_block",
@@ -2861,6 +3642,7 @@
     "current_date_type"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "CurrentDateBlock",
@@ -3024,7 +3806,8 @@
     }
    },
    "evidence": null,
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "static_date",
@@ -3044,6 +3827,7 @@
     "value"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "StaticDateBlock",
@@ -3054,7 +3838,8 @@
     }
    },
    "evidence": null,
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "static_date_time",
@@ -3074,6 +3859,7 @@
     "value"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "StaticDateTimeBlock",
@@ -3084,7 +3870,8 @@
     }
    },
    "evidence": null,
-   "mutation_order": []
+   "mutation_order": [],
+   "mutation_always": []
   },
   {
    "type": "currency_converter",
@@ -3109,6 +3896,15 @@
    "mutation_attributes": [
     "attribute"
    ],
+   "mutation_sources": {
+    "attribute": {
+     "fields": [
+      "conversion_type"
+     ],
+     "consts": [],
+     "derived": false
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "CurrencyConvertorRateBlock",
@@ -3189,7 +3985,8 @@
    "evidence": null,
    "mutation_order": [
     "attribute"
-   ]
+   ],
+   "mutation_always": []
   },
   {
    "type": "activity_attribute",
@@ -3242,6 +4039,62 @@
     "pvisiblevalue",
     "type"
    ],
+   "mutation_sources": {
+    "operators": {
+     "fields": [
+      "operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "payoperators": {
+     "fields": [
+      "payment_operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute": {
+     "fields": [
+      "ATTRIBUTE"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "value": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "visible_value": {
+     "fields": [
+      "visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "pvalue": {
+     "fields": [
+      "payment_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "pvisiblevalue": {
+     "fields": [
+      "payment_visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "BitAttributesBlock",
@@ -3411,6 +4264,12 @@
     "pvalue",
     "pvisiblevalue",
     "type"
+   ],
+   "mutation_always": [
+    "attribute",
+    "operators",
+    "payoperators",
+    "type"
    ]
   },
   {
@@ -3489,6 +4348,91 @@
     "mto_attribute_level",
     "vector_attribute_map"
    ],
+   "mutation_sources": {
+    "attribute_type_input": {
+     "fields": [
+      "ATTRIBUTE_TYPE"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute": {
+     "fields": [
+      "ATTRIBUTE"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "iscountertypevector": {
+     "fields": [],
+     "consts": [
+      "yes",
+      "no"
+     ],
+     "derived": false
+    },
+    "vector_counter_namespace": {
+     "fields": [
+      "vector_counter_namespace"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attr_type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    },
+    "operators": {
+     "fields": [
+      "operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "value": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "visible_value": {
+     "fields": [
+      "visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "tieractionvalue": {
+     "fields": [
+      "tieractionoperator"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "tierloyaltyactionvalue": {
+     "fields": [
+      "tierloyaltyaction"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "mto_attribute_level": {
+     "fields": [
+      "attribute_entity_map_level"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "vector_attribute_map": {
+     "fields": [
+      "vector_counter_namespace"
+     ],
+     "consts": [],
+     "derived": false
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "MemberAttributesBlock",
@@ -3682,6 +4626,12 @@
     "tierloyaltyactionvalue",
     "mto_attribute_level",
     "vector_attribute_map"
+   ],
+   "mutation_always": [
+    "attr_type",
+    "attribute",
+    "attribute_type_input",
+    "iscountertypevector"
    ]
   },
   {
@@ -3713,6 +4663,27 @@
     "attribute",
     "attr_type"
    ],
+   "mutation_sources": {
+    "attribute_type_input": {
+     "fields": [
+      "ATTRIBUTE_PRODUCTS"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attribute": {
+     "fields": [
+      "ATTRIBUTE"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "attr_type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "ProductAttributesBlock",
@@ -3754,7 +4725,8 @@
     "attribute_type_input",
     "attribute",
     "attr_type"
-   ]
+   ],
+   "mutation_always": []
   },
   {
    "type": "payment_attribute",
@@ -3800,6 +4772,48 @@
     "visible_value",
     "type"
    ],
+   "mutation_sources": {
+    "PAYMENT_OBJECT": {
+     "fields": [],
+     "consts": [
+      "payment_method"
+     ],
+     "derived": false
+    },
+    "payment_attribute": {
+     "fields": [
+      "payment_attribute"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "operators": {
+     "fields": [
+      "operators"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "value": {
+     "fields": [
+      "value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "visible_value": {
+     "fields": [
+      "visible_value"
+     ],
+     "consts": [],
+     "derived": false
+    },
+    "type": {
+     "fields": [],
+     "consts": [],
+     "derived": true
+    }
+   },
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "PaymentAttributeBlock",
@@ -3817,7 +4831,8 @@
     "value",
     "visible_value",
     "type"
-   ]
+   ],
+   "mutation_always": []
   },
   {
    "type": "airport_attribute",
@@ -3841,6 +4856,7 @@
     "datetime_operator"
    ],
    "mutation_attributes": [],
+   "mutation_sources": {},
    "mutation_attributes_read_only": [],
    "category": "Attributes & Variables",
    "cls": "AirportPairAttributeBlock",
@@ -3894,6 +4910,12 @@
     "payment_object",
     "airportpair_attribute",
     "operators",
+    "type"
+   ],
+   "mutation_always": [
+    "airportpair_attribute",
+    "operators",
+    "payment_object",
     "type"
    ]
   }
