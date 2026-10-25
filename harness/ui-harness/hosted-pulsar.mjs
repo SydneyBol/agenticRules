@@ -110,6 +110,7 @@ const state = fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, 'utf8')) 
 const summary = {};
 await page.setRequestInterception(true);
 const ai = [], aiSeen = [], mtoPosts = [], drlCalls = [];
+let lastGen = null;
 const onReq = async (req) => {
   const u = req.url();
   let url; try { url = new URL(u); } catch { return req.continue(); }
@@ -130,6 +131,10 @@ const onReq = async (req) => {
       const r = await fetch(BACKEND + rel, { method: req.method(), headers: { 'Content-Type': 'application/json' }, body });
       const text = await r.text();
       ai.push({ method: req.method(), rel, status: r.status, result: text.slice(0, 120) });
+      if (req.method() === 'POST' && /\/offer\/rules/.test(url.pathname)) {  // the popup's own answer, for the save gate
+        let j = {}; try { j = JSON.parse(text); } catch {}
+        if (j.result !== 'Generating') lastGen = { status: r.status, body: j };
+      }
       return req.respond({ status: r.status, headers: cors, contentType: 'application/json', body: text });
     } catch (e) {
       ai.push({ method: req.method(), rel, error: String(e) });
@@ -152,7 +157,7 @@ try {
   const queue = PLAN.map((x) => ({ ...x, attempt: 1 }));
   for (const item of queue) {
     const res = { key: item.key, mode: item.mode, prompt: item.prompt, attempt: item.attempt };
-    ai.length = 0; aiSeen.length = 0; mtoPosts.length = 0; drlCalls.length = 0;
+    ai.length = 0; aiSeen.length = 0; mtoPosts.length = 0; drlCalls.length = 0; lastGen = null;
     try {
       // --offer-key=K: every item runs on ONE offer (state[K], created once, named --offer-name); each popup
       // generation replaces its rules. --fresh: a new planning offer per item (earlier ids kept under `previous`)
@@ -296,6 +301,14 @@ try {
       for (let i = 0; i < 160; i++) { await sleep(750); if (i > 8 && (await blocks()) > 0 && !(await loaderUp())) break; }
       await sleep(2500);
       res.blocks = await blocks();
+      if (item.mode === 'popup' && lastGen) {  // what the upload branch records from its own request
+        const g = lastGen.body;
+        res.generation = { status: lastGen.status, backend_status: g.status, blocking_questions: g.blocking_questions,
+                           unsupported: g.unsupported, assumptions: g.assumptions, error: g.error };
+        res.counter_report = g.counter_report;
+        res.counter_notes = g.counter_notes;
+        if (g.xml) { res.upload_xml = path.join(OUT, item.key + '.generated.xml'); fs.writeFileSync(res.upload_xml, b64(g.xml)); }
+      }
       res.note_on_canvas = await page.evaluate(() => [...document.querySelectorAll('textarea, .blocklyCommentText, .blocklyText')]
         .some((e) => /AI draft:/.test(e.value || e.textContent || '')));
       res.ai_seen = [...new Set(aiSeen)];
