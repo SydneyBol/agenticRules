@@ -12,7 +12,8 @@ Metrics: recall@1/5/15, MRR, query latency p50/p95, index build seconds.
 Design: ~/Documents/Gravty/ai-agent/AttributeRetrieval.md
 
 Runs where sentence-transformers and torch are installed (not the repo venv):
-  ~/PycharmProjects/ai/.venv/bin/python -I tools/retrieval_bench.py [--sizes=0,3000,5000] [--out=harness/results/retrieval_bench.json]
+  HF_HUB_OFFLINE=1 ~/PycharmProjects/ai/.venv/bin/python -I tools/retrieval_bench.py [--sizes=0,3000,5000] [--embedders=a,b] [--rerankers=a,b|none]
+      [--out=harness/results/retrieval_bench.json]
 """
 import difflib
 import json
@@ -38,6 +39,11 @@ OUT = os.path.join(ROOT, ARGS.get("out", "harness/results/retrieval_bench.json")
 EMBEDDERS = ["sentence-transformers/all-mpnet-base-v2", "BAAI/bge-small-en-v1.5", "Snowflake/snowflake-arctic-embed-m-v2.0",
              "Qwen/Qwen3-Embedding-0.6B"]
 RERANKERS = ["cross-encoder/ms-marco-MiniLM-L6-v2", "BAAI/bge-reranker-base", "BAAI/bge-reranker-v2-m3"]
+EMBEDDERS = [m for m in EMBEDDERS if m.split("/")[-1] in ARGS.get("embedders", m.split("/")[-1]).split(",")]
+RERANKERS = [m for m in RERANKERS if m.split("/")[-1] in ARGS.get("rerankers", m.split("/")[-1]).split(",")]
+# models whose own modelling code runs (trust_remote_code), pinned to the commit whose code was read: imports torch and
+# transformers only, no file, network or process calls (2026-10-25). Run offline (HF_HUB_OFFLINE=1) so nothing newer loads.
+AUDITED = {"Snowflake/snowflake-arctic-embed-m-v2.0": "95c2741480856aa9666782eb4afe11959938017f"}
 BGE_QUERY = "Represent this sentence for searching relevant passages: "
 K, POOL = 15, 50
 
@@ -55,16 +61,18 @@ def toks(s):
 
 # ------------------------------------------------------------------------------------------------ catalogs
 def padded(cat, n, rnd):
-    """The catalog with look-alike attributes added until each object has n: labels recombined from real label words."""
+    """The catalog with look-alike attributes added until the tenant has n (each object grown in proportion): labels
+    recombined from real label words."""
     if not n:
         return cat
+    total = sum(len(v) for v in cat.attributes.values())
     pool = [w for c in CATS.values() for o in c.attributes.values() for a in o.values() for w in toks(a.label) if len(w) > 2]
     out = Catalog(**{k: getattr(cat, k) for k in cat.__dataclass_fields__})
     out.attributes = {o: dict(v) for o, v in cat.attributes.items()}
     for obj, attrs in out.attributes.items():
         labels = {norm(a.label) for a in attrs.values()}
-        i = 0
-        while len(attrs) < n:
+        i, goal = 0, round(n * len(attrs) / total)
+        while len(attrs) < goal:
             i += 1
             label = " ".join(w.capitalize() for w in rnd.sample(pool, rnd.randint(2, 4)))
             if norm(label) in labels:
@@ -122,7 +130,7 @@ def rrf(*rankings, k=60):
 
 def load_embedder(name, device):
     from sentence_transformers import SentenceTransformer
-    m = SentenceTransformer(name, device=device, trust_remote_code=False)
+    m = SentenceTransformer(name, device=device, trust_remote_code=name in AUDITED, revision=AUDITED.get(name))
 
     def enc(texts, query=False):
         kw = {}

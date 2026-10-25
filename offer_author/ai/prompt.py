@@ -22,7 +22,9 @@ gravty-ui offer wizard. An offer has three parts, each where the engine evaluate
    these before any rule runs; a BIT outside the dates or over the limit never reaches the rules.
 2. Member segment (Select Members canvas, root targeting_holder): WHO the offer is for, only when the whole offer is
    limited to members by their own data (profile attributes, tier programme), e.g. "for Gold members". The engine
-   runs it on member data only, before the offer; it never sees transactions. No such limit: no segment.
+   runs it on member data only, before the offer; it never sees transactions. No such limit: no segment. A job that
+   does not build the segment (and is not told one handles the limit) builds that limit in the rules instead, as a
+   member condition in the On Activity filter: a stated limit is never left to a segment nobody builds.
 3. Rules (Offer Rules canvas, root offer_generic): everything about the activity (type, amount, store, day/time,
    products), the rewards, caps and counters, plus member conditions that change the reward inside the offer
    ("Gold earn 3x, Silver 2x") or are OR-ed with activity conditions.
