@@ -207,3 +207,13 @@ def test_tree_errors_are_reported_not_raised_into_the_loop(fixture_catalog):
         tree.to_xml({"type": "offer_generic", "inputs": {"activities": [{"fields": {}}]}})
     out = session.Session(fixture_catalog, None).run("compile", {"canvas": "rules", "blocks": {"fields": {}}})
     assert not out["ok"] and out["problems"][0].startswith("not a block tree")
+
+
+@pytest.mark.parametrize("level,has_target", [("MA_O", True), ("MA_TO", True), ("MA_A", False)])
+def test_only_offer_counters_carry_a_target_type(level, has_target):
+    """The UI adds the hidden target_type field for MA_O / MA_TO counters only; an MA_A attribute saved with one is
+    changed by the screen (live A01-A07, SO06)."""
+    spec = tree.reference()["if_generic_adaptive"]
+    node = {"type": "if_generic_adaptive", "fields": {"OBJECT": "member", "attribute_level": level, "attribute": "visits"}}
+    mut = tree.derive(node, spec, None, {"visits": {"name": "visits", "data_type": "NUMBER", "counter_type": "REGULAR"}})
+    assert mut.get("attribute_level") == level and ("target_type" in mut) == has_target, mut

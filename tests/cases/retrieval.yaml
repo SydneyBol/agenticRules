@@ -1,0 +1,170 @@
+# Attribute retrieval: the manager's words for ONE attribute -> the attribute(s) that are right (any of `want`).
+# The object (activity | member | product) is given, as find_attributes takes it. Used by tools/retrieval_bench.py to
+# pick the bi-encoder / cross-encoder pair (~/Documents/Gravty/ai-agent/AttributeRetrieval.md).
+#   devintbf2: the real tenant catalog (catalogs/devintbf2/bolapi), with its own look-alikes and junk names
+#   scaled:    tests/scaled_catalog.py (1,000 attributes, look-alikes next to the targets), grown further by the bench
+devintbf2:
+  activity:
+    - {q: "spend amount", want: [h_bit_amount]}
+    - {q: "bill value", want: [h_bit_amount]}
+    - {q: "how much they spent", want: [h_bit_amount]}
+    - {q: "transaction amount", want: [h_bit_amount]}
+    - {q: "purchase total", want: [h_bit_amount]}
+    - {q: "amount before adjustment", want: [h_original_bit_amount]}
+    - {q: "date of the transaction", want: [h_bit_date]}
+    - {q: "purchase date", want: [h_bit_date]}
+    - {q: "when the bit happened", want: [h_bit_date]}
+    - {q: "store", want: [h_location]}
+    - {q: "outlet where they shopped", want: [h_location]}
+    - {q: "branch", want: [h_location]}
+    - {q: "activity type", want: [h_bit_type]}
+    - {q: "kind of transaction", want: [h_bit_type]}
+    - {q: "transaction category", want: [h_bit_category]}
+    - {q: "channel the bit came from", want: [h_bit_source]}
+    - {q: "sponsor", want: [h_sponsor_id]}
+    - {q: "partner brand id", want: [h_sponsor_id]}
+    - {q: "till number", want: [h_pos_id]}
+    - {q: "point of sale terminal", want: [h_pos_id]}
+    - {q: "flight date", want: [h_flight_date]}
+    - {q: "departure airport", want: [h_origin_airport_code]}
+    - {q: "flight number", want: [h_operating_flight_number]}
+    - {q: "booking reference", want: [h_pnr_number]}
+    - {q: "product bought", want: [l_product_external_id, l_product_id, l_product_name]}
+    - {q: "SKU on the line", want: [l_product_external_id, l_product_id]}
+    - {q: "item name", want: [l_product_name]}
+    - {q: "quantity purchased", want: [l_quantity]}
+    - {q: "number of units", want: [l_quantity]}
+    - {q: "line item value", want: [l_amount]}
+    - {q: "price of each line", want: [l_amount]}
+    - {q: "currency", want: [h_bit_currency]}
+    - {q: "tax", want: [h_tax_amount]}
+    - {q: "GST amount", want: [h_tax_amount]}
+    - {q: "payment mode", want: [payment_method]}
+    - {q: "paid by card or cash", want: [payment_method]}
+    - {q: "amount paid in cash", want: [h_pay_in_amount]}
+    - {q: "points used to pay", want: [h_pay_in_points]}
+    - {q: "department of the product", want: [l_product_department, department_code]}
+    - {q: "brand", want: [brand_code, sku_brandname]}
+    - {q: "movie", want: [l_movie_code]}
+    - {q: "ticket type", want: [ticket_type]}
+    - {q: "visit count on the bill", want: ["No._of_visits"]}
+    - {q: "favourite product", want: [Fav_Product]}
+    - {q: "cobrand card used", want: [h_cobrandcard_id, h_cobrandcard_name]}
+    - {q: "bank account", want: [h_bankaccount_id]}
+    - {q: "receipt photo", want: [h_receipt_image]}
+    - {q: "referral link", want: [h_referral_url]}
+    - {q: "member mobile", want: [h_member_mobile]}
+    - {q: "email of the member on the transaction", want: [h_member_email]}
+    - {q: "streak", want: [streak_value]}
+    - {q: "engagement type", want: [engagement_type]}
+    - {q: "conversion rate", want: [h_conversion_rate]}
+    - {q: "points to transfer", want: [transfer_amount, h_bit_transfer]}
+    - {q: "programme name", want: [h_program_name]}
+    - {q: "tier the member bought", want: [purchased_tier]}
+    - {q: "maximum price", want: [maximum_price]}
+    - {q: "speding amont", want: [h_bit_amount]}
+    - {q: "loction", want: [h_location]}
+  member:
+    - {q: "age", want: [age]}
+    - {q: "how old the member is", want: [age, date_of_birth]}
+    - {q: "birthday", want: [date_of_birth]}
+    - {q: "DOB", want: [date_of_birth]}
+    - {q: "joined on", want: [date_of_joining]}
+    - {q: "enrolment date", want: [date_of_joining]}
+    - {q: "member since", want: [date_of_joining, membership_tenure]}
+    - {q: "how long they have been a member", want: [membership_tenure]}
+    - {q: "tier", want: [tier_class]}
+    - {q: "membership level", want: [tier_class, membership_stage]}
+    - {q: "gold silver bronze status", want: [tier_class]}
+    - {q: "tier expiry", want: [tier_end_date]}
+    - {q: "tier start", want: [tier_start_date]}
+    - {q: "gender", want: [gender]}
+    - {q: "male or female", want: [gender]}
+    - {q: "city", want: [city]}
+    - {q: "town they live in", want: [city]}
+    - {q: "country", want: [country, member_country]}
+    - {q: "nationality", want: [country, member_country]}
+    - {q: "region", want: [region]}
+    - {q: "postcode", want: [zipcode]}
+    - {q: "pin code", want: [zipcode]}
+    - {q: "language", want: [language]}
+    - {q: "mother tongue", want: [mother_tongue, mother_tounge]}
+    - {q: "anniversary", want: [wedding_anniversary]}
+    - {q: "marriage date", want: [wedding_anniversary]}
+    - {q: "first name", want: [first_name]}
+    - {q: "surname", want: [last_name]}
+    - {q: "email address", want: [email]}
+    - {q: "phone number", want: [mobile, home_phone]}
+    - {q: "mobile", want: [mobile]}
+    - {q: "consent to marketing", want: [communication_consent, program_opt_in]}
+    - {q: "opted in", want: [program_opt_in]}
+    - {q: "store where they enrolled", want: [enrolling_location]}
+    - {q: "joined via app or web", want: [enrollment_channel, enrollment_touchpoint]}
+    - {q: "referred by", want: [enrollment_referrer]}
+    - {q: "last transaction date", want: [last_activity_date]}
+    - {q: "days since last visit", want: [days_since_bit]}
+    - {q: "inactive for days", want: [days_since_bit]}
+    - {q: "last earn date", want: [last_accrual_date]}
+    - {q: "last redemption", want: [last_redemption_date]}
+    - {q: "first purchase", want: [first_earn_date]}
+    - {q: "family size", want: [family_member_count]}
+    - {q: "head of family", want: [family_head]}
+    - {q: "corporate member", want: [corporate]}
+    - {q: "member type", want: [member_type]}
+    - {q: "status points balance", want: ["3_balance"]}
+    - {q: "share points balance", want: ["1_balance"]}
+    - {q: "pending points", want: ["99_balance"]}
+    - {q: "airport points balance", want: ["39_balance"]}
+    - {q: "card number", want: [myclub_card_number]}
+    - {q: "salutation", want: [salutation]}
+    - {q: "Mr or Mrs", want: [salutation]}
+    - {q: "number of visits", want: ["No._of_Visits"]}
+    - {q: "preferred brands", want: [Preferred_Brands]}
+    - {q: "birth place", want: [birth_place, Member_birth_place04]}
+    - {q: "brithday", want: [date_of_birth]}
+    - {q: "gendr", want: [gender]}
+  product:
+    - {q: "category", want: [category]}
+    - {q: "product category", want: [category]}
+    - {q: "type of product", want: [category, type, privilege_type]}
+    - {q: "brand", want: [brand_name, brand_code]}
+    - {q: "make", want: [brand_name, brand_code]}
+    - {q: "SKU", want: [sku, sku_id]}
+    - {q: "stock keeping unit", want: [sku]}
+    - {q: "product name", want: [name]}
+    - {q: "department", want: [department_name, department_code]}
+    - {q: "supplier", want: [supplier_name, supplier_code]}
+    - {q: "vendor", want: [supplier_name, supplier_code]}
+    - {q: "product family", want: [family_name, family_code]}
+    - {q: "sub family", want: [sub_family_name, sub_family_code]}
+    - {q: "section", want: [section_name, section_code]}
+    - {q: "product line", want: [line]}
+    - {q: "cost price", want: [cost]}
+    - {q: "description", want: [description]}
+    - {q: "award price", want: [award_price]}
+scaled:
+  activity:
+    - {q: "spend amount", want: [h_bit_amount]}
+    - {q: "bill value", want: [h_bit_amount]}
+    - {q: "net of discount", want: [h_net_amount]}
+    - {q: "discount given", want: [h_discount_amount]}
+    - {q: "store", want: [h_location]}
+    - {q: "store region", want: [h_location_region]}
+    - {q: "date of purchase", want: [h_bit_date]}
+    - {q: "activity type", want: [h_bit_type]}
+    - {q: "sales channel", want: [h_channel]}
+    - {q: "quantity", want: [l_quantity]}
+    - {q: "line amount", want: [l_amount]}
+  member:
+    - {q: "tier", want: [tier]}
+    - {q: "previous tier", want: [previous_tier]}
+    - {q: "birthday", want: [date_of_birth]}
+    - {q: "spouse birthday", want: [spouse_date_of_birth]}
+    - {q: "home store", want: [home_store]}
+    - {q: "store they enrolled at", want: [enrolling_store]}
+    - {q: "age group", want: [age_band]}
+    - {q: "employee", want: [employee_flag]}
+    - {q: "anniversary", want: [anniversary_date]}
+  product:
+    - {q: "category", want: [category]}
+    - {q: "sku", want: [sku]}

@@ -131,6 +131,9 @@ def intro(prompt, parts, context=None, existing=None):
     if "offer_main" not in parts:
         text += (" Offer Main is set on its own screen: still call set_offer_main when the description states dates or"
                  " limits, so they are suggested there, but never build them into a canvas.")
+    if "segment" not in parts:
+        text += (" No segment is built in this job: a member limit the description states (\"for Gold members\") that is"
+                 " not listed below as already handled is built in the rules as a member condition, never dropped.")
     if context:
         text += f"\n\n{context}"
     if existing and existing.get("counters"):

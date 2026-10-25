@@ -56,15 +56,15 @@ def counter_ref(mut):
     return level, (name if level in COUNTER_LEVELS and name else None)
 
 
-def _counter_attrs(mut, src, counter):
+def _counter_attrs(mut, src, counter, level):
     """What a block that uses an offer counter stores about it, as the UI copies it from the offer's counter list:
-    data type; target type for non-TEXT counters; for a VECTOR counter its namespace, entity level and the ladder
+    data type; target type for non-TEXT offer counters (MA_O / MA_TO; an activity-level MA_A attribute has none); for a VECTOR counter its namespace, entity level and the ladder
     placeholder the UI saves (`DUMMY VALUE`)."""
     out = {}
     for key in ("type", "attr_type"):
         if key in src:
             out[key] = counter["data_type"]
-    if "target_type" in src and counter["data_type"] != "TEXT":
+    if "target_type" in src and counter["data_type"] != "TEXT" and level in ("MA_O", "MA_TO"):
         out["target_type"] = counter.get("target_type") or "NO TARGET"
     if counter.get("namespace"):
         if "vector_counter_namespace" in src:
@@ -102,7 +102,7 @@ def derive(node, spec, catalog=None, counters=None):
     level, name = counter_ref(mut)
     counter = (counters or {}).get(name) if name else None
     if counter:
-        mut.update(_counter_attrs(mut, src, counter))
+        mut.update(_counter_attrs(mut, src, counter, level))
     if "iscountertypevector" in src and ("iscountertypevector" in always or "iscountertypevector" in given):
         mut["iscountertypevector"] = "yes" if mut.get("vector_counter_namespace") else "no"
     obj = mut.get("object") or ("activity" if "operators" in mut and "object" not in src else None)
