@@ -80,6 +80,14 @@ def test_no_finish_still_returns_the_last_clean_draft(fixture_catalog, fake_ui, 
     assert any("ran out of steps" in a for a in res["assumptions"])
 
 
+def test_no_finish_and_no_clean_compile_asks_instead_of_a_draft(fixture_catalog, fake_ui, monkeypatch):
+    monkeypatch.setattr(agent, "MAX_TURNS", 2)
+    fake_ui.bad["rules"] = [{"block": "action#b9", "field": "action_operator", "in": "INCREMENT_BY"}]
+    res = agent.generate("x", fixture_catalog, ScriptedLLM([[("compile", S07)], [("compile", S07)]]))
+    assert res["status"] == "needs_input" and res["by_part"]["rules"]["blocking_questions"]
+    assert "stock screen reports" in res["blocking_questions"][0] and "action_operator" in res["blocking_questions"][0]
+
+
 def test_unsupported_without_rules(fixture_catalog, fake_ui):
     fin = finish(readback="", unsupported=[{"phrase": "referrals", "reason": "not a member's own transaction"}])
     res = agent.generate("reward referrals", fixture_catalog, ScriptedLLM([[fin]]))

@@ -259,6 +259,14 @@ def outcome(s, fin, parts, offer_id):
         if rules:
             by_part["rules"]["assumptions"].append(f"Who qualifies is the member segment '{segment['name']}': create and "
                                                    "select it on Select Members, otherwise every member qualifies.")
+    # a canvas that never compiled clean (the run stopped before its problems were fixed) is not a draft: the stock
+    # screen would drop or reject parts of it, so the manager is asked instead
+    for canvas, built_canvas in (("rules", rules), ("segment", segment)):
+        if built_canvas and not s.clean.get(canvas):
+            problems = s.last[canvas]["problems"]
+            by_part[canvas]["blocking_questions"].append(
+                f"I could not finish the {canvas} without problems the stock screen reports ("
+                + "; ".join(map(str, problems[:3])) + "). Please review the draft or describe the offer again.")
     # the whole offer's items (CLI, a full-offer reader): each once, in part order
     assumptions = list(dict.fromkeys(a for p in parts for a in by_part[p]["assumptions"]))
     questions = list(dict.fromkeys(q for p in parts for q in by_part[p]["blocking_questions"]))
