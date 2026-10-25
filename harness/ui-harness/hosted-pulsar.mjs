@@ -159,6 +159,9 @@ try {
       const skey = OFFER_KEY || item.key;
       let id = FRESH && !OFFER_KEY ? null : state[skey]?.offer_id;
       if (!id) {
+        // one QA offer per tenant: a missing key in STATE must not silently create another offer
+        if (OFFER_KEY && !process.argv.includes('--allow-create'))
+          throw new Error(`no offer for key ${OFFER_KEY} in ${STATE}; pass --allow-create to create one`);
         const r = await api('POST', 'offers/', offerPayload(skey, OFFER_KEY ? OFFER_NAME : item.name));
         if (r.status !== 201) throw new Error('offer create ' + r.status + ' ' + JSON.stringify(r.body).slice(0, 300));
         const old = state[skey];

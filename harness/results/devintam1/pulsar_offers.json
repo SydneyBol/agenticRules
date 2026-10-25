@@ -1,0 +1,46 @@
+{
+ "P01_gold_weekend_stores": {
+  "offer_id": 1952146027,
+  "name": "Gold Weekend Bonus - HQ & Online",
+  "status": "planning",
+  "previous": [
+   2042567104,
+   4751290,
+   432722506
+  ]
+ },
+ "P02_every_5th_yoga": {
+  "offer_id": 1897258482,
+  "name": "5th Purchase Free Yoga Session",
+  "status": "planning",
+  "previous": [
+   567143473,
+   1414824220,
+   422380426
+  ]
+ },
+ "P03_birthday_voucher": {
+  "offer_id": 800214480,
+  "name": "Birthday Week Voucher",
+  "status": "planning",
+  "previous": [
+   991930729,
+   1724769178,
+   1073860091
+  ]
+ },
+ "P04_three_stores_popup": {
+  "offer_id": 1423018238,
+  "name": "3 Store Explorer Bonus",
+  "status": "planning",
+  "previous": [
+   1284542741
+  ]
+ },
+ "COMBO": {
+  "offer_id": 1281376581,
+  "name": "AI Rules Combination Test",
+  "status": "planning",
+  "previous": []
+ }
+}
