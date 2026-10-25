@@ -47,7 +47,7 @@ def main(case_id, out):
     default_member, tier_attr = DOC["default_member"], DOC["tier_attribute"]
     drl = open(tenant_results(TENANT, BASE, "hosted_combos", case_id + ".drl")).read()
     btype = activity_type(drl)
-    named = set(re.findall(r'h_location"\)(?:\.contentEquals\(|\s*==\s*\()"([^"]+)"\)', drl))  # both forms the DRL uses
+    named = set(re.findall(r'h_location"\)(?:\.contentEquals\(|\s*==\s*\(?)"([^"]+)"', drl))  # .contentEquals("X"), == ("X"), == "X"
     shift, cases, paying = shifter(case), [], []
     for si, s in enumerate(case["sequences"]):
         member = dict(default_member, **s.get("member", {}))

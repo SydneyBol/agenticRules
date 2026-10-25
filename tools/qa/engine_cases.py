@@ -32,7 +32,7 @@ def offer_id(drl):
 
 def activity_type(drl):
     """The activity type the rules require (the BITs are sent with it); Spend when they name none."""
-    m = re.search(r'readAttributeS\("h_bit_type"\)== \("([^"]+)"\)', drl)
+    m = re.search(r'readAttributeS\("h_bit_type"\)\s*==\s*\(?"([^"]+)"', drl)  # == ("X") or == "X"
     return m.group(1) if m else "SPEND"
 
 
