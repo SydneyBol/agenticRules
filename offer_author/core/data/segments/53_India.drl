@@ -1,0 +1,6 @@
+rule "segmentation-indiaftrvp6crl"
+when
+    $segment : MemberSegmentExecutionContext(evaluateTextAttribute("5", "=", "city", "PROGRAM") && evaluateTextAttribute("1", "=", "membership_stage", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("indiaftrvp6crl");
+end

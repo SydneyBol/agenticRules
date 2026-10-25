@@ -1,0 +1,6 @@
+rule "segmentation-members_over_27161056"
+when
+    $segment : MemberSegmentExecutionContext(evaluateNumberAttribute("27", ">", "age", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("members_over_27161056");
+end

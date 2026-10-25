@@ -16,9 +16,9 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 
 from conftest import ROOT
-from offer_author.llm import BedrockLLM
-from offer_author.pipeline import generate
-from offer_author.pulsar import ui_xml
+from offer_author.ai.llm import BedrockLLM
+from offer_author.ai.agent import generate
+from offer_author.api.pulsar import ui_xml
 
 pytestmark = pytest.mark.live
 LIVE = os.path.join(ROOT, "tests", ".live")

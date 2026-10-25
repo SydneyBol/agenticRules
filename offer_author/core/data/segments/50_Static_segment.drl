@@ -1,0 +1,6 @@
+rule "segmentation-static_segmentl2k47jsva"
+when
+    $segment : MemberSegmentExecutionContext((undefined || (!evaluateDateAttribute("0", "is_null", "date_of_joining", "PROGRAM", "DATE"))))
+then
+    $segment.addValidatedSegmentId("static_segmentl2k47jsva");
+end

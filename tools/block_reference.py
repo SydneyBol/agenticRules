@@ -1,37 +1,47 @@
-"""Generate the block reference the blocks-mode model reads, from the gravty-ui source (no hand-written block facts).
+"""Generate the block reference the agent reads, from the gravty-ui source (no hand-written block facts).
 
-Three layers, all derived:
-  1. static, from the TypeScript: for every block of the reward toolbox (offer-rules.config.ts), its type, connection
-     checks, statement/value/dummy inputs, field names, the mutation attributes in mutationToDom order, and the
-     upload dialog's counter-detection regexes (rules-upload-model.component.ts; attribute ORDER matters there);
-  2. live (optional), harness/ui-harness/introspect.mjs output: the dropdown options the running stock screen offers
-     for each field, per selector choice (the option lists are context-dependent getters, so only the UI knows them);
-  3. evidence, from saved XML (the seeded blueprints): the mutation signatures and fields each block type really saves.
+Per canvas (rules: offer-rules.config.ts; segment: segmentation-blockly.config.ts), three layers, all derived:
+  1. static, from the TypeScript: for every toolbox block, its type, connection checks, statement/value/dummy inputs,
+     field names, where mutationToDom takes each mutation attribute (field, constant, derived) and in which order,
+     and the upload dialog's counter-detection regexes (rules-upload-model.component.ts; attribute ORDER matters);
+  2. live (optional), compile-server.mjs /introspect: the dropdown options the running stock screen offers per field
+     and selector choice (the option lists are context-dependent getters, so only the UI knows them);
+  3. evidence, from XML the UI saved (seeded blueprints; segments saved on devintam1): the mutation signatures,
+     fields and picked codes each block type really carries.
+The JSON also records a hash of every source file read, so a test can tell when the reference is stale.
 
-usage: python tools/block_reference.py [--ui ~/Downloads/newui-develop/gravty-ui] [--live harness/results/introspect.json]
-writes offer_author/blocks/assets/block_reference.{json,md}
+usage: python tools/block_reference.py [--ui ~/Downloads/newui-develop/gravty-ui]
+writes offer_author/core/data/block_reference.json (what the code reads) and offer_author/ai/context/
+block_reference.md (rules), block_reference_segment.md
 """
 import argparse
 import collections
 import glob
+import hashlib
 import json
 import os
 import re
 import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ASSETS = os.path.join(ROOT, "offer_author", "blocks", "assets")
-CONFIG = "src/app/workspaces/offer/modules/offer-setup/screens/offer-rules/config/offer-rules.config.ts"
+DATA = os.path.join(ROOT, "offer_author", "core", "data")  # code: tree.py / check.py read the json
+CONTEXT = os.path.join(ROOT, "offer_author", "ai", "context")  # AI: the md the model reads
+CANVASES = {  # canvas -> (toolbox config, evidence dir, live introspection output)
+    "rules": ("src/app/workspaces/offer/modules/offer-setup/screens/offer-rules/config/offer-rules.config.ts",
+              os.path.join(DATA, "blueprints"), os.path.join(ROOT, "harness", "results", "introspect.json")),
+    "segment": ("src/app/workspaces/program/screens/segment-setup/config/segmentation-blockly.config.ts",
+                os.path.join(DATA, "segments"), os.path.join(ROOT, "harness", "results", "introspect_segment.json")),
+}
 UPLOAD = "src/app/gravty-blockly/layouts/rules-upload-model/rules-upload-model.component.ts"
 BLOCKS = "src/app/gravty-blockly/blocks"
 Q = r"""['"]([^'"]+)['"]"""
 
 
-def toolbox(ui):
+def toolbox(ui, config):
     """[(category, class_name)] in toolbox order."""
-    src = open(os.path.join(ui, CONFIG)).read()
+    src = open(os.path.join(ui, config)).read()
     lists = {m.group(1): re.findall(r"new (\w+)\(", m.group(2))
-             for m in re.finditer(r"const (\w+)\s*:\s*CustomBlock\[\]\s*=\s*\[(.*?)\];", src, re.S)}
+             for m in re.finditer(r"const (\w+)\s*(?::[^=]+)?=\s*\[(.*?)\];?\s*\n", src, re.S)}
     out = []
     for cat, body in re.findall(r"new Category\(" + Q + r",\s*'[^']*',\s*\[(.*?)\]\)", src, re.S):
         for name in re.findall(r"\.\.\.(\w+)", body):
@@ -192,7 +202,7 @@ def counter_patterns(ui):
 def evidence(xml_files):
     """block type -> {signatures: {attr order: count}, fields: {name: [sample values]}, parents: {input: count}}."""
     ev = collections.defaultdict(lambda: {"signatures": collections.Counter(), "fields": collections.defaultdict(set),
-                                          "inside": collections.Counter()})
+                                          "inside": collections.Counter(), "picked": set()})
 
     def walk(el, parent_input):
         for ch in el:
@@ -206,6 +216,9 @@ def evidence(xml_files):
                     gt = g.tag.split("}")[-1]
                     if gt == "mutation":
                         e["signatures"][" ".join(k for k in g.attrib if k != "xmlns")] += 1
+                        has_field = any(x.tag.split("}")[-1] == "field" and x.get("name") == "value" for x in ch)
+                        if g.get("value") and not has_field and len(e["picked"]) < 6:
+                            e["picked"].add(g.get("value")[:40])
                     elif gt == "field" and len(e["fields"][g.get("name")]) < 6:
                         e["fields"][g.get("name")].add((g.text or "")[:40])
                 for g in ch:
@@ -223,18 +236,17 @@ def evidence(xml_files):
         except ET.ParseError:
             continue
     return {t: {"signatures": dict(e["signatures"].most_common()), "fields": {k: sorted(v) for k, v in e["fields"].items()},
-                "inside": dict(e["inside"].most_common(6))} for t, e in ev.items()}
+                "inside": dict(e["inside"].most_common(6)), "picked": sorted(e["picked"])} for t, e in ev.items()}
 
 
-def build(ui, live_path, blueprint_dir):
-    srcs = class_sources(ui)
+def canvas(ui, srcs, config, evidence_dir, live_path):
     blocks = []
-    for cat, cls in toolbox(ui):
+    for cat, cls in toolbox(ui, config):
         f, src = srcs[cls]
         b = dict(static_shape(src), category=cat, cls=cls, source=f)
         blocks.append(b)
     live = json.load(open(live_path)) if live_path and os.path.exists(live_path) else {}
-    ev = evidence(sorted(glob.glob(os.path.join(blueprint_dir, "*.xml"))))
+    ev = evidence(sorted(glob.glob(os.path.join(evidence_dir, "*.xml"))))
     for b in blocks:
         b["live"] = live.get(b["type"])
         b["evidence"] = ev.get(b["type"])
@@ -242,7 +254,20 @@ def build(ui, live_path, blueprint_dir):
         b["mutation_order"] = mutation_order(b["mutation_attributes"], sigs)
         # attributes every saved instance of the block carries: the UI writes them unconditionally ("null" if unset)
         b["mutation_always"] = sorted(set.intersection(*[set(x.split()) for x in sigs])) if sigs else []
-    return {"toolbox": blocks, "counter_patterns": counter_patterns(ui), "sources": {"ui": ui, "config": CONFIG, "upload": UPLOAD}}
+    return {"toolbox": blocks, "config": config}
+
+
+def source_hashes(ui, ref):
+    files = {UPLOAD} | {c["config"] for c in ref["canvases"].values()} | \
+        {f"{BLOCKS}/{b['source']}" for c in ref["canvases"].values() for b in c["toolbox"]}
+    return {f: hashlib.sha256(open(os.path.join(ui, f), "rb").read()).hexdigest()[:16] for f in sorted(files)}
+
+
+def build(ui):
+    srcs = class_sources(ui)
+    ref = {"canvases": {name: canvas(ui, srcs, *spec) for name, spec in CANVASES.items()}, "counter_patterns": counter_patterns(ui)}
+    ref["sources"] = {"ui": ui, "hashes": source_hashes(ui, ref)}
+    return ref
 
 
 def _opts(v, n=12):
@@ -272,12 +297,14 @@ def live_lines(live):
     return out
 
 
-def md(ref):
+def md(ref, name):
     def c(x):
         return "any" if x is None else "|".join(x)
-    out = ["# Reward-offer block reference (generated from gravty-ui source by tools/block_reference.py; do not edit)", "",
+    out = [f"# {name.title()} canvas block reference (generated from gravty-ui source by tools/block_reference.py; do not edit)",
+           f"Toolbox: {ref['config']}", "",
            "Connections: a block's `previous` check must share a name with the check of the statement input (or `next`) it",
-           "plugs into; `output` blocks plug into value inputs. `any` = no check.", ""]
+           "plugs into; `output` blocks plug into value inputs. `any` = no check. You set fields (and `picked` codes for a",
+           "lookup popup); the tools write every mutation attribute from them as the UI does.", ""]
     for b in ref["toolbox"]:
         out.append(f"## {b['type']}  ({b['category']}; {b['cls']}, blocks/{b['source']})")
         cn = b["connections"]
@@ -290,37 +317,31 @@ def md(ref):
             out.append("- value inputs: " + ", ".join(f"{s['name']} [{c(s['check'])}]" for s in b["value_inputs"]))
         if b["fields"]:
             out.append("- fields: " + ", ".join(b["fields"]))
-        if b["mutation_attributes"]:
-            out.append("- mutation attributes (mutationToDom order): " + ", ".join(b["mutation_attributes"]))
         out += live_lines(b.get("live"))
         ev = b.get("evidence")
         if ev:
             if ev["inside"]:
                 out.append("- seen inside: " + ", ".join(f"{k} ({v})" for k, v in ev["inside"].items()))
-            for sig, n in list(ev["signatures"].items())[:6]:
-                out.append(f"- saved mutation ({n}x): {sig}")
+            if ev.get("picked"):
+                out.append("- saved picked codes: " + " / ".join(ev["picked"]))
             if ev["fields"]:
                 out.append("- saved fields: " + "; ".join(f"{k}={'/'.join(v)}" for k, v in ev["fields"].items()))
         out.append("")
-    out += ["## Counters the upload dialog creates", "",
-            "On upload the stock dialog scans the raw XML with these regexes and creates an offer counter for every match whose",
-            "level is MA_O (or MA_A/MA_TO) that the offer does not have yet. Attributes must appear in exactly one of these",
-            "orders (others may follow after the last one), with no attribute in between:", ""]
-    out += [f"- {p['regex']}: {' '.join(p['attribute_order'])}" for p in ref["counter_patterns"]]
     return "\n".join(out) + "\n"
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ui", default=os.environ.get("GRAVTY_UI", os.path.expanduser("~/Downloads/newui-develop/gravty-ui")))
-    ap.add_argument("--live", default=os.path.join(ROOT, "harness", "results", "introspect.json"))
-    ap.add_argument("--blueprints", default=os.path.join(ASSETS, "blueprints"))
     a = ap.parse_args()
-    ref = build(a.ui, a.live, a.blueprints)
-    os.makedirs(ASSETS, exist_ok=True)
-    json.dump(ref, open(os.path.join(ASSETS, "block_reference.json"), "w"), indent=1)
-    open(os.path.join(ASSETS, "block_reference.md"), "w").write(md(ref))
-    print(len(ref["toolbox"]), "blocks,", len(ref["counter_patterns"]), "counter patterns ->", ASSETS)
+    ref = build(a.ui)
+    os.makedirs(DATA, exist_ok=True)
+    os.makedirs(CONTEXT, exist_ok=True)
+    json.dump(ref, open(os.path.join(DATA, "block_reference.json"), "w"), indent=1)
+    for name, cv in ref["canvases"].items():
+        open(os.path.join(CONTEXT, "block_reference.md" if name == "rules" else f"block_reference_{name}.md"), "w").write(md(cv, name))
+        print(name, len(cv["toolbox"]), "blocks")
+    print(len(ref["counter_patterns"]), "counter patterns ->", DATA, CONTEXT)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,6 @@
+rule "segmentation-tier_name_segment_ti6ulfwhl"
+when
+    $segment : MemberSegmentExecutionContext(evaluateTierTextAttribute("Bronze", "=", "name", "TIER", "Elite_Levels") && evaluateNumberAttribute("18", ">", "age", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("tier_name_segment_ti6ulfwhl");
+end

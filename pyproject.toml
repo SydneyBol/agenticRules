@@ -13,8 +13,12 @@ dependencies = ["anthropic[bedrock]>=1.17", "Flask>=3.1", "jsonschema>=4.26", "h
 test = ["pytest>=8", "PyYAML>=6"]
 
 [project.scripts]
-offer-xml = "offer_author.cli:main"
-offer-xml-server = "offer_author.service:main"
+offer-xml = "offer_author.api.cli:main"
+offer-xml-server = "offer_author.api.service:main"
 
 [tool.setuptools]
-packages = ["offer_author"]
+packages = ["offer_author", "offer_author.ai", "offer_author.core", "offer_author.api"]
+
+[tool.setuptools.package-data]
+"offer_author.ai" = ["context/*.md"]
+"offer_author.core" = ["data/*.json", "data/blueprints/*", "data/segments/*"]

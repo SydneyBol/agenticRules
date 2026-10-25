@@ -1,0 +1,6 @@
+rule "segmentation-test_segmentpc4kwcbn"
+when
+    $segment : MemberSegmentExecutionContext(evaluateTierTextAttribute("Bronze", "=", "name", "TIER", "Elite_Levels") && evaluateTextAttribute("268", "=", "country", "PROGRAM") && evaluateTextAttribute("male", "=", "gender", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("test_segmentpc4kwcbn");
+end

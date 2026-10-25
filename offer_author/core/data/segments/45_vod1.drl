@@ -1,0 +1,6 @@
+rule "segmentation-vod1f517h7y0q"
+when
+    $segment : MemberSegmentExecutionContext(evaluateTextAttribute("256", "=", "country", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("vod1f517h7y0q");
+end

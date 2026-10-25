@@ -1,13 +1,14 @@
 // Warm compile service: the stock gravty-ui rules screen, headless, kept loaded so a rule XML can be checked in ~2 s.
-// POST /compile {xml, tenant?, path?: 'upload'|'append'} -> what the UI made of it: canonical XML, DRL, validation
-// messages, exceptions, dropped/changed fields, and the counters the upload dialog created (the offer starts with none).
+// POST /compile {xml, tenant?, canvas?: 'rules'|'segment', path?: 'upload'|'append'} -> what the UI made of it:
+// rules: canonical XML, DRL, validation messages, exceptions, dropped/changed fields, and the counters the upload
+// dialog created (the offer starts with none); segment: the add-segment screen's saved XML, DRL, target_json, error.
 // POST /introspect {types, tenant?} -> the dropdown options the screen offers per block field (tools/block_reference.py --live).
 // usage: node compile-server.mjs [--port=8078] [--pool=2] [--headful]   (needs ng serve of gravty-ui on :4200)
 import puppeteer from 'puppeteer-core';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { openScreen, loadInScreen, compareInPage, CHROME, CHROME_ARGS } from './screen.mjs';
+import { openScreen, loadInScreen, loadSegmentInScreen, compareInPage, CHROME, CHROME_ARGS } from './screen.mjs';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
@@ -19,28 +20,36 @@ const browser = await puppeteer.launch({
   userDataDir: fs.mkdtempSync(path.join(HERE, 'tmp-profile-compile-')), args: CHROME_ARGS,
 });
 
-// ready screens per tenant ('' = fixture): each is used once (the upload creates counters on its offer), then closed
+// ready screens per (screen, tenant) ('' = fixture): each is used once (an upload creates counters on its offer), then
+// closed
 const spares = new Map();
-function warm(tenant) {
-  const list = spares.get(tenant) || [];
-  spares.set(tenant, list);
+function warm(tenant, screen = 'rules') {
+  const key = `${screen}:${tenant}`;
+  const list = spares.get(key) || [];
+  spares.set(key, list);
   while (list.length < POOL) {
     const ctx = { counters: [], drlGet: [], posted: [] };
-    list.push(openScreen(browser, { tenant: tenant || null, ctx }));
+    list.push(openScreen(browser, { tenant: tenant || null, ctx, screen }));
   }
 }
-async function take(tenant) {
-  warm(tenant);
-  const s = await spares.get(tenant).shift();
-  warm(tenant);
+async function take(tenant, screen = 'rules') {
+  warm(tenant, screen);
+  const s = await spares.get(`${screen}:${tenant}`).shift();
+  warm(tenant, screen);
   return s;
 }
 
-async function compile({ xml, tenant = '', path: loadPath = 'upload' }) {
+async function compile({ xml, tenant = '', canvas = 'rules', path: loadPath = 'upload' }) {
   const t0 = Date.now();
-  const s = await take(tenant);
+  const s = await take(tenant, canvas);
   try {
     if (s.error) return { loaded: false, error: s.error, console: s.console.slice(0, 20) };
+    if (canvas === 'segment') {
+      const out = await loadSegmentInScreen(s.page, xml);
+      const cmp = out.canonical ? await s.page.evaluate(compareInPage, xml, out.canonical) : {};
+      return { ...out, ms: Date.now() - t0, validation_errors: out.error ? [out.error] : [], block_warnings: out.warnings,
+               ...cmp, console: s.console.filter((l) => !/favicon|DevTools/.test(l)).slice(0, 20) };
+    }
     const out = await loadInScreen(s.page, xml, loadPath);
     const cmp = out.canonical ? await s.page.evaluate(compareInPage, xml, out.canonical) : {};
     return {
@@ -108,7 +117,7 @@ async function introspect({ tenant = '', types = [] }) {
 const routes = { '/compile': compile, '/introspect': introspect };
 http.createServer((req, res) => {
   const send = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
-  if (req.method === 'GET' && req.url === '/health') return send(200, { ok: true, pool: Object.fromEntries([...spares].map(([k, v]) => [k || 'fixture', v.length])) });
+  if (req.method === 'GET' && req.url === '/health') return send(200, { ok: true, pool: Object.fromEntries([...spares].map(([k, v]) => [k, v.length])) });
   const fn = routes[req.url];
   if (req.method !== 'POST' || !fn) return send(404, { error: 'POST /compile or /introspect' });
   let body = '';

@@ -19,10 +19,9 @@ import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path[:0] = [ROOT, os.path.join(ROOT, "tests")]
-import offer_author.catalog as catalog_mod  # noqa: E402
-from offer_author.llm import BedrockLLM  # noqa: E402
-from offer_author.pipeline import generate  # noqa: E402
-from offer_author.tools import TOOLS  # noqa: E402
+import offer_author.core.catalog as catalog_mod  # noqa: E402
+from offer_author.ai.llm import BedrockLLM  # noqa: E402
+from offer_author.ai.agent import generate  # noqa: E402
 from scaled_catalog import build  # noqa: E402
 
 CASES = os.path.join(ROOT, "tests", "cases", "scale.yaml")
@@ -36,43 +35,24 @@ class NoLookup:
         self.llm, self.model = llm, llm.model
 
     def turn(self, system, messages, tools=None):
-        return self.llm.turn(system, messages, tools=[t for t in (tools or TOOLS) if t["name"] != "lookup_values"])
+        return self.llm.turn(system, messages, tools=[t for t in tools if t["name"] != "lookup_values"])
 
 
-def used(calls):
-    """{"object.attribute": set(codes)} for everything the draft's calls reference."""
+def used(xml):
+    """{"object.attribute": set(codes)} for every attribute the delivered blocks test, with the codes they compare to."""
+    import xml.etree.ElementTree as ET
+    from offer_author.core.tree import CATALOG_OBJECT
     out = {}
-    add = lambda k, codes=(): out.setdefault(k, set()).update(c for c in codes if c)
-
-    def walk(o):
-        if isinstance(o, dict):
-            if {"object", "attribute", "op"} <= set(o):
-                add(f"{o['object']}.{o['attribute']}", o.get("values") if o["op"] in ("in", "not_in") else [o.get("value")])
-            for v in o.values():
-                walk(v)
-        elif isinstance(o, list):
-            for v in o:
-                walk(v)
-    for n, x in calls:
-        if n == "finish":
-            add("activity.h_bit_type", x.get("activity_types") or [])
+    for m in ET.fromstring(xml).iter() if xml else []:
+        if m.tag.split("}")[-1] != "mutation" or not m.get("attribute") or m.get("object") not in CATALOG_OBJECT:
             continue
-        if n in ("add_line_item", "add_collect_all"):
-            vals = x.get("values") or [v for g in x.get("groups") or [] for v in g]
-            add(f"product.{x.get('product_attribute')}", vals)
-        if x.get("measure"):
-            add(f"activity.{x['measure']}")
-        if x.get("date_attribute"):
-            add(f"member.{x['date_attribute']}")
-        if n == "add_unique_count" and x.get("dimension"):
-            add(f"activity.{x['dimension']}")
-        walk(x)
+        codes = (m.get("value") or "").split(",") if m.get("operators") in ("in", "not_in", "==", "!=") else []
+        out.setdefault(f"{CATALOG_OBJECT[m.get('object')]}.{m.get('attribute')}", set()).update(c for c in codes if c and c != "null")
     return out
 
 
 def score(case, res):
-    calls = (res.get("diagnostics") or {}).get("calls") or []
-    got = used(calls)
+    got = used((res.get("rules") or {}).get("xml"))
     problems = []
     for attr, codes in (case.get("picks") or {}).items():
         if attr not in got:

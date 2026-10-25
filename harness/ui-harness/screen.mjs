@@ -1,5 +1,6 @@
-// The REAL gravty-ui offer-rules Blockly screen against a fully mocked backend (shared by mock-run.mjs and
-// compile-server.mjs): open it, load rule XML through a stock path, read back what the UI made of it.
+// The REAL gravty-ui Blockly screens against a fully mocked backend (shared by mock-run.mjs, segment-run.mjs and
+// compile-server.mjs): the offer-rules screen and the add-segment screen. Open one, load XML through the stock path,
+// read back what the UI made of it.
 import fs from 'node:fs';
 import path from 'node:path';
 import * as M from './fixtures/mocks.mjs';
@@ -46,8 +47,17 @@ export function tenantGetter(tenant) {
 
 // Open the rules screen in a fresh browser context. ctx: {counters, drlGet, posted}; POSTed counters are recorded in
 // ctx.posted and become part of the offer. stats: {endpoints, unknown} Maps, shared across screens if given.
-export async function openScreen(browser, { tenant = null, ctx, stats = { endpoints: new Map(), unknown: new Map() }, tagdelay = 0, timeout = 90000 }) {
-  const tenantGet = tenantGetter(tenant);
+const page1 = (rows) => (Array.isArray(rows) ? { count: rows.length, next: null, previous: null, results: rows } : rows);
+const SCREENS = {
+  rules: { hash: `#/offer/${M.OFFER_ID}/rules`, paged: [] },
+  // the segment screen reads tier lists as paginated responses
+  segment: { hash: `#/offer/${M.OFFER_ID}/selectmembers/membersegment/new`, paged: [/\/tier-list\/?$/, /\/tier-classes\/?$/] },
+};
+
+export async function openScreen(browser, { tenant = null, ctx, stats = { endpoints: new Map(), unknown: new Map() }, tagdelay = 0, timeout = 90000, screen: kind = 'rules' }) {
+  const spec = SCREENS[kind];
+  const raw = tenantGetter(tenant);
+  const tenantGet = (u) => { const b = raw(u); return b && spec.paged.some((re) => re.test(u.pathname)) ? page1(b) : b; };
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
   await page.setViewport({ width: 1600, height: 1000 });
@@ -76,7 +86,10 @@ export async function openScreen(browser, { tenant = null, ctx, stats = { endpoi
     if (req.method() === 'OPTIONS') return req.respond({ status: 204, headers: cors, body: '' });
     if (tagdelay && /\/loyaltyaccounts\/\d+\/tags\/$/.test(u.pathname)) await new Promise((r) => setTimeout(r, Number(tagdelay)));
     let body = null;
-    try { body = (req.method() === 'GET' && tenantGet(u)) || M.route(req.method(), u, req.postData(), ctx); } catch (e) { body = null; }
+    if (/\/pulsar\/offer\/metadata\/?$/.test(u.pathname)) {  // segment name/description asked by the add-segment screen
+      body = { success: true, metadata: { member_segment_name: 'AI segment', segment_description: 'Generated segment' } };
+    }
+    try { body = body || (req.method() === 'GET' && tenantGet(u)) || M.route(req.method(), u, req.postData(), ctx); } catch (e) { body = null; }
     if (req.method() === 'POST' && /\/member-tracked-attributes\/$/.test(u.pathname) && body) {
       ctx.posted.push(JSON.parse(req.postData() || '{}'));
       ctx.counters.push({ name: body.name, level: 'MA_O', data_type: body.data_type, counter_type: body.counter_type,
@@ -102,8 +115,18 @@ export async function openScreen(browser, { tenant = null, ctx, stats = { endpoi
 
   const t0 = Date.now();
   await page.setCookie({ name: 'XSRF-COOKIE', value: 'mock-xsrf-local', url: 'http://localhost:4200/' });
-  await page.goto(`${APP}/#/offer/${M.OFFER_ID}/rules`, { waitUntil: 'domcontentloaded', timeout: 120000 });
-  const screen = { page, context, console: consoleLines, ctx };
+  await page.goto(`${APP}/${spec.hash}`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  const screen = { page, context, console: consoleLines, ctx, kind };
+  if (kind === 'segment') {
+    try {
+      await page.waitForFunction(() => {
+        const el = document.querySelector('app-add-segment');
+        return !!(el && window.ng?.getComponent(el)?.segmentData);
+      }, { timeout, polling: 250 });
+      screen.ready_ms = Date.now() - t0;
+    } catch (e) { screen.error = 'timeout waiting for the segment screen: ' + e.message; screen.url = page.url(); }
+    return screen;
+  }
   // the offer-rules component + rendered workspace + metadata forkJoin finished
   try {
     await page.waitForFunction(() => {
@@ -212,4 +235,40 @@ export function compareInPage(inXml, outXml) {
   });
   const extra_out = blocksB.filter((b) => !blocksA.some((a) => a.id === b.id)).map((b) => `${b.type}#${b.id}`);
   return { blocks_in: blocksA.length, blocks_out: blocksB.length, dropped_fields: dropped, changed_fields: changed, mutation_diffs, extra_out_blocks: extra_out };
+}
+
+// Load segment XML the way the stock AI hand-off does (member-segments-listing handlePopupResponse -> add-segment
+// manipulateSegmentData: base64 XML in member_target_xml with fromAi) and read back what the screen would save:
+// the re-serialised XML, target_json and the DRL its own generator writes (the call add-segment's getXMLDRL makes).
+export async function loadSegmentInScreen(page, xml, settleMs = 1500) {
+  await page.evaluate((b64) => {
+    const c = window.ng.getComponent(document.querySelector('app-add-segment'));
+    c.memberSegmentService.selectedSegment = { segment: { fromAi: true, member_target_xml: b64, rule_id: 'harness', id: 'new',
+                                                          dynamic_segmentation: 'DYNAMIC', staticOption: 'rules' } };
+    c.manipulateSegmentData();
+    window.ng.applyChanges?.(c);
+  }, Buffer.from(xml, 'utf8').toString('base64'));
+  try {
+    await page.waitForFunction(() => {
+      const c = window.ng.getComponent(document.querySelector('app-add-segment'));
+      const ws = c?.segmentBlockly?.workspace?.workspace;
+      return !!(ws && ws.rendered && ws.getAllBlocks(false).length > 0);
+    }, { timeout: 60000, polling: 250 });
+  } catch (e) { return { loaded: false, error: 'timeout waiting for the segment canvas: ' + e.message.slice(0, 120) }; }
+  return page.evaluate(async (settleMs) => {
+    const r = { loaded: true, exceptions: [] };
+    const sb = window.ng.getComponent(document.querySelector('app-add-segment')).segmentBlockly;
+    const ws = sb.workspace.workspace;
+    await new Promise((ok) => setTimeout(ok, settleMs));
+    r.blocks = ws.getAllBlocks(false).map((b) => b.type);
+    r.warnings = ws.getAllBlocks(false).map((b) => (b.warning ? `${b.type}#${b.id}: ${b.warning.getText?.() || ''}` : null)).filter(Boolean);
+    try {
+      const out = sb.generateDrlCode();
+      r.error = out?.errorObj?.error ? out.errorObj.errorMsg : null;
+      r.target_json = out?.target_json;
+      r.canonical = out?.encodedXml ? atob(out.encodedXml) : '';
+      r.drl = sb.blocklySourceDetails?.drl ? atob(sb.blocklySourceDetails.drl) : '';
+    } catch (e) { r.exceptions.push('gen: ' + (e.stack || e)); }
+    return r;
+  }, settleMs);
 }

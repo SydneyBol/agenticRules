@@ -1,0 +1,6 @@
+rule "segmentation-target_member_per_pointsvywhagdju"
+when
+    $segment : MemberSegmentExecutionContext(evaluateNumberAttribute("1", ">", "6_balance", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("target_member_per_pointsvywhagdju");
+end

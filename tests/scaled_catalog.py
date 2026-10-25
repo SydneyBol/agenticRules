@@ -12,7 +12,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from offer_author.catalog import Attribute, Catalog  # noqa: E402
+from offer_author.core.catalog import Attribute, Catalog  # noqa: E402
 
 CITIES = ["Chennai", "Mumbai", "Pune", "Delhi", "Bengaluru", "Hyderabad", "Kolkata", "Ahmedabad", "Jaipur", "Lucknow",
           "Kochi", "Coimbatore", "Madurai", "Vijayawada", "Visakhapatnam", "Nagpur", "Indore", "Bhopal", "Surat", "Vadodara",

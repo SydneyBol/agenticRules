@@ -1,0 +1,6 @@
+rule "segmentation-dynamickk848976"
+when
+    $segment : MemberSegmentExecutionContext(evaluateTextAttribute("female", "=", "gender", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("dynamickk848976");
+end

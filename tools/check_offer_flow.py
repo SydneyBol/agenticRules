@@ -53,9 +53,7 @@ JAR = os.path.join(SPIKE, "engine-harness", "target", "harness.jar")
 CASES = os.path.join(SPIKE, "results", "engine", "cases")
 
 ROOT = os.path.dirname(HERE)
-# OFFER_AUTHOR_ENGINE=blocks (set for this script too when the backend runs blocks mode): separate outputs
-ENGINE = "blocks_" if os.environ.get("OFFER_AUTHOR_ENGINE") == "blocks" else ""
-LIVE = os.path.join(ROOT, "tests", ".live" + ("_blocks" if ENGINE else ""))
+LIVE = os.path.join(ROOT, "tests", ".live")
 OFFER_BASE = {"full": 970000, "individual": 980000}  # synthetic offer ids: nothing shared with the hosted offer
 
 
@@ -107,8 +105,8 @@ def rules_result(row, st, r):
 
 def stock_ui(mode, rows):
     """Rules XML through the stock rules screen, segment XML through the stock segment screen -> DRLs."""
-    rin, rout = f"{ENGINE}flow_{mode}", f"ui_{ENGINE}flow_{mode}"
-    sin, sout = os.path.join(SPIKE, "results", f"{ENGINE}flow_{mode}_seg"), os.path.join(SPIKE, "results", f"ui_{ENGINE}flow_{mode}_seg")
+    rin, rout = f"flow_{mode}", f"ui_flow_{mode}"
+    sin, sout = os.path.join(SPIKE, "results", f"flow_{mode}_seg"), os.path.join(SPIKE, "results", f"ui_flow_{mode}_seg")
     for d in (rin, rout):
         shutil.rmtree(os.path.join(SPIKE, "results", d), ignore_errors=True)
     for d in (sin, sout):

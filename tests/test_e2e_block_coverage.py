@@ -14,11 +14,11 @@ import subprocess
 import pytest
 
 from conftest import ROOT, SPIKE
-from offer_author.pulsar import ui_xml
+from offer_author.api.pulsar import ui_xml
 
 pytestmark = pytest.mark.e2e
 LIVE = os.path.join(ROOT, "tests", ".live", "block_coverage.json")
-IN_DIR, UI_DIR = "proto_block_coverage", "ui_proto_block_coverage"
+IN_DIR, UI_DIR = "agent_block_coverage", "ui_agent_block_coverage"
 
 
 @pytest.fixture(scope="module")

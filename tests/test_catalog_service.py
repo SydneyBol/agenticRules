@@ -6,10 +6,10 @@ import time
 import httpx
 import pytest
 
-from conftest import ROOT, finish
-from offer_author.catalog import BolapiCatalogSource, Catalog
-from offer_author.llm import ScriptedLLM
-from offer_author.service import create_app
+from conftest import ROOT, finish, golden
+from offer_author.core.catalog import BolapiCatalogSource
+from offer_author.ai.llm import ScriptedLLM
+from offer_author.api.service import create_app
 
 DUMPS = os.path.join(ROOT, "catalogs", "devintam1", "bolapi")
 
@@ -40,7 +40,7 @@ def test_live_source_matches_dumps_and_caches(devintam1_catalog):
     src = BolapiCatalogSource("https://master.devintam1.gravty.info", http=client)
     live = src.get("devintam1", 1, "12", "JWT test", default_tag="BASE")
     assert live.prompt_text() == devintam1_catalog.prompt_text()
-    assert live.expander_catalog() == devintam1_catalog.expander_catalog()
+    assert live.account() == devintam1_catalog.account() and live.privileges == devintam1_catalog.privileges
     n = len(seen)
     src.get("devintam1", 1, "12", "JWT test")
     assert len(seen) == n  # cached
@@ -52,18 +52,17 @@ def test_live_source_propagates_auth_failure():
         BolapiCatalogSource("https://x", http=client).get("t", 1, "12", "JWT wrong")
 
 
-def test_unknown_tag_rejected(devintam1_catalog):
-    with pytest.raises(ValueError, match="not an active tag"):
-        devintam1_catalog.expander_catalog("12", "BONUS")
+def test_unknown_account_is_none(devintam1_catalog):
+    assert devintam1_catalog.account("999") is None and devintam1_catalog.account("12")["id"] in (12, "12")
 
 
 # ---------------------------------------------------------------- API
-EARN = ("add_earn", {"measure": "h_bit_amount", "factor_kind": "rate_per_unit", "factor": 10, "conditions": [], "or_groups": []})
+EARN = ("compile", golden("S14_simple_sanity"))
 
 
 @pytest.fixture
-def client(fixture_catalog):
-    llm = ScriptedLLM([[EARN, finish(readback="10 points per dollar")]] * 5)
+def client(fixture_catalog, fake_ui):
+    llm = ScriptedLLM([[EARN], [finish(readback="10 points per dollar")]] * 5)
     return create_app(llm, lambda sponsor, account, auth: fixture_catalog).test_client()
 
 
@@ -96,7 +95,7 @@ def test_sync_mode(client):
     ({"prompt": "  "}, 400, "prompt_required"),
     ({"prompt": "x" * 4001}, 400, "prompt_too_long"),
     ({"sponsor_id": "1"}, 400, "sponsor_required"),
-    ({"tag": "NOPE"}, 424, "catalog_unavailable"),
+    ({"loyalty_account_id": "999"}, 424, "catalog_unavailable"),
 ])
 def test_request_validation(client, kw, status, code):
     r = client.post("/ai/offer-author/generate", json=body(**kw))

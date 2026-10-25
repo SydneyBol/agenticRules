@@ -2,8 +2,8 @@
 import pytest
 
 import catalog
-from offer_author.llm import ScriptedLLM
-from offer_author.service import create_app
+from offer_author.ai.llm import ScriptedLLM
+from offer_author.api.service import create_app
 
 CASES = catalog.load()
 API_CASES = [c for c in CASES if c.get("api")]
@@ -36,7 +36,7 @@ SLOT_PAIRS = [(slot, child) for slot, kids in catalog.slots().items() for child 
 def test_slot_pair_builds(slot, child):
     """Every container input with every child its setCheck allows is accepted by blocks mode's offline check, whose
     connection rules come from the block reference generated from the UI source (tools/block_reference.py)."""
-    from offer_author.blocks.check import check, reference
+    from offer_author.core.check import check, reference
     parent, inp = slot.split(".")
     ref = reference()
     kind = "statement" if inp in {i["name"] for i in ref[parent]["statement_inputs"]} else "value"

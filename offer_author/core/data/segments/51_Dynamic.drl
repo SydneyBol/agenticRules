@@ -1,0 +1,6 @@
+rule "segmentation-dynamic_540602"
+when
+    $segment : MemberSegmentExecutionContext(evaluateTextAttribute("1", "=", "membership_stage", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("dynamic_540602");
+end

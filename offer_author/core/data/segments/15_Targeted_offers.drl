@@ -1,0 +1,6 @@
+rule "segmentation-targeted_offersg560mcfis"
+when
+    $segment : MemberSegmentExecutionContext(evaluateNumberAttribute("20", ">", "age", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("targeted_offersg560mcfis");
+end

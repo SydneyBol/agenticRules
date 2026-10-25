@@ -1,14 +1,19 @@
-"""Existing-counter guard: reuse only an exact match on a planning offer, otherwise a free name, and list unused counters."""
+"""Counters already on the offer: the agent names its counters, code checks each name against the offer (reuse only an
+exact match on a planning offer), and the report lists what is reused, created and left unused."""
 import base64
+import json
 
-from conftest import finish, pts
-from offer_author.counters import BolapiCounterSource, Guard, normalize
-from offer_author.llm import ScriptedLLM
-from offer_author.pipeline import generate
-from offer_author.service import create_app
+import pytest
 
-MILESTONE = ("add_milestone", {"measure": "h_bit_amount", "threshold": 1000, "reward": pts(300), "conditions": []})
-UNIQUE = ("add_unique_count", {"dimension": "h_location", "n": 3, "reward": pts(300)})
+from conftest import finish, golden
+from offer_author.core.counters import BolapiCounterSource, Guard, normalize
+from offer_author.ai.agent import Session, generate
+from offer_author.ai.llm import ScriptedLLM
+from offer_author.api.service import create_app
+
+pytestmark = pytest.mark.usefixtures("fake_ui")
+MILESTONE = ("compile", golden("S08_spend_milestone_once"))  # counters: Total spend (NUMBER), 500 points given (TEXT)
+UNIQUE = ("compile", golden("S09_unique_locations"))  # Visits per store: VECTOR per h_location
 
 
 def mto(name, data_type="NUMBER", counter_type="REGULAR", ns=None):
@@ -18,8 +23,17 @@ def mto(name, data_type="NUMBER", counter_type="REGULAR", ns=None):
     return m
 
 
-def run(fixture_catalog, calls, existing, offer_id=4242):
-    return generate("...", fixture_catalog, ScriptedLLM([list(calls) + [finish()]]), offer_id=offer_id, existing=existing)
+def renamed(call, old, new):
+    return (call[0], json.loads(json.dumps(call[1]).replace(f'"{old}"', f'"{new}"')))
+
+
+def run(fixture_catalog, turns, existing, offer_id=4242):
+    llm = ScriptedLLM([*turns, [finish()]])
+    return generate("...", fixture_catalog, llm, offer_id=offer_id, existing=existing), llm
+
+
+def problems(llm, k=1):
+    return json.loads(llm.calls[-1][2 * k]["content"][0]["content"])["problems"]
 
 
 def names(res):
@@ -27,55 +41,38 @@ def names(res):
 
 
 def test_exact_match_on_planning_offer_is_reused_and_old_ones_listed(fixture_catalog):
-    existing = {"offer_status": "planning", "counters": [mto("Total spend"), mto("300 points given", "TEXT"), mto("AI visit count")]}
-    res = run(fixture_catalog, [MILESTONE], existing)
+    existing = {"offer_status": "planning", "counters": [mto("Total spend"), mto("500 points given", "TEXT"), mto("AI visit count")]}
+    res, _ = run(fixture_catalog, [[MILESTONE]], existing)
     rep = res["rules"]["counter_report"]
-    assert names(res) == ["Total spend", "300 points given"]
-    assert rep["reused"] == ["Total spend", "300 points given"] and rep["renamed"] == [] and rep["created"] == []
+    assert names(res) == ["Total spend", "500 points given"]
+    assert rep["reused"] == ["Total spend", "500 points given"] and rep["renamed"] == [] and rep["created"] == []
     assert rep["unused"] == ["AI visit count"]
-    assert any("Reuses the offer's existing counter(s): 'Total spend', '300 points given'" in n for n in res["counter_notes"])
+    assert any("Reuses the offer's existing counter(s): 'Total spend', '500 points given'" in n for n in res["counter_notes"])
     assert any("'AI visit count'" in n and "Not used by these rules" in n for n in res["counter_notes"])
 
 
-def test_same_name_other_type_gets_a_free_name_and_says_why(fixture_catalog):
-    existing = {"offer_status": "planning", "counters": [mto("Total spend", "TEXT"), mto("Total spend 2", "TEXT")]}
-    res = run(fixture_catalog, [MILESTONE], existing)
-    rep = res["rules"]["counter_report"]
-    assert names(res)[0] == "Total spend 3"  # "Total spend 2" is taken by the offer too
-    assert rep["renamed"] == [{"wanted": "Total spend", "used": "Total spend 3",
-                               "why": "the offer's counter is TEXT REGULAR, these rules need NUMBER REGULAR"}]
-    assert "Total spend 3" in res["rules"]["xml"] and ">Total spend<" not in res["rules"]["xml"]
-    assert any(n.startswith("Counter 'Total spend 3' is new: 'Total spend' already exists") for n in res["counter_notes"])
+def test_same_name_other_type_is_sent_back_and_the_model_picks_another(fixture_catalog):
+    existing = {"offer_status": "planning", "counters": [mto("Total spend", "TEXT")]}
+    res, llm = run(fixture_catalog, [[MILESTONE], [renamed(MILESTONE, "Total spend", "Total spend 2")]], existing)
+    assert any("counter 'Total spend' already exists on this offer and the offer's counter is TEXT REGULAR, these rules "
+               "need NUMBER REGULAR" in p for p in problems(llm))
+    assert names(res)[0] == "Total spend 2" and res["rules"]["counter_report"]["created"] == ["Total spend 2", "500 points given"]
+    assert "Total spend 2" in res["rules"]["xml"] and '"Total spend"' not in res["rules"]["xml"]
 
 
 def test_vector_namespace_must_match_too(fixture_catalog):
     existing = {"offer_status": "planning", "counters": [mto("Visits per store", counter_type="VECTOR", ns="h_bit_type")]}
-    res = run(fixture_catalog, [UNIQUE], existing)
-    assert names(res)[0] == "Visits per store 2"
-    assert "per h_bit_type" in res["rules"]["counter_report"]["renamed"][0]["why"]
+    assert any("per h_bit_type" in p for p in Session(fixture_catalog, 1, existing).run("validate", UNIQUE[1])["problems"])
 
 
 def test_exact_match_on_a_launched_offer_is_not_reused(fixture_catalog):
     existing = {"offer_status": {"status": {"code": "launched"}}, "counters": [mto("Total spend")]}
-    res = run(fixture_catalog, [MILESTONE], existing)
-    rep = res["rules"]["counter_report"]
-    assert names(res)[0] == "Total spend 2" and rep["reused"] == []
-    assert "members may already hold values" in rep["renamed"][0]["why"]
-
-
-def test_shared_cap_counter_is_renamed_once_for_every_rule(fixture_catalog):
-    band = lambda lo, hi, f: {"lower": lo, "lower_inclusive": True, "has_upper": hi is not None, "upper": hi or 0,
-                              "upper_inclusive": False, "factor_kind": "multiplier", "factor": f}
-    tiers = ("add_tiers", {"measure": "h_bit_amount", "conditions": [], "bands": [band(0, 1000, 2), band(1000, None, 3)]})
-    existing = {"offer_status": "planning", "counters": [mto("Points toward 300 cap", "TEXT")]}
-    res = run(fixture_catalog, [tiers, ("add_cap", {"max_points": 300})], existing)
-    assert res["status"] == "draft", res["diagnostics"]
-    assert names(res) == ["Points toward 300 cap 2"]
-    assert len(res["rules"]["counter_report"]["renamed"]) == 1
+    out = Session(fixture_catalog, 1, existing).run("validate", MILESTONE[1])
+    assert any("members may already hold values" in p for p in out["problems"])
 
 
 def test_unknown_counters_are_said_not_checked(fixture_catalog):
-    res = run(fixture_catalog, [MILESTONE], None)
+    res, _ = run(fixture_catalog, [[MILESTONE]], None)
     assert res["rules"]["counter_report"] == {"checked": False}
     assert "were not checked" in res["counter_notes"][0]
 
@@ -87,14 +84,30 @@ def test_normalize_reads_bolapi_records():
 
 
 def test_pulsar_endpoint_takes_existing_counters_and_notes_them_on_the_canvas(fixture_catalog):
-    llm = ScriptedLLM([[MILESTONE, finish(activity_types=["SPEND"])]])
+    llm = ScriptedLLM([[MILESTONE], [renamed(MILESTONE, "Total spend", "Total spend 2")], [finish()]])
     cl = create_app(llm, lambda s, a, auth: fixture_catalog).test_client()
-    body = {"prompt": "300 points at 1000 total spend", "sponsor_id": 10, "id": 31, "type": "reward",
+    body = {"prompt": "500 points at 1000 total spend", "sponsor_id": 10, "id": 31, "type": "reward",
             "existing_counters": {"offer_status": "planning", "counters": [mto("Total spend", "TEXT")]}}
     j = cl.post("/ai/pulsar/offer/rules?regenerate=true", json=body).get_json()
     xml = base64.b64decode(j["xml"]).decode()
-    assert j["counter_report"]["renamed"][0]["used"] == "Total spend 2"
-    assert "Counters:" in xml and "Total spend 2" in xml
+    assert "Counters already on this offer" in llm.calls[0][0]["content"][0]["text"]
+    assert j["counter_report"]["created"] == ["Total spend 2", "500 points given"] and "Total spend 2" in xml
+
+
+def test_the_offer_runs_counters_are_checked_when_the_rules_screen_takes_them(fixture_catalog):
+    """The whole-offer run names counters before the offer exists; a clash found when the rules are handed out is
+    rebuilt as a rules-only run that knows the offer's counters."""
+    from conftest import offer_main
+    llm = ScriptedLLM([[offer_main(rules_prompt="500 points at 1000 total spend")], [MILESTONE], [finish()],
+                       [renamed(MILESTONE, "Total spend", "Total spend 2")], [finish()]])
+    cl = create_app(llm, lambda s, a, auth: fixture_catalog).test_client()
+    prompt = "500 points once a member has spent 1000 in total"
+    cl.post("/ai/pulsar/31/prompt/offermain/", json={"prompt": prompt, "offer_status": "planning"})
+    cl.post("/ai/pulsar/offer/metadata", json={"prompt": prompt, "category": "offer"})
+    body = {"prompt": prompt, "sponsor_id": 10, "id": 31, "type": "reward",
+            "existing_counters": {"offer_status": "planning", "counters": [mto("Total spend", "TEXT")]}}
+    j = cl.post("/ai/pulsar/offer/rules?regenerate=true", json=body).get_json()
+    assert j["counter_report"]["created"] == ["Total spend 2", "500 points given"] and len(llm.calls) == 5
 
 
 def test_live_source_reads_offer_and_counters_with_the_callers_jwt():

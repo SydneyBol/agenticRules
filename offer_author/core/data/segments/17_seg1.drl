@@ -1,0 +1,6 @@
+rule "segmentation-seg1cflh4t9b"
+when
+    $segment : MemberSegmentExecutionContext(evaluateNumberAttribute("1", ">=", "3_balance", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("seg1cflh4t9b");
+end

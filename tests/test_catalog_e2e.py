@@ -15,16 +15,11 @@ import pytest
 
 import catalog
 from conftest import ROOT, SPIKE
-from offer_author.catalog import Catalog
-from offer_author.expander import expand
-from offer_author.pipeline import mto_payloads
-from offer_author.pulsar import ui_xml
-from offer_author.rule_xml import offer_xml
+from offer_author.api.pulsar import ui_xml
 
 pytestmark = pytest.mark.e2e
-BLOCKS = os.environ.get("OFFER_AUTHOR_ENGINE") == "blocks"  # blocks mode: its own live results and harness dirs
-LIVE = os.path.join(ROOT, "tests", ".live" + ("_blocks" if BLOCKS else ""))
-IN_DIR, UI_DIR = ("blocks_catalog", "ui_blocks_catalog") if BLOCKS else ("proto_catalog", "ui_proto_catalog")
+LIVE = os.path.join(ROOT, "tests", ".live")
+IN_DIR, UI_DIR = "agent_catalog", "ui_agent_catalog"
 JAR = os.path.join(SPIKE, "engine-harness", "target", "harness.jar")
 SKU_CATEGORY = {"SNK-1": "SNACKS", "SNK-2": "SNACKS", "DRK-1": "DRINKS", "BAK-1": "BAKERY"}
 MEMBER = {"tier": "GOLD", "date_of_birth": "1990-06-15"}
@@ -46,12 +41,6 @@ def ui():
     src = os.path.join(SPIKE, "results", IN_DIR)
     shutil.rmtree(src, ignore_errors=True)
     os.makedirs(src)
-    # recompile the model's cached intent with the current compiler, so compiler changes are tested without model calls
-    cat = Catalog.from_json(os.path.join(ROOT, "catalogs", "fixture.json"))
-    for k, r in res.items():
-        if (r.get("rules") or {}).get("xml") and r.get("intent"):
-            spec, counters = expand(r["intent"], cat.expander_catalog())
-            r["rules"].update(xml=offer_xml(spec), counters=mto_payloads(counters, r["rules"].get("expected_offer_id", 1001)))
     for k, r in res.items():
         if (r.get("rules") or {}).get("xml"):
             # what the browser hands loadBlocklyFileUpload: atob of the ASCII the endpoint base64-encodes

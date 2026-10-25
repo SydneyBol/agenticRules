@@ -1,0 +1,6 @@
+rule "segmentation-asia1yhd0djxu5"
+when
+    $segment : MemberSegmentExecutionContext(evaluateNumberAttribute("18", ">", "age", "PROGRAM") && evaluateTextAttribute("256", "=", "country", "PROGRAM") && evaluateTierTextAttribute("Bronze", "=", "name", "TIER", "Elite_Levels"))
+then
+    $segment.addValidatedSegmentId("asia1yhd0djxu5");
+end

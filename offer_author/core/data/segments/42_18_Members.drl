@@ -1,0 +1,6 @@
+rule "segmentation-18__members7qlslaoxw"
+when
+    $segment : MemberSegmentExecutionContext(evaluateNumberAttribute("18", ">", "age", "PROGRAM"))
+then
+    $segment.addValidatedSegmentId("18__members7qlslaoxw");
+end
