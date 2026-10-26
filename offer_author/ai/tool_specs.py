@@ -22,7 +22,14 @@ COUNTER = {"type": "object", "properties": {
     "required": ["name", "data_type", "counter_type"]}
 CANVAS_ARGS = {"canvas": {"type": "string", "enum": ["rules", "segment"]},
                "blocks": {"type": "object", "description": "The block tree: one offer_generic (rules) or targeting_holder (segment) root"},
-               "counters": {"type": "array", "items": COUNTER, "description": "The offer counters the blocks refer to"}}
+               "counters": {"type": "array", "items": COUNTER, "description": "The offer counters the blocks refer to "
+                                                                             "(with edits: kept from the last compile unless given)"},
+               "edits": {"type": "array", "description": "Instead of blocks: changes to this canvas's last tree, by the "
+                                                         "block ids problems name (rule#b9 -> b9). {id, fields} merges "
+                                                         "fields; {id, picked}; {id, replace: node}; {id, remove: true}",
+                         "items": {"type": "object", "properties": {"id": S, "fields": {"type": "object"}, "picked": S,
+                                                                    "replace": {"type": "object"}, "remove": {"type": "boolean"}},
+                                   "required": ["id"]}}}
 BIT = {"type": "object", "properties": {
     "header": {"type": "object", "description": "BIT header attributes (h_bit_type, h_bit_amount, h_bit_date "
                                                 "YYYY-MM-DDTHH:MM:SS, h_location, ...); defaults: the tenant's Spend activity type "
@@ -46,10 +53,10 @@ TOOLS = [
           "rules_prompt": {"type": "string", "description": "the rules part in the manager's words, without what Offer Main "
                                                            "or the segment covers"}}),
     tool("validate", "Fast offline check of a canvas: toolbox blocks only, connection checks, field names, catalog "
-                     "codes, counters declared.", CANVAS_ARGS, required=["canvas", "blocks"]),
+                     "codes, counters declared.", CANVAS_ARGS, required=["canvas"]),
     tool("compile", "Load the canvas in the stock screen (rules: through Upload Rules). Returns what it dropped or "
                     "changed, validation messages, whether it compiled, and the counters it created.",
-         CANVAS_ARGS, required=["canvas", "blocks"]),
+         CANVAS_ARGS, required=["canvas"]),
     tool("simulate", "Run the rules of the last compile in the real engine, one member, BITs in order (offer "
                      "counters persist across them), with the last compiled segment and the Offer Main dates and "
                      "limits applied as the engine applies them. Returns per BIT: points, privileges, counters, "

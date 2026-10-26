@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 from . import engine, ui
 from .check import check
 from .counters import Guard, notes as counter_notes
-from .tree import TreeError, counter_ref, to_xml
+from .tree import TreeError, apply_edits, counter_ref, number, to_xml
 
 DATA = os.path.join(os.path.dirname(__file__), "data")
 CATALOGS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "catalogs")
@@ -109,6 +109,7 @@ class Session:
         self.guard = Guard(existing) if existing is not None else None
         self.on_offer_main = on_offer_main
         self.offer_main, self.last, self.clean = None, {}, {}
+        self.trees = {}  # canvas -> its last tree, ids filled in (what compile edits apply to)
         self.sims, self.counts, self.lookups, self.trace = [], {}, [], []
 
     def run(self, name, x):
@@ -136,15 +137,27 @@ class Session:
         canvas = x.get("canvas") or "rules"
         if canvas not in ("rules", "segment"):
             return {"ok": False, "problems": ["canvas must be rules or segment"]}
-        own = _mutations(x.get("blocks"))
+        blocks, counters = x.get("blocks"), x.get("counters")
+        if blocks is None and x.get("edits") is not None:  # a repair: changes to this canvas's last tree, by block id
+            if canvas not in self.trees:
+                return {"ok": False, "problems": [f"no earlier {canvas} tree to edit: send blocks"]}
+            try:
+                blocks = apply_edits(self.trees[canvas], x["edits"])
+            except TreeError as e:
+                return {"ok": False, "problems": [str(e)]}
+            if counters is None:
+                counters = (self.last.get(canvas) or {}).get("counters")
+        own = _mutations(blocks)
         if own:
             return {"ok": False, "problems": [f"{p}: remove 'mutation'; give fields, picked codes and counters, the tools "
                                               "write the mutation" for p in own]}
-        counters = [c for c in x.get("counters") or [] if isinstance(c, dict)]
+        counters = [c for c in counters or [] if isinstance(c, dict)]
         try:
-            xml, paths = to_xml(x.get("blocks"), self.catalog, {c.get("name"): c for c in counters}, canvas)
-        except (TreeError, TypeError, AttributeError) as e:
+            blocks = number(blocks)
+            xml, paths = to_xml(blocks, self.catalog, {c.get("name"): c for c in counters}, canvas)
+        except (TreeError, TypeError, AttributeError, ValueError) as e:
             return {"ok": False, "problems": [f"not a block tree: {e}"]}
+        self.trees[canvas] = blocks
         pre = located(check(xml, self.catalog, canvas=canvas), paths) + counter_problems(xml, counters, self.guard)
         if name == "validate" or any(p.startswith("not well-formed") for p in pre):
             return {"ok": not pre, "problems": pre}
@@ -155,6 +168,8 @@ class Session:
         if not problems:
             self.clean[canvas] = last
         out = {"ok": not problems, "problems": problems, "compiled": bool((res.get("drl") or "").strip())}
+        if problems:  # a repair needs only the blocks the problems name
+            out["fix_with"] = 'edits by block id, e.g. {"canvas": "%s", "edits": [{"id": "b9", "fields": {...}}]}' % canvas
         if canvas == "rules":
             out["counters_created"] = [{k: c.get(k) for k in ("name", "data_type", "counter_type", "target_type", "entity_attribute_map")
                                         if c.get(k) is not None} for c in res.get("counters_created") or []]

@@ -120,6 +120,74 @@ def derive(node, spec, catalog=None, counters=None):
     return mut
 
 
+def _nodes(root):
+    """Every node of a tree with the input that holds it: [(node, container, key)], container a dict or list."""
+    out = []
+
+    def walk(node, holder, key):  # depth first, inputs and chains in order: the order to_xml writes the blocks in
+        if not isinstance(node, dict):
+            return
+        out.append((node, holder, key))
+        for name, child in (node.get("inputs") or {}).items():
+            if isinstance(child, list):
+                for i, c in enumerate(child):
+                    walk(c, child, i)
+            else:
+                walk(child, node["inputs"], name)
+
+    walk(root, None, None)
+    return out
+
+
+def number(root):
+    """A copy of the tree with an id on every block: the model's own ids are kept, the rest get the next free b<n>.
+    Problems name blocks by these ids, and compile edits refer to them."""
+    root = json.loads(json.dumps(root))
+    nodes = [n for n, _, _ in _nodes(root)]
+    used, k = {str(n["id"]) for n in nodes if n.get("id")}, 0
+    for n in nodes:  # the root first
+        if not n.get("id"):
+            k += 1
+            while f"b{k}" in used:
+                k += 1
+            n["id"] = f"b{k}"
+            used.add(n["id"])
+    return root
+
+
+def apply_edits(root, edits):
+    """The last tree with edits applied, by block id: {"id", "fields": {...}} merges fields, "picked" replaces the
+    picked codes, "replace": node swaps the block (and what hangs under it), "remove": true drops it."""
+    root = json.loads(json.dumps(root))
+    for e in edits or []:
+        if not isinstance(e, dict) or not e.get("id"):
+            raise TreeError("every edit needs the id of a block in the last tree")
+        hit = next(((n, h, k) for n, h, k in _nodes(root) if str(n.get("id")) == str(e["id"])), None)
+        if hit is None:
+            raise TreeError(f"no block {e['id']} in the last tree")
+        node, holder, key = hit
+        if e.get("remove"):
+            if holder is None:
+                raise TreeError("the root block cannot be removed")
+            if isinstance(holder, list):
+                holder.pop(key)
+            else:
+                holder.pop(key)
+            continue
+        if e.get("replace") is not None:
+            new = dict(e["replace"])
+            if holder is None:
+                root = new
+            else:
+                holder[key] = new
+            node = new
+        if e.get("fields"):
+            node["fields"] = {**(node.get("fields") or {}), **e["fields"]}
+        if "picked" in e:
+            node["picked"] = e["picked"]
+    return root
+
+
 VECTOR_MODES = ("across", "unique")  # block-definition.service.ts getMAOVectorattributes: the options after the first
 
 

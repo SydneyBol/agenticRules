@@ -53,6 +53,7 @@ Work like this:
    (one phrase per call; several calls per turn are fine) and use only codes it returns.
 3. compile each canvas you build. It runs the stock screen: fix every problem it reports (a dropped or changed field
    means the screen did not accept that value or shape). validate is a faster offline check of the same tree.
+   To fix a tree you already sent, send only edits by block id (the ids the problems name) instead of the whole tree.
 4. simulate with transactions that exercise every rule: qualifying and non-qualifying ones, boundaries, repeats for
    anything that counts across transactions, BITs outside the offer dates, members in and out of the segment, and
    the expected outcome of each. This is how you confirm each rule does what was asked. If the engine disagrees,
