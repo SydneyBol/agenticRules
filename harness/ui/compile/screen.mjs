@@ -75,14 +75,26 @@ const SCREENS = {
   segment: { hash: `#/offer/${M.OFFER_ID}/selectmembers/membersegment/new`, paged: [/\/tier-list\/?$/, /\/tier-classes\/?$/] },
 };
 
-export async function openScreen(browser, { tenant = null, ctx, stats = { endpoints: new Map(), unknown: new Map() }, tagdelay = 0, timeout = 90000, screen: kind = 'rules' }) {
+// page: an open tab to load the screen in (someone is watching one tab): the previous screen's listeners and start-up
+// script are removed, the tab is reloaded from blank, and closing the screen leaves the tab open. Without it, each
+// screen gets its own browser context.
+export async function openScreen(browser, { tenant = null, ctx, stats = { endpoints: new Map(), unknown: new Map() }, tagdelay = 0, timeout = 90000, screen: kind = 'rules', page: tab = null }) {
   const spec = SCREENS[kind];
   const raw = tenantGetter(tenant);
   const tenantGet = (u) => { const b = raw(u); return b && spec.paged.some((re) => re.test(u.pathname)) ? page1(b) : b; };
   const mocked = new Set();  // tenant mode: GET paths the fixture answered
-  const context = await browser.createBrowserContext();
-  const page = await context.newPage();
-  await page.setViewport({ width: 1600, height: 1000 });
+  let context, page;
+  if (tab) {
+    page = tab;
+    context = { close: async () => {} };
+    for (const ev of ['request', 'console', 'pageerror']) page.removeAllListeners(ev);
+    if (page.__harnessScript) await page.removeScriptToEvaluateOnNewDocument(page.__harnessScript).catch(() => {});
+    await page.goto('about:blank');
+  } else {
+    context = await browser.createBrowserContext();
+    page = await context.newPage();
+    await page.setViewport({ width: 1600, height: 1000 });
+  }
   const consoleLines = [];
   page.on('console', (m) => { const t = m.text(); if (m.type() === 'error' || m.type() === 'warn') consoleLines.push(`[${m.type()}] ${t.slice(0, 400)}`); });
   page.on('pageerror', (e) => consoleLines.push(`[pageerror] ${String(e.message).slice(0, 400)}`));
@@ -129,7 +141,7 @@ export async function openScreen(browser, { tenant = null, ctx, stats = { endpoi
     return req.respond({ status: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   });
 
-  await page.evaluateOnNewDocument((globals) => {
+  page.__harnessScript = (await page.evaluateOnNewDocument((globals) => {
     if (location.origin !== 'http://localhost:4200') return;
     localStorage.setItem('globals', JSON.stringify(globals));
     localStorage.setItem('offe_type', 'reward');
@@ -137,7 +149,7 @@ export async function openScreen(browser, { tenant = null, ctx, stats = { endpoi
     localStorage.setItem('programInfo', JSON.stringify([{ date_format: 'DD/MM/YYYY', timezone: 'UTC' }]));
     localStorage.setItem('enableMultilingual', 'false');
     window.__harness = { errors: [] };
-  }, M.globals);
+  }, M.globals)).identifier;
 
   const t0 = Date.now();
   await page.setCookie({ name: 'XSRF-COOKIE', value: 'mock-xsrf-local', url: 'http://localhost:4200/' });

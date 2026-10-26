@@ -22,6 +22,10 @@ COUNTER = {"type": "object", "properties": {
     "required": ["name", "data_type", "counter_type"]}
 CANVAS_ARGS = {"canvas": {"type": "string", "enum": ["rules", "segment"]},
                "blocks": {"type": "object", "description": "The block tree: one offer_generic (rules) or targeting_holder (segment) root"},
+               "defs": {"type": "object", "description": "Blocks used in more than one place, written once by name: "
+                                                         "{name: block | [blocks]}. In the tree (or another def) write "
+                                                         "{\"use\": name} where it goes; the tools copy it into each place. "
+                                                         "Kept for later compiles of this canvas"},
                "counters": {"type": "array", "items": COUNTER, "description": "The offer counters the blocks refer to "
                                                                              "(with edits: kept from the last compile unless given)"},
                "edits": {"type": "array", "description": "Instead of blocks: changes to this canvas's last tree, by the "
@@ -38,6 +42,13 @@ BIT = {"type": "object", "properties": {
     "lines": {"type": "array", "items": {"type": "object"}, "description": "line items: l_product_external_id, l_quantity, l_amount"},
     "expect": {"type": "object", "description": "what the manager's offer should do on this BIT: points (REWARD_POINTS "
                                                 "total), privilege (id or null), mto {counter: value after}, mta {...}"}}}
+FINISH = {"readback": {"type": "string", "description": "Plain-English description of what the offer will do"},
+          "segment_name": {"type": "string", "description": "under 50 characters, when a segment was built"},
+          "segment_description": S,
+          "assumptions": NOTES, "blocking_questions": NOTES,
+          "unsupported": {"type": "array", "items": {"type": "object", "properties": {"part": PART, "phrase": S, "reason": S,
+                                                                                       "alternative": S},
+                                                      "required": ["part", "phrase", "reason"]}}}
 TOOLS = [
     tool("lookup_values", "Find catalog codes for the manager's words, for an attribute whose values are not listed.",
          {"object": {"type": "string", "enum": ["activity", "member", "product"]}, "attribute": S,
@@ -61,17 +72,14 @@ TOOLS = [
     tool("simulate", "Run the rules of the last compile in the real engine, one member, BITs in order (offer "
                      "counters persist across them), with the last compiled segment and the Offer Main dates and "
                      "limits applied as the engine applies them. Returns per BIT: points, privileges, counters, "
-                     "skipped (and why), mismatches with expect; and whether the member is in the segment.",
+                     "skipped (and why), mismatches with expect; and whether the member is in the segment. With the "
+                     "finish fields (readback, assumptions, blocking_questions, unsupported, segment name and "
+                     "description): when every canvas's last compile is clean and every BIT has an expect that "
+                     "matches, the run ends with them; otherwise they are ignored and you fix and simulate again.",
          {"member": {"type": "object", "description": "{attributes: {date_of_birth, ...}, tier}"},
           "products": {"type": "object", "description": "SKU -> product attributes, e.g. {\"SNK-1\": {\"category\": \"SNACKS\"}}"},
-          "bits": {"type": "array", "items": BIT}}, required=["bits"]),
-    tool("finish", "Call once, last. Delivers the last clean compile of each canvas.",
-         {"readback": {"type": "string", "description": "Plain-English description of what the offer will do"},
-          "segment_name": {"type": "string", "description": "under 50 characters, when a segment was built"},
-          "segment_description": S,
-          "assumptions": NOTES, "blocking_questions": NOTES,
-          "unsupported": {"type": "array", "items": {"type": "object", "properties": {"part": PART, "phrase": S, "reason": S,
-                                                                                       "alternative": S},
-                                                      "required": ["part", "phrase", "reason"]}}},
-         required=["readback", "assumptions", "blocking_questions", "unsupported"]),
+          "bits": {"type": "array", "items": BIT}, **FINISH}, required=["bits"]),
+    tool("finish", "Ends the run without a simulate that confirms it (e.g. only questions or unsupported items). "
+                   "Delivers the last clean compile of each canvas.",
+         FINISH, required=["readback", "assumptions", "blocking_questions", "unsupported"]),
 ]

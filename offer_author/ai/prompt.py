@@ -12,7 +12,7 @@ import os
 
 from ..core.counters import normalize
 from ..core.session import DATA
-from ..core.tree import compact, selections
+from ..core.tree import compact, selections, share
 
 CONTEXT = os.path.join(os.path.dirname(__file__), "context")
 
@@ -37,13 +37,15 @@ the names the block reference lists:
 - a field: the block's field value (dropdown option, typed value, catalog code in a field).
 - picked: codes chosen in the block's lookup popup (the "saved picked codes" lines), comma-separated.
 - an input: a statement input holds a list (blocks chained in order); a value input holds one block.
+- A block or condition you need in several places (a period index, the same counter check in several rules) goes
+  once in `defs` beside the tree, {name: block | [blocks]}, and is used by name: {"use": name}.
 - The tools fill these fields when you leave them out, so leave them out unless you want something else: a
   condition's OBJECT and attribute_level (from its attribute: a declared counter at its level, an activity attribute,
   a member attribute at MA_P); update_attribute's mta_type_value (the counter's level); give_points' LOYALTY_ACCOUNT
-  and REWARD_TAGS (the tenant's account and reward tag below).
-- counters: declare once, beside the tree, every offer counter (MA_O) the blocks refer to:
+  and REWARD_TAGS (the tenant's account and reward tag below); the levels come from `counters`.
+- counters: declare once, beside the tree, every counter the blocks refer to, offer (MA_O) and activity (MA_A) alike:
   {"name", "data_type" NUMBER|TEXT|DATE|BOOLEAN, "counter_type" REGULAR|VECTOR, "target_type"?, "namespace"? (VECTOR:
-  what it counts per, e.g. h_location), "level" MA_O}. The rules screen creates them on upload.
+  what it counts per, e.g. h_location), "level" MA_O|MA_A}. The rules screen creates them on upload.
 You never write XML or mutation attributes: the tools derive them from your fields, picked codes and counters as the
 UI does, and the stock screen compiles them into the rules the engine runs.
 
@@ -64,11 +66,13 @@ Work like this:
    anything that counts across transactions, BITs outside the offer dates, members in and out of the segment, and
    the expected outcome of each. This is how you confirm each rule does what was asked. If the engine disagrees,
    decide whether the blocks or your expectation is wrong, fix, compile and simulate again.
-5. finish once, after the last compile of each canvas you deliver was clean.
+5. Give the finish fields (readback, assumptions, blocking_questions, unsupported, segment name and description)
+   with that simulate. When every canvas's last compile is clean and every BIT's expect matches, that ends the run.
+   Call finish only to end without such a simulate (e.g. when you can only ask or report something unsupported).
 Tools in one turn run in call order and each sees what the previous one did. Once you know the blocks and the
-transactions that test them, send compile, simulate and finish in that same turn: every turn costs the manager
-waiting time. A finish is sent back when that turn's compile had problems or its simulate disagreed with an
-expectation, and then you fix and send them again.
+transactions that test them, send compile and simulate (with the finish fields) in that same turn: every turn costs
+the manager waiting time. If the compile had problems or the engine disagreed, the run goes on: fix and send them
+again.
 
 Offer semantics:
 - Every restriction the manager states must be built in the part the engine evaluates it in. A rules condition every
@@ -92,7 +96,7 @@ Offer semantics:
   codes (then ask even if the draft uses all of them). Still build everything else.
 - Something that cannot be expressed on a single member's own data and transactions goes in `unsupported` with an
   alternative.
-- Always end with finish. Do not answer in prose.
+- Always end with a confirming simulate or finish. Do not answer in prose.
 """
 
 
@@ -101,7 +105,8 @@ def examples(folder, title):
     out, seen = [], set()
     for f in sorted(glob.glob(os.path.join(DATA, folder, "*.xml"))):
         tree, counters = selections(open(f).read())
-        text = json.dumps(compact(tree, counters), separators=(",", ":"))
+        tree, defs = share(compact(tree, counters))
+        text = json.dumps(tree, separators=(",", ":")) + (f"\nDefs: {json.dumps(defs, separators=(',', ':'))}" if defs else "")
         if text in seen:
             continue
         seen.add(text)

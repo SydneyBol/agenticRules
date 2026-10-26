@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 from . import engine, ui
 from .check import check
 from .counters import Guard, notes as counter_notes
-from .tree import TreeError, apply_edits, counter_ref, expand, number, to_xml
+from .tree import TreeError, apply_edits, counter_ref, expand, inline, number, to_xml, unfilled
 
 DATA = os.path.join(os.path.dirname(__file__), "data")
 CATALOGS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "catalogs")
@@ -109,6 +109,7 @@ class Session:
         self.on_offer_main = on_offer_main
         self.offer_main, self.last, self.clean = None, {}, {}
         self.trees = {}  # canvas -> its last tree, ids filled in (what compile edits apply to)
+        self.defs = {}  # canvas -> the defs its trees use by name (kept for later edits and trees)
         self.sims, self.counts, self.lookups, self.trace = [], {}, [], []
 
     def run(self, name, x):
@@ -146,7 +147,12 @@ class Session:
                 return {"ok": False, "problems": [str(e)]}
             if counters is None:
                 counters = (self.last.get(canvas) or {}).get("counters")
-        blocks = expand(blocks)
+        defs = {**self.defs.get(canvas, {}), **(x.get("defs") or {})} if isinstance(x.get("defs") or {}, dict) else x.get("defs")
+        try:
+            blocks = expand(inline(blocks, defs))
+        except TreeError as e:
+            return {"ok": False, "problems": [str(e)]}
+        self.defs[canvas] = defs
         own = _mutations(blocks)
         if own:
             return {"ok": False, "problems": [f"{p}: remove 'mutation'; give fields, picked codes and counters, the tools "
@@ -154,6 +160,11 @@ class Session:
         counters = [c for c in counters or [] if isinstance(c, dict)]
         try:
             blocks = number(blocks)
+            missing = unfilled(blocks, self.catalog, {c.get("name"): c for c in counters})
+            if missing:
+                self.trees[canvas] = blocks
+                return {"ok": False, "problems": missing, "compiled": False,
+                        "fix_with": 'edits by block id, or the counters, e.g. {"canvas": "%s", "counters": [...]}' % canvas}
             xml, paths = to_xml(blocks, self.catalog, {c.get("name"): c for c in counters}, canvas)
         except (TreeError, TypeError, AttributeError, ValueError) as e:
             return {"ok": False, "problems": [f"not a block tree: {e}"]}

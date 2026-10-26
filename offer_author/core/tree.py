@@ -251,6 +251,83 @@ def expand(root):
     return out
 
 
+def inline(root, defs=None):
+    """The tree with each {"use": name} replaced by a copy of defs[name]: a block, or blocks spliced into a statement
+    list. Defs may use other defs. A block written once and used in several places (a period index, a repeated
+    condition) becomes ordinary blocks here, before ids and XML."""
+    defs = defs or {}
+    if not isinstance(defs, dict):
+        raise TreeError("defs must be {name: block or [blocks]}")
+
+    def resolve(name, seen):
+        if name not in defs:
+            raise TreeError(f"no def '{name}' (defs: {', '.join(defs) or 'none'})")
+        if name in seen:
+            raise TreeError(f"def '{name}' uses itself")
+        return sub(json.loads(json.dumps(defs[name])), seen | {name})
+
+    def use(n):
+        return isinstance(n, dict) and set(n) == {"use"}
+
+    def sub(n, seen):
+        if isinstance(n, list):
+            out = []
+            for x in n:
+                v = resolve(x["use"], seen) if use(x) else sub(x, seen)
+                out.extend(v if use(x) and isinstance(v, list) else [v])
+            return out
+        if not isinstance(n, dict):
+            return n
+        if use(n):
+            v = resolve(n["use"], seen)
+            if isinstance(v, list):
+                if len(v) != 1:
+                    raise TreeError(f"def '{n['use']}' is several blocks: use it in a statement list")
+                v = v[0]
+            return v
+        return {k: sub(v, seen) if isinstance(v, (dict, list)) and k not in ("fields", "mutation") else v for k, v in n.items()}
+
+    return sub(root, frozenset())
+
+
+def share(root, min_chars=80):
+    """A compact tree -> (tree, defs) with every block subtree of min_chars+ that occurs twice or more written once as
+    a def and used by name, largest first (how the examples show `defs`)."""
+    key = lambda n: json.dumps(n, separators=(",", ":"), sort_keys=True)  # noqa: E731
+    tree, defs = json.loads(json.dumps(root)), {}
+
+    def blocks(n, out):
+        if isinstance(n, list):
+            for x in n:
+                blocks(x, out)
+        elif isinstance(n, dict):
+            if n.get("type") not in (None, "offer_generic", "activity", "rule", "targeting_holder"):
+                out.append(n)
+            for v in n.values():
+                if isinstance(v, (dict, list)):
+                    blocks(v, out)
+        return out
+
+    while True:
+        count = {}
+        for b in blocks(tree, []):
+            count.setdefault(key(b), [0, b])[0] += 1
+        best = max(((k, b) for k, (c, b) in count.items() if c >= 2 and len(k) >= min_chars), key=lambda kb: len(kb[0]), default=None)
+        if best is None:
+            return tree, defs
+        name = f"part{len(defs) + 1}"
+        defs[name] = best[1]
+
+        def swap(n):
+            if isinstance(n, list):
+                return [swap(x) for x in n]
+            if isinstance(n, dict):
+                return {"use": name} if key(n) == best[0] else {k: swap(v) for k, v in n.items()}
+            return n
+        tree = swap(tree)
+        defs = {k: (swap(v) if k != name else v) for k, v in defs.items()}
+
+
 CONDITIONS = ("if_generic_adaptive", "activity_criteria")
 
 
@@ -298,6 +375,24 @@ def fill(node, catalog=None, counters=None):
         if counter:
             f = _put(f, "mta_type_value", counter.get("level") or "MA_O", "action_type")
     return f
+
+
+def unfilled(root, catalog=None, counters=None):
+    """Problems for the fields the model left out that `fill` cannot work out (a counter that is not declared, an
+    attribute the catalog does not have): the screen would drop what depends on them, so they are reported before
+    any compile, by block id."""
+    out = []
+    for n, _, _ in _nodes(root):
+        t, f = n.get("type"), fill(n, catalog, counters)
+        name = f.get("attribute") if t in CONDITIONS else f.get("mta_attribute")
+        where = f"{t}#{n.get('id')}"
+        if t in CONDITIONS and ("OBJECT" not in f or (f["OBJECT"] == "member" and "attribute_level" not in f)):
+            out.append(f"{where}: '{name}' is not a declared counter nor a catalog attribute: declare the counter (with "
+                       "its level) in counters, or give OBJECT and attribute_level")
+        elif t == "action" and f.get("action_type") == "update_attribute" and "mta_type_value" not in f:
+            out.append(f"{where}: '{name}' is not a declared counter: declare it in counters with its level (MA_O or MA_A), "
+                       "or give mta_type_value")
+    return out
 
 
 def compact(root, counters=()):

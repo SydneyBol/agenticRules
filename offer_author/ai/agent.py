@@ -28,6 +28,7 @@ from .prompt import intro, system_blocks
 from .tool_specs import TOOLS
 
 MAX_TURNS = int(os.environ.get("OFFER_AUTHOR_TURNS", 14))
+EARLY = os.environ.get("OFFER_AUTHOR_EARLY_TOOLS", "1") != "0"  # start each tool call as soon as it has streamed
 PARALLEL = {"lookup_values"}  # read only the catalog: one turn's calls run together; the rest run in call order
 NUDGE = "Use the tools: compile, simulate, then finish."
 log = logging.getLogger("offer_author.agent")
@@ -53,7 +54,12 @@ def _cached(messages):
 def _model(state, config):
     c = config["configurable"]
     t0 = time.time()
-    turn = c["llm"].turn(c["system"], _cached(state["messages"]), tools=TOOLS)
+
+    def start(tid, name, x):  # a tool call the model has finished writing; finish is judged after the turn, lookups
+        if name != "finish" and name not in PARALLEL:  # (catalog reads) run together in the tools step
+            c["started"][tid] = c["worker"].submit(_run_tool, c, name, x)
+
+    turn = c["llm"].turn(c["system"], _cached(state["messages"]), tools=TOOLS, on_tool=start if EARLY else None)
     c["timing"]["model_s"] += time.time() - t0
     c["timing"]["turns"].append({"s": round(time.time() - t0, 1), "out": turn.usage.get("output_tokens"),
                                  "calls": [f"{name}:{len(json.dumps(x))}" for _, name, x in turn.tool_calls]})
@@ -67,6 +73,24 @@ def _model(state, config):
     return out
 
 
+def _run_tool(c, name, x):
+    """One tool call on the run's session, timed. A malformed input the tool did not foresee goes back to the model
+    as an error and the job goes on; an unavailable compiler ends the run (the tools step reports it)."""
+    t = c["timing"]
+    t["input_chars"][name] = t["input_chars"].get(name, 0) + len(json.dumps(x))
+    t0 = time.time()
+    try:
+        return c["session"].run(name, x)
+    except ui.CompileUnavailable:
+        raise
+    except Exception as e:  # noqa: BLE001
+        log.exception("tool %s failed on the model's input", name)
+        return {"ok": False, "error": f"{name} could not read this input ({type(e).__name__}: {e}); check its shape "
+                                      "against the tool schema and send it again"}
+    finally:
+        t["tools_s"][name] = t["tools_s"].get(name, 0) + time.time() - t0
+
+
 def _nudge(state, config):
     return {"messages": [{"role": "user", "content": NUDGE}]}
 
@@ -76,26 +100,13 @@ def _tools(state, config):
     s, turns, fin = c["session"], state["turns"], None
     calls = state["calls"]
     disagreed = []  # this turn's simulate mismatches: a finish later in the same turn is sent back
-    tools_s = c["timing"]["tools_s"]
-
     chars = c["timing"]["input_chars"]
+    timed = lambda name, x: _run_tool(c, name, x)  # noqa: E731
 
-    def timed(name, x):
-        chars[name] = chars.get(name, 0) + len(json.dumps(x))
-        t0 = time.time()
-        try:
-            return s.run(name, x)
-        except ui.CompileUnavailable:
-            raise
-        except Exception as e:  # noqa: BLE001  a malformed input the tool did not foresee: the model fixes it, the job goes on
-            log.exception("tool %s failed on the model's input", name)
-            return {"ok": False, "error": f"{name} could not read this input ({type(e).__name__}: {e}); check its shape "
-                                          "against the tool schema and send it again"}
-        finally:
-            tools_s[name] = tools_s.get(name, 0) + time.time() - t0
-
+    notes = None  # the finish fields given with a simulate that confirmed the offer in this turn
     with ThreadPoolExecutor(4) as pool:
-        early = {tid: pool.submit(timed, name, x) for tid, name, x in calls if name in PARALLEL}
+        early = {tid: c["started"].pop(tid) for tid, _, _ in calls if tid in c["started"]}  # started while streaming
+        early.update({tid: pool.submit(timed, name, x) for tid, name, x in calls if name in PARALLEL and tid not in early})
         results = []
         for tid, name, x in calls:
             if name == "finish":
@@ -115,11 +126,27 @@ def _tools(state, config):
                     return {"result": error_result(f"The rules compiler is unavailable right now ({e}).")}
             if name == "simulate":
                 disagreed += [str(bit["mismatch"]) for bit in out.get("bits") or [] if bit.get("mismatch")]
+                if x.get("readback") and confirms(x, out):
+                    notes = {k: x[k] for k in FINISH_KEYS if k in x}
             s.trace.append({"turn": turns, "tool": name, **({"canvas": x.get("canvas")} if x.get("canvas") else {}),
                             **{k: out[k] for k in ("ok", "problems", "error") if k in out},
                             **({"sim": [b.get("mismatch") or "ok" for b in out.get("bits", [])]} if name == "simulate" else {})})
             results.append({"type": "tool_result", "tool_use_id": tid, "content": json.dumps(out)[:60000]})
+    if fin is None and notes is not None and not disagreed and not finish_blockers(s, c["parts"], notes) \
+            and all(s.clean.get(cv) is last for cv, last in s.last.items()):
+        fin = dict({"assumptions": [], "blocking_questions": [], "unsupported": []}, **notes)  # no finish turn needed
+        s.trace.append({"turn": turns, "tool": "finish", "ok": True, "with": "simulate"})
     return {"messages": [{"role": "user", "content": results}], "fin": fin}
+
+
+FINISH_KEYS = ("readback", "segment_name", "segment_description", "assumptions", "blocking_questions", "unsupported")
+
+
+def confirms(x, out):
+    """A simulate that confirms the offer: it ran, and every BIT stated what it expects and got it."""
+    bits = out.get("bits") or []
+    return (out.get("compile") == "ok" and bits and len(bits) == len(x.get("bits") or [])
+            and all(isinstance(b, dict) and b.get("expect") for b in x["bits"]) and not any(r.get("mismatch") for r in bits))
 
 
 def _after_model(state):
@@ -158,8 +185,9 @@ def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, conte
     parts = tuple(p for p in PARTS if p in parts)
     s = Session(catalog, offer_id, existing, on_offer_main)
     timing = {"model_s": 0.0, "tools_s": {}, "input_chars": {}, "turns": []}  # where the run's time went: per tool, per turn
+    worker = ThreadPoolExecutor(1)  # tool calls started while the model streams: one at a time, in call order
     config = {"configurable": {"llm": llm, "session": s, "system": system_blocks(catalog, account_id), "parts": parts,
-                               "timing": timing},
+                               "timing": timing, "worker": worker, "started": {}},
               "recursion_limit": 2 * MAX_TURNS + 4}
     last = {"messages": [{"role": "user", "content": intro(prompt, parts, context, existing)}], "turns": 0, "usage": {}}
 
@@ -176,6 +204,8 @@ def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, conte
             pass
     except LLMError as e:
         return done(error_result(f"The rule generator is unavailable right now ({e}). Please try again."))
+    finally:
+        worker.shutdown(wait=True)
     if last.get("result"):
         return done(last["result"])
     return done(outcome(s, last.get("fin"), parts, offer_id))

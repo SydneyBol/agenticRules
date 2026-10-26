@@ -4,7 +4,9 @@
 // rules: canonical XML, DRL, validation messages, exceptions, dropped/changed fields, and the counters the upload
 // dialog created (the offer starts with none); segment: the add-segment screen's saved XML, DRL, target_json, error.
 // POST /introspect {types, tenant?} -> the dropdown options the screen offers per block field (tools/block_reference.py --live).
-// usage: node compile-server.mjs [--port=8078] [--pool=2] [--busy=4] [--headful]   (needs ng serve of gravty-ui on :4200)
+// usage: node compile-server.mjs [--port=8078] [--pool=2] [--busy=4] [--headful | --connect=http://127.0.0.1:9222]
+//   (needs ng serve of gravty-ui on :4200). --connect: open the screens in an already running Chrome (the debug Chrome,
+//   so someone can watch), each in its own browser context (a window); that Chrome is never closed, only disconnected.
 import puppeteer from 'puppeteer-core';
 import http from 'node:http';
 import { openScreen, loadInScreen, loadSegmentInScreen, compareInPage, CHROME, CHROME_ARGS, tempProfile, dropProfile } from './screen.mjs';
@@ -13,12 +15,19 @@ const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] 
 const PORT = Number(args.port || 8078);
 const POOL = Number(args.pool || 2);
 
-const BUSY = Number(args.busy || 4);  // compiles at once; more queue (a crowded Chrome crashes under load)
+// --connect: one tab in the watched Chrome, one screen at a time; the next screen is prepared there after each compile
+const SINGLE = !!args.connect;
+const BUSY = SINGLE ? 1 : Number(args.busy || 4);  // compiles at once; more queue (a crowded Chrome crashes under load)
 
 // The browser survives nothing it does not have to: when Chrome dies, the pools are dropped and the next request
 // launches a fresh one; a request that was in flight gets a 'not loaded' answer, never a dead server.
 let browser = null;
 async function getBrowser() {
+  if (!browser && args.connect) {
+    browser = puppeteer.connect({ browserURL: args.connect, defaultViewport: null, protocolTimeout: 120000 });
+    const b = await browser.catch((e) => { browser = null; throw e; });
+    b.on('disconnected', () => { console.log('chrome disconnected: reconnecting on the next request'); browser = null; tab = null; single = null; });
+  }
   if (!browser) {
     const profile = tempProfile('compile');
     browser = puppeteer.launch({
@@ -46,7 +55,35 @@ function warm(tenant, screen = 'rules') {
     list.push(getBrowser().then((b) => openScreen(b, { tenant: tenant || null, ctx, screen })).catch(failed));
   }
 }
+// single-tab mode: the localhost:4200 tab already open in that Chrome (else one opened once), and the screen ready in it
+let tab = null, single = null, seq = 0;
+async function theTab(b) {
+  if (!tab || tab.isClosed()) tab = (await b.pages()).find((p) => p.url().startsWith('http://localhost:4200')) || await b.newPage();
+  return tab;
+}
+function prepare(tenant, screen) {
+  const id = ++seq, ctx = { counters: [], drlGet: [], posted: [] };
+  single = { key: `${screen}:${tenant}`, id, promise: getBrowser().then(async (b) => {
+    const s = await openScreen(b, { tenant: tenant || null, ctx, screen, page: await theTab(b) });
+    await s.page.evaluate((n) => { window.__spare = n; }, id).catch(() => {});
+    return s;
+  }).catch(failed) };
+}
+async function takeSingle(tenant, screen) {
+  if (single && single.key !== `${screen}:${tenant}`) { await single.promise; single = null; }
+  if (!single) prepare(tenant, screen);
+  const { promise, id } = single;
+  let s = await promise;
+  if (!s.error && (await s.page.evaluate(() => window.__spare).catch(() => null)) !== id) {  // the tab was used since
+    prepare(tenant, screen);
+    s = await single.promise;
+  }
+  single = null;
+  return s;
+}
+
 async function take(tenant, screen = 'rules') {
+  if (SINGLE) return takeSingle(tenant, screen);
   warm(tenant, screen);
   const s = await spares.get(`${screen}:${tenant}`).shift();
   warm(tenant, screen);
@@ -82,6 +119,7 @@ async function compile({ xml, tenant = '', canvas = 'rules', path: loadPath = 'u
     };
   } finally {
     s.context.close().catch(() => {});
+    if (SINGLE) prepare(tenant, canvas);
   }
 }
 
@@ -134,6 +172,7 @@ async function introspect({ tenant = '', types = [] }) {
     }, types);
   } finally {
     s.context.close().catch(() => {});
+    if (SINGLE) prepare(tenant, 'rules');
   }
 }
 
