@@ -20,12 +20,13 @@ from .counters import Guard, notes as counter_notes
 from .tree import TreeError, apply_edits, counter_ref, expand, inline, number, to_xml, unfilled
 
 DATA = os.path.join(os.path.dirname(__file__), "data")
-CATALOGS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "catalogs")
 PARTS = ("offer_main", "segment", "rules")
 
 
-def compile_tenant(catalog):
-    return catalog.tenant if os.path.isdir(os.path.join(CATALOGS, catalog.tenant or "-", "bolapi")) else ""
+def compile_tenant(catalog, catalogs):
+    """The tenant whose dumps the compile screen answers its catalog calls from ('' = its fixture): only when
+    Settings.catalogs holds that tenant's dumps."""
+    return catalog.tenant if catalogs and os.path.isdir(os.path.join(catalogs, catalog.tenant or "-", "bolapi")) else ""
 
 
 
@@ -105,7 +106,7 @@ class Session:
 
     def __init__(self, catalog, offer_id, settings, engine, existing=None, on_offer_main=None):
         """settings: core.settings.Settings (the compile service URL). engine: the core.engine.Engine simulate runs on."""
-        self.catalog, self.offer_id, self.tenant = catalog, offer_id, compile_tenant(catalog)
+        self.catalog, self.offer_id, self.tenant = catalog, offer_id, compile_tenant(catalog, settings.catalogs)
         self.settings, self.engine = settings, engine
         self.guard = Guard(existing) if existing is not None else None
         self.on_offer_main = on_offer_main

@@ -19,15 +19,18 @@ from ..core.settings import Settings
 from ..ai.agent import generate
 from .pulsar import ascii_xml, ui_xml
 
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the repo (catalog dumps)
 EXIT = {"draft": 0, "needs_input": 0, "unsupported": 2, "error": 1}
 SEVERITY = {0: 0, 2: 1, 1: 2}  # batch exit code: an error outranks unsupported
 
 
-def load_catalog(a):
+def load_catalog(a, settings):
+    """--catalog (a catalog JSON), else --catalog-dir, else the tenant's dumps under OFFER_AUTHOR_CATALOGS."""
     if a.catalog:
         return Catalog.from_json(a.catalog)
-    return Catalog.from_bolapi_dumps(a.catalog_dir, a.tenant, a.sponsor, a.account or "12", a.tag or "BASE")
+    folder = a.catalog_dir or (settings.catalogs and os.path.join(settings.catalogs, a.tenant, "bolapi"))
+    if not folder:
+        raise SystemExit("offer-xml: give --catalog, --catalog-dir or OFFER_AUTHOR_CATALOGS (the tenant dumps folder)")
+    return Catalog.from_bolapi_dumps(folder, a.tenant, a.sponsor, a.account or "12", a.tag or "BASE")
 
 
 def slugify(text, n=40):
@@ -61,8 +64,8 @@ def main(argv=None, llm=None):
     ap.add_argument("-o", "--out", help="output .xml path (default: stdout)")
     ap.add_argument("--batch", help="file with one prompt per line (# comments allowed)")
     ap.add_argument("--out-dir", default="out", help="output folder for --batch")
-    ap.add_argument("--catalog", help="catalog JSON (e.g. catalogs/fixture.json) instead of saved bolapi responses")
-    ap.add_argument("--catalog-dir", default=os.path.join(ROOT, "catalogs", "devintam1", "bolapi"))
+    ap.add_argument("--catalog", help="catalog JSON instead of saved bolapi responses")
+    ap.add_argument("--catalog-dir", help="saved bolapi responses (default: $OFFER_AUTHOR_CATALOGS/<tenant>/bolapi)")
     ap.add_argument("--tenant", default="devintam1")
     ap.add_argument("--sponsor", type=int, default=1)
     ap.add_argument("--account", help="loyalty account id for points (default: the catalog's; 12 for devintam1)")
@@ -75,8 +78,8 @@ def main(argv=None, llm=None):
     if llm is None:
         from ..ai.llm import make_llm
         llm = make_llm()
-    cat = load_catalog(a)
     settings = Settings.from_env()
+    cat = load_catalog(a, settings)
     engine = Engine.from_settings(settings)  # one engine for the whole batch, closed at the end
 
     def run(prompt):

@@ -18,3 +18,6 @@ harness/engine/target/
 .idea/amazonq.xml
 .idea/awsToolkit.xml
 harness/ui/.claude/
+
+# Tenant catalog dumps live outside the repo (README: "Outside this repo"); a leftover local copy is never tracked
+/catalogs/

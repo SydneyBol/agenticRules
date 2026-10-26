@@ -6,7 +6,6 @@ import os from 'node:os';
 import path from 'node:path';
 import * as M from './mocks.mjs';
 
-const HERE = path.dirname(new URL(import.meta.url).pathname);
 export const APP = 'http://localhost:4200';
 export const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 export const CHROME_ARGS = ['--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-background-networking',
@@ -26,12 +25,13 @@ export function dropProfile(dir) {
 process.on('exit', () => { for (const d of profiles) fs.rmSync(d, { recursive: true, force: true }); });
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => process.exit(130));
 
-// tenant 'devintam1': the catalog GETs come from that tenant's bolapi dumps (catalogs/<t>/bolapi),
-// so XML written in its codes (stores, activity types, accounts, privileges) loads as it does on the hosted screen
+// tenant 'devintam1': the catalog GETs come from that tenant's bolapi dumps ($OFFER_AUTHOR_CATALOGS/<t>/bolapi, kept
+// outside the repo), so XML written in its codes (stores, activity types, accounts, privileges) loads as it does on
+// the hosted screen. No dumps for the tenant: the fixture answers.
 const LOOKUP_DUMPS = { TIER_CLASS: 'extra_tierclass', PRODUCT_CATEGORY: 'extra_prodcat' };  // as Catalog.from_bolapi_dumps maps them
 export function tenantGetter(tenant) {
-  if (!tenant) return () => null;
-  const dir = path.resolve(HERE, '../../../catalogs', tenant, 'bolapi');
+  const dir = tenant && process.env.OFFER_AUTHOR_CATALOGS ? path.join(process.env.OFFER_AUTHOR_CATALOGS, tenant, 'bolapi') : '';
+  if (!dir || !fs.existsSync(dir)) return () => null;
   const tdump = (f) => {  // a dump bolapi refused (403 for this role) is no data: the fixture answers and `mocked` says so
     const x = path.join(dir, f + '.json');
     const d = fs.existsSync(x) ? JSON.parse(fs.readFileSync(x, 'utf8')) : null;

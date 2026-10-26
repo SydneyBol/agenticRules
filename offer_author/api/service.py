@@ -8,11 +8,12 @@ Pulsar-compatible (what the stock gravty-ui calls, see pulsar.py):
 POST /ai/pulsar/offer/rules[/]?regenerate=true|false   GET|POST /ai/pulsar/<offer_id>/prompt/<stage>[/]
 
 Reward offers only: other offer types get 422 unsupported_offer_type.
-Run:  AWS_PROFILE=... python -m offer_author.api.service --catalog-dir catalogs/devintam1/bolapi --tenant devintam1 \
+Run:  AWS_PROFILE=... OFFER_AUTHOR_CATALOGS=<tenant dumps folder> python -m offer_author.api.service --tenant devintam1 \
           --sponsor 1 --account 12 --tag BASE
 """
 import argparse
 import logging
+import os
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -116,7 +117,7 @@ def main():
     from ..core.settings import Settings
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     ap = argparse.ArgumentParser()
-    ap.add_argument("--catalog-dir", required=True)
+    ap.add_argument("--catalog-dir", help="saved bolapi responses (default: $OFFER_AUTHOR_CATALOGS/<tenant>/bolapi)")
     ap.add_argument("--tenant", required=True)
     ap.add_argument("--sponsor", type=int, required=True)
     ap.add_argument("--account", required=True)
@@ -124,9 +125,12 @@ def main():
     ap.add_argument("--port", type=int, default=8077)
     ap.add_argument("--bolapi-base", help="https://master.<tenant>.gravty.info: read each offer's counters with the caller's JWT")
     a = ap.parse_args()
-    cat = Catalog.from_bolapi_dumps(a.catalog_dir, a.tenant, a.sponsor, a.account, a.tag)
-    counters_for = BolapiCounterSource(a.bolapi_base).get if a.bolapi_base else None
     settings = Settings.from_env()
+    folder = a.catalog_dir or (settings.catalogs and os.path.join(settings.catalogs, a.tenant, "bolapi"))
+    if not folder:
+        ap.error("give --catalog-dir or OFFER_AUTHOR_CATALOGS (the tenant dumps folder)")
+    cat = Catalog.from_bolapi_dumps(folder, a.tenant, a.sponsor, a.account, a.tag)
+    counters_for = BolapiCounterSource(a.bolapi_base).get if a.bolapi_base else None
     engine = Engine.from_settings(settings).start()  # the first simulate then answers in milliseconds, not after a JVM start
     try:
         create_app(make_llm(), lambda sponsor, account, auth: cat, counters_for=counters_for, settings=settings,

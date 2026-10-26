@@ -6,7 +6,7 @@ It replaces Pulsar behind the same `/ai/pulsar/...` API.
 
 ```bash
 offer-xml "Gold tier members get 100 bonus points on weekend spends of at least \$50" -o gold.xml
-offer-xml-server --catalog-dir catalogs/devintbf2/bolapi --tenant devintbf2 --sponsor 1 --account 9 --tag BASE
+offer-xml-server --tenant devintbf2 --sponsor 1 --account 9 --tag BASE
 ```
 
 ## How it works
@@ -42,10 +42,21 @@ an XML through that the stock screen did not accept. Design: `~/Documents/Gravty
 | `offer_author/api/` | HTTP service and CLI. Dependencies point one way: api → ai → core |
 | `harness/ui/compile/` | the `compile` tool's service: stock gravty-ui screens, headless, against a mocked backend |
 | `harness/engine/` | the `simulate` tool: Java harness that runs rules + BITs in the real Drools engine (`mvn -q package -DskipTests`) |
-| `catalogs/<tenant>/bolapi/` | tenant catalog dumps (the CLI, the local backend, the compile screen's catalog calls); production reads bolapi live |
 
-Tests, QA tools, batch and hosted scripts, case files and their outputs live in the dev workspace
-`~/Documents/Gravty/offer-xml-generator-dev/` (see its README); they run against this checkout.
+## Outside this repo
+
+The repo holds only what runs. Everything it needs or produces besides that lives under `~/Documents/Gravty/` (or
+the place named below) and is found through the setting in the last column; none of it is committed here.
+
+| What | Where | How it is found |
+|---|---|---|
+| Tenant catalog dumps (`<tenant>/bolapi/*.json`, written by the dev workspace's `harness/ui/hosted/tenant-catalog.mjs`) | `~/Documents/Gravty/offer-xml-generator-dev/catalogs/` | `OFFER_AUTHOR_CATALOGS` for the service, the CLI and the compile server (`--catalog-dir` overrides it for the service and CLI); production reads bolapi live |
+| Tests, QA tools, batch and hosted scripts, case files and every output | `~/Documents/Gravty/offer-xml-generator-dev/` (its README) | they point back at this checkout (`OFFER_AUTHOR_REPO`, default `~/PycharmProjects/offer-xml-generator`) |
+| Design notes, decisions, error logs, KT PDF | `~/Documents/Gravty/` (index: `README.md`; this branch: `ai-agent/`) | read by people only |
+| Hosted QA runbook and its scripts | `~/.claude/skills/rulesGenerationQA/` | `scripts/backend.sh` sets `OFFER_AUTHOR_CATALOGS` |
+| gravty-ui, served for the compile screen | `~/Downloads/newui-develop/gravty-ui` | `ng serve` on :4200 (`APP` in `harness/ui/compile/screen.mjs`) |
+| Gravty engine jar the harness runs | `~/.m2/repository/com/gravty/bit_processor/` | `engine.jar` in `harness/engine/pom.xml` (`-Dengine.jar=` overrides) |
+| Local dev servers | `~/Downloads/engine-develop/.claude/launch.json` | `compile-server` entries set `OFFER_AUTHOR_CATALOGS` |
 
 ## Setup
 
@@ -59,7 +70,8 @@ cd harness/ui && npm ci
 
 AWS: an SSO session for a profile with Bedrock access (`aws sso login --profile MLCoreDeveloperAccess-384853870836`).
 Model: `OFFER_AUTHOR_MODEL` (default `us.anthropic.claude-sonnet-5-5`). The compile service needs `ng serve` of
-gravty-ui on :4200, then `npm --prefix harness/ui run compile-server` (:8078).
+gravty-ui on :4200, then `OFFER_AUTHOR_CATALOGS=~/Documents/Gravty/offer-xml-generator-dev/catalogs npm --prefix harness/ui run compile-server` (:8078).
+Export the same `OFFER_AUTHOR_CATALOGS` for the service and the CLI.
 
 Hosted QA on a tenant is the `rulesGenerationQA` Claude skill (`~/.claude/skills/rulesGenerationQA/`). Results and
 error logs: `~/Documents/Gravty/`.
