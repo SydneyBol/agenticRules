@@ -14,24 +14,43 @@ import subprocess
 import tempfile
 import threading
 
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-JAR = os.environ.get("OFFER_AUTHOR_ENGINE_JAR", os.path.join(ROOT, "harness", "engine", "target", "harness.jar"))
 OFFER_ID = 1001
 BASE_DATE = dt.datetime(2026, 10, 20, 10, 0, 0)  # a Tuesday
-WARM = os.environ.get("OFFER_AUTHOR_ENGINE_WARM", "1") != "0"  # one long-lived harness (--serve) instead of a JVM per run
 
 
-class _Warm:
-    """The harness in --serve mode: one case path per line in, one JSON line out. A dead or stuck process is
-    dropped; the next run starts a fresh one."""
+class Engine:
+    """The engine harness jar. Cold: a JVM per run. Warm: one long-lived harness in --serve mode (one case path per
+    line in, one JSON line out); a dead or stuck process is dropped and the next run starts a fresh one, and a failed
+    warm run is retried cold once. The entry point makes one per process (start() pays the JVM start up front) and
+    close()s it; agent.run makes a cold one for a run when it is given none."""
 
-    def __init__(self):
-        self.p, self.lock = None, threading.Lock()
+    def __init__(self, jar, warm=False):
+        self.jar, self.warm, self.p, self.lock = jar, warm, None, threading.Lock()
 
-    def run(self, path, timeout):
+    @classmethod
+    def from_settings(cls, settings):
+        return cls(settings.engine_jar, settings.engine_warm)
+
+    def available(self):
+        return os.path.exists(self.jar)
+
+    def start(self):
+        """Start the warm harness and its first rule compile now, not on the first simulate."""
+        if self.warm and self.available():
+            sample = {"offer_id": OFFER_ID, "drl": "", "params": {}, "priority": 1, "bits": []}
+            threading.Thread(target=lambda: self.run(sample, timeout=120), daemon=True).start()
+        return self
+
+    def close(self):
+        with self.lock:
+            if self.p is not None:
+                self.p.kill()
+                self.p = None
+
+    def _serve(self, path, timeout):
         with self.lock:
             if self.p is None or self.p.poll() is not None:
-                self.p = subprocess.Popen(["java", "-jar", JAR, "--serve"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                self.p = subprocess.Popen(["java", "-jar", self.jar, "--serve"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                           stderr=subprocess.DEVNULL, text=True, bufsize=1)
             try:
                 self.p.stdin.write(path + "\n")
@@ -47,19 +66,31 @@ class _Warm:
                 self.p = None
                 raise
 
-
-_WARM = _Warm()
-
-
-def warm():
-    """Start the long-lived harness and pay its JVM start and first rule compile now, not on the first simulate."""
-    if WARM and available():
-        sample = {"offer_id": OFFER_ID, "drl": "", "params": {}, "priority": 1, "bits": []}
-        threading.Thread(target=lambda: run(sample, timeout=120), daemon=True).start()
-
-
-def available():
-    return os.path.exists(JAR)
+    def run(self, job, timeout=300, save_to=None):
+        """One harness run of a job {offer_id, drl, member, products, privilege_products, bits, segment_drl?} -> its
+        output. save_to keeps the job file (to rerun it by hand); otherwise a temp file is used and removed."""
+        if save_to:
+            os.makedirs(os.path.dirname(save_to), exist_ok=True)
+            json.dump(job, open(save_to, "w"), indent=1)
+            path = save_to
+        else:
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+                json.dump(job, f)
+            path = f.name
+        try:
+            if self.warm:
+                try:
+                    return self._serve(path, timeout)
+                except (OSError, ValueError, TimeoutError, EOFError):
+                    pass  # one cold run below
+            p = subprocess.run(["java", "-jar", self.jar, path], capture_output=True, text=True, timeout=timeout)
+        finally:
+            if not save_to:
+                os.unlink(path)
+        try:
+            return json.loads(p.stdout)
+        except json.JSONDecodeError:
+            return {"compile": "crash", "messages": p.stderr[-800:]}
 
 
 def same(got, want):
@@ -67,33 +98,6 @@ def same(got, want):
         return abs(float(got) - float(want)) < 0.01
     except (TypeError, ValueError):
         return got is not None and str(got) == str(want)
-
-
-def run(job, timeout=300, save_to=None):
-    """One harness run of a job {offer_id, drl, member, products, privilege_products, bits, segment_drl?} -> its output.
-    save_to keeps the job file (to rerun it by hand); otherwise a temp file is used and removed."""
-    if save_to:
-        os.makedirs(os.path.dirname(save_to), exist_ok=True)
-        json.dump(job, open(save_to, "w"), indent=1)
-        path = save_to
-    else:
-        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-            json.dump(job, f)
-        path = f.name
-    try:
-        if WARM:
-            try:
-                return _WARM.run(path, timeout)
-            except (OSError, ValueError, TimeoutError, EOFError):
-                pass  # one cold run below
-        p = subprocess.run(["java", "-jar", JAR, path], capture_output=True, text=True, timeout=timeout)
-    finally:
-        if not save_to:
-            os.unlink(path)
-    try:
-        return json.loads(p.stdout)
-    except json.JSONDecodeError:
-        return {"compile": "crash", "messages": p.stderr[-800:]}
 
 
 def period(date, freq):
@@ -105,7 +109,7 @@ def earned(bo):
     return bool(sum(x["total"] for x in bo.get("points", []) if x["action"] == "REWARD_POINTS") or bo.get("privileges"))
 
 
-def run_offer(job, bits, offer_main=None, timeout=300, save_to=None):
+def run_offer(engine, job, bits, offer_main=None, timeout=300, save_to=None):
     """The engine as it runs an offer: Offer Main's checks first (OfferValidator.checkBitEligibility: BIT date inside
     start/end, per-member usage limit per frequency), then the rules on the BITs that pass. offer_main: {start_date,
     end_date, max_usage_per_user, frequency}. -> the harness output with one entry per BIT; a filtered BIT is
@@ -117,7 +121,7 @@ def run_offer(job, bits, offer_main=None, timeout=300, save_to=None):
     limit, freq = om.get("max_usage_per_user") or 0, om.get("frequency") or "total"
     while True:  # limits depend on what earlier BITs earned: drop the first over-limit BIT and run again until stable
         keep = [i for i in range(len(bits)) if i not in skipped]
-        out = run(dict(job, bits=[bits[i] for i in keep]), timeout, save_to)
+        out = engine.run(dict(job, bits=[bits[i] for i in keep]), timeout, save_to)
         if out.get("compile") != "ok" or not limit:
             break
         used, over = {}, None
@@ -136,7 +140,7 @@ def run_offer(job, bits, offer_main=None, timeout=300, save_to=None):
     return out
 
 
-def simulate(drl, scenario, sponsor_id, header_defaults, program_id=1, segment_drl=None, offer_main=None, timeout=300):
+def simulate(engine, drl, scenario, sponsor_id, header_defaults, program_id=1, segment_drl=None, offer_main=None, timeout=300):
     """scenario: {member: {attributes, tier}, products: {sku: {attr: v}}, privilege_products, bits: [{header, lines, expect}]}
     header_defaults: the tenant's BIT codes (Catalog.bit_defaults: h_bit_type, h_bit_category); a BIT's own header wins.
     program_id only labels the local harness's BIT (the engine harness runs one program).
@@ -158,7 +162,7 @@ def simulate(drl, scenario, sponsor_id, header_defaults, program_id=1, segment_d
     if segment_drl:
         m = re.search(r'addValidatedSegmentId\("([^"]+)"\)', segment_drl)
         job.update(segment_drl=segment_drl, segment_id=m.group(1) if m else "SEG")
-    out = run_offer(job, bits, offer_main, timeout)
+    out = run_offer(engine, job, bits, offer_main, timeout)
     if out.get("compile") != "ok":
         return {"compile": "error", "detail": str(out.get("messages"))[:1500]}
     rows = []

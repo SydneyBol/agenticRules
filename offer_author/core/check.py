@@ -1,16 +1,11 @@
 """Offline checks of model-written rule XML, all driven by data: the generated block reference (toolbox, connection
 checks) and the tenant catalog (codes). It answers fast what the slower stock-UI compile would also reject."""
-import json
-import os
 import xml.etree.ElementTree as ET
 
-REF = os.path.join(os.path.dirname(__file__), "data", "block_reference.json")
+from .tree import reference
+
 NS = "{https://developers.google.com/blockly/xml}"
 CATALOG_OBJECT = {"activity": "activity", "member": "member", "products_attrs": "product"}
-
-
-def reference(canvas="rules"):
-    return {b["type"]: b for b in json.load(open(REF))["canvases"][canvas]["toolbox"]}
 
 
 def _checks(variants):

@@ -77,21 +77,19 @@ class _Reply(list):
 
 
 _CACHE = {"cachePoint": {"type": "default"}}
-_LIMITERS = {}
 
 
-def _limiter(rps):
-    """One rate limiter per process and rate, shared by every run (parallel suites and requests queue here)."""
+def rate_limiter(rps):
+    """A request-rate limiter for ConverseLLM. Every run on one client shares that client's limiter (the entry point
+    makes one client per process); pass the same one to several clients to make them queue together."""
     from langchain_core.rate_limiters import InMemoryRateLimiter
-    if rps not in _LIMITERS:
-        _LIMITERS[rps] = InMemoryRateLimiter(requests_per_second=rps, check_every_n_seconds=0.1, max_bucket_size=max(1, int(rps * 4)))
-    return _LIMITERS[rps]
+    return InMemoryRateLimiter(requests_per_second=rps, check_every_n_seconds=0.1, max_bucket_size=max(1, int(rps * 4)))
 
 
 class ConverseLLM:
     """Claude on Amazon Bedrock through LangChain (langchain-aws ChatBedrockConverse, the Converse API). Same turn()
     contract as BedrockLLM; the library supplies the request, botocore adaptive retries (they back off on throttling),
-    a process-wide rate limiter (OFFER_AUTHOR_RPS) and token usage with cache reads and writes.
+    the client's rate limiter (OFFER_AUTHOR_RPS) and token usage with cache reads and writes.
 
     Cache points (4, the Bedrock maximum): end of the static system text (the tools render before it, so it covers
     them), end of the tenant catalog, the previous user turn (written a turn earlier, so it is read) and the newest
@@ -101,7 +99,7 @@ class ConverseLLM:
     """
 
     def __init__(self, model=None, region=None, effort="medium", thinking=None, max_tokens=16000, retries=2, rps=None,
-                 client=None):
+                 client=None, limiter=None):
         from botocore.config import Config
         from langchain_aws import ChatBedrockConverse
         self.model = model or os.environ.get("OFFER_AUTHOR_MODEL", DEFAULT_MODEL)
@@ -110,7 +108,7 @@ class ConverseLLM:
         rps = rps or float(os.environ.get("OFFER_AUTHOR_RPS", 2))
         self.chat = ChatBedrockConverse(
             model_id=self.model, region_name=region or os.environ.get("AWS_REGION", "us-west-2"), max_tokens=max_tokens,
-            additional_model_request_fields=fields, rate_limiter=_limiter(rps), client=client,
+            additional_model_request_fields=fields, rate_limiter=limiter or rate_limiter(rps), client=client,
             config=Config(retries={"mode": "adaptive", "max_attempts": retries + 1}, read_timeout=300))
 
     @staticmethod

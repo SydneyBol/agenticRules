@@ -14,6 +14,8 @@ import re
 import sys
 
 from ..core.catalog import Catalog
+from ..core.engine import Engine
+from ..core.settings import Settings
 from ..ai.agent import generate
 from .pulsar import ascii_xml, ui_xml
 
@@ -74,10 +76,20 @@ def main(argv=None, llm=None):
         from ..ai.llm import make_llm
         llm = make_llm()
     cat = load_catalog(a)
+    settings = Settings.from_env()
+    engine = Engine.from_settings(settings)  # one engine for the whole batch, closed at the end
 
     def run(prompt):
-        return generate(prompt, cat, llm, offer_id=a.offer_id, account_id=a.account)
+        return generate(prompt, cat, llm, offer_id=a.offer_id, account_id=a.account, settings=settings, engine=engine)
 
+    try:
+        return answer(a, run)
+    finally:
+        engine.close()
+
+
+def answer(a, run):
+    """Run the batch or the one prompt and write the results. -> exit code."""
     if a.batch:
         os.makedirs(a.out_dir, exist_ok=True)
         prompts = [p.strip() for p in open(a.batch) if p.strip() and not p.lstrip().startswith("#")]

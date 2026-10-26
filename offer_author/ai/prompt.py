@@ -115,17 +115,13 @@ def examples(folder, title):
     return f"# {title}\n\n" + "\n".join(out)
 
 
-_STATIC = None
-
-
 def static_prompt():
-    global _STATIC
-    if _STATIC is None:
-        read = lambda n: open(os.path.join(CONTEXT, n)).read()  # noqa: E731
-        _STATIC = "\n\n".join([read("block_reference.md"), read("block_reference_segment.md"), read("kt.md"), read("member_dates.md"),
-                               examples("blueprints", "Seeded blueprints (rules canvas)"),
-                               examples("segments", "Saved member segments (segment canvas)")])
-    return _STATIC
+    """The reference text every run shares (~20 ms to read and render): read per run, the same bytes each time, so
+    it stays a prompt-cache hit."""
+    read = lambda n: open(os.path.join(CONTEXT, n)).read()  # noqa: E731
+    return "\n\n".join([read("block_reference.md"), read("block_reference_segment.md"), read("kt.md"), read("member_dates.md"),
+                        examples("blueprints", "Seeded blueprints (rules canvas)"),
+                        examples("segments", "Saved member segments (segment canvas)")])
 
 
 

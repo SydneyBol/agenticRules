@@ -55,12 +55,13 @@ class Jobs:
             return dict(j) if j else None
 
 
-def create_app(llm, catalog_for, jobs=None, counters_for=None):
+def create_app(llm, catalog_for, jobs=None, counters_for=None, settings=None, engine=None):
     """catalog_for(sponsor_id, account_id, authorization) -> Catalog. llm: object with turn(system, messages).
-    counters_for(offer_id, authorization) -> the offer's status and counters (counters.py), or None."""
+    counters_for(offer_id, authorization) -> the offer's status and counters (counters.py), or None.
+    settings, engine: core.settings.Settings and core.engine.Engine, handed to every agent run."""
     app = Flask(__name__)
     jobs = jobs or Jobs()
-    app.register_blueprint(pulsar_blueprint(llm, catalog_for, counters_for=counters_for))  # the contract the stock gravty-ui already calls
+    app.register_blueprint(pulsar_blueprint(llm, catalog_for, counters_for=counters_for, settings=settings, engine=engine))  # the contract the stock gravty-ui already calls
 
     def bad(code, msg, status=400):
         return jsonify({"code": code, "detail": msg}), status
@@ -91,7 +92,8 @@ def create_app(llm, catalog_for, jobs=None, counters_for=None):
             return bad("catalog_unavailable", f"Could not load the tenant catalog: {e}", 424)
         existing = body.get("existing_counters") if isinstance(body.get("existing_counters"), dict) else \
             (counters_for(offer_id, request.headers.get("Authorization")) if counters_for and offer_id is not None else None)
-        work = lambda: generate(prompt, catalog, llm, offer_id=offer_id, account_id=account, existing=existing)
+        work = lambda: generate(prompt, catalog, llm, offer_id=offer_id, account_id=account, existing=existing,  # noqa: E731
+                                settings=settings, engine=engine)
         if request.args.get("wait") == "true":
             return jsonify(work())
         return jsonify({"job_id": jobs.submit(work)}), 202
@@ -105,9 +107,13 @@ def create_app(llm, catalog_for, jobs=None, counters_for=None):
 
 
 def main():
+    """The service, start to finish: settings from the environment, the catalog, the engine (warm for the process),
+    the model client, then the app that hands them to each agent run."""
+    from ..ai.llm import make_llm
     from ..core.catalog import Catalog
     from ..core.counters import BolapiCounterSource
-    from ..ai.llm import make_llm
+    from ..core.engine import Engine
+    from ..core.settings import Settings
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     ap = argparse.ArgumentParser()
     ap.add_argument("--catalog-dir", required=True)
@@ -120,9 +126,13 @@ def main():
     a = ap.parse_args()
     cat = Catalog.from_bolapi_dumps(a.catalog_dir, a.tenant, a.sponsor, a.account, a.tag)
     counters_for = BolapiCounterSource(a.bolapi_base).get if a.bolapi_base else None
-    from ..core import engine
-    engine.warm()  # the first simulate then answers in milliseconds, not after a JVM start
-    create_app(make_llm(), lambda sponsor, account, auth: cat, counters_for=counters_for).run(port=a.port)
+    settings = Settings.from_env()
+    engine = Engine.from_settings(settings).start()  # the first simulate then answers in milliseconds, not after a JVM start
+    try:
+        create_app(make_llm(), lambda sponsor, account, auth: cat, counters_for=counters_for, settings=settings,
+                   engine=engine).run(port=a.port)
+    finally:
+        engine.close()
 
 
 if __name__ == "__main__":

@@ -103,8 +103,10 @@ def counter_problems(xml, counters, guard):
 class Session:
     """Tool state for one offer: Offer Main, and per canvas the last compile and the last clean one."""
 
-    def __init__(self, catalog, offer_id, existing=None, on_offer_main=None):
+    def __init__(self, catalog, offer_id, settings, engine, existing=None, on_offer_main=None):
+        """settings: core.settings.Settings (the compile service URL). engine: the core.engine.Engine simulate runs on."""
         self.catalog, self.offer_id, self.tenant = catalog, offer_id, compile_tenant(catalog)
+        self.settings, self.engine = settings, engine
         self.guard = Guard(existing) if existing is not None else None
         self.on_offer_main = on_offer_main
         self.offer_main, self.last, self.clean = None, {}, {}
@@ -172,7 +174,7 @@ class Session:
         pre = located(check(xml, self.catalog, canvas=canvas), paths) + counter_problems(xml, counters, self.guard)
         if name == "validate" or any(p.startswith("not well-formed") for p in pre):
             return {"ok": not pre, "problems": pre}
-        res = ui.compile_xml(xml, self.tenant, canvas=canvas)
+        res = ui.compile_xml(xml, url=self.settings.compile_url, tenant=self.tenant, canvas=canvas)
         problems = pre + located(ui.problems(res), paths)
         last = {"xml": xml, "res": res, "problems": problems, "counters": counters}
         self.last[canvas] = last
@@ -190,12 +192,12 @@ class Session:
         rules = self.last.get("rules")
         if not rules or not (rules["res"].get("drl") or "").strip():
             return {"error": "compile the rules canvas first"}
-        if not engine.available():
+        if not self.engine.available():
             return {"error": "engine harness not available here; rely on compile"}
         seg = self.last.get("segment")
         # the tenant's privilege products exist for the engine, as they do on the tenant
         priv = {pid: {"name": p.get("name"), "cost": p.get("cost", 0)} for pid, p in self.catalog.privileges.items()}
-        r = engine.simulate(rules["res"]["drl"], dict(x, privilege_products={**priv, **(x.get("privilege_products") or {})}),
+        r = engine.simulate(self.engine, rules["res"]["drl"], dict(x, privilege_products={**priv, **(x.get("privilege_products") or {})}),
                             sponsor_id=self.catalog.sponsor_id, header_defaults=self.catalog.bit_defaults(), segment_drl=(seg["res"].get("drl") if seg else None) or None,
                             offer_main=self.offer_main)
         if r.get("compile") != "ok":  # the engine's message quotes the compiled rules: never shown to the model

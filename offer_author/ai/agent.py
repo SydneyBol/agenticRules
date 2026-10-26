@@ -8,13 +8,16 @@ This file is only the loop, as a LangGraph graph: model turn -> tool calls -> re
 
     START -> model -> tools -> model ... -> END      (model -> nudge -> model when a turn calls no tool)
 
+Everything starts in run(): it builds the graph, the system prompt and the session for that run, and nothing is
+set up when this module is imported. The entry point (api/service.py, api/cli.py) hands down the Settings and the
+Engine it made; a library caller may leave them out (code defaults, a cold engine for the run).
 One graph run per request and no checkpointer: nothing is kept after the run. The per-run objects (llm, session,
-system blocks, parts) come in through config["configurable"]; the state holds only the conversation and counters.
+system blocks, parts, settings) come in through config["configurable"]; the state holds the conversation, counters
+and the turn limit.
 """
 import json
 import logging
 import operator
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Annotated, TypedDict
@@ -22,13 +25,13 @@ from typing import Annotated, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from ..core import ui
+from ..core.engine import Engine
 from ..core.session import PARTS, Session, error_result, finish_blockers, outcome
+from ..core.settings import Settings
 from .llm import LLMError
 from .prompt import intro, system_blocks
 from .tool_specs import TOOLS
 
-MAX_TURNS = int(os.environ.get("OFFER_AUTHOR_TURNS", 14))
-EARLY = os.environ.get("OFFER_AUTHOR_EARLY_TOOLS", "1") != "0"  # start each tool call as soon as it has streamed
 PARALLEL = {"lookup_values"}  # read only the catalog: one turn's calls run together; the rest run in call order
 NUDGE = "Use the tools: compile, simulate, then finish."
 log = logging.getLogger("offer_author.agent")
@@ -38,6 +41,7 @@ class AgentState(TypedDict, total=False):
     messages: Annotated[list, operator.add]  # append-only: earlier turns (and their thinking) are resent unchanged
     calls: list  # the last model turn's tool calls [(id, name, input)]
     turns: int
+    max_turns: int  # Settings.max_turns
     usage: dict
     fin: dict | None  # the accepted finish input
     result: dict | None  # an early end (refusal, compiler unavailable)
@@ -59,7 +63,7 @@ def _model(state, config):
         if name != "finish" and name not in PARALLEL:  # (catalog reads) run together in the tools step
             c["started"][tid] = c["worker"].submit(_run_tool, c, name, x)
 
-    turn = c["llm"].turn(c["system"], _cached(state["messages"]), tools=TOOLS, on_tool=start if EARLY else None)
+    turn = c["llm"].turn(c["system"], _cached(state["messages"]), tools=TOOLS, on_tool=start if c["settings"].early_tools else None)
     c["timing"]["model_s"] += time.time() - t0
     c["timing"]["turns"].append({"s": round(time.time() - t0, 1), "out": turn.usage.get("output_tokens"),
                                  "calls": [f"{name}:{len(json.dumps(x))}" for _, name, x in turn.tool_calls]})
@@ -111,8 +115,8 @@ def _tools(state, config):
         for tid, name, x in calls:
             if name == "finish":
                 chars["finish"] = chars.get("finish", 0) + len(json.dumps(x))
-                wait = finish_blockers(s, c["parts"], x) if turns < MAX_TURNS - 1 else []
-                if disagreed and turns < MAX_TURNS - 1:
+                wait = finish_blockers(s, c["parts"], x) if turns < state["max_turns"] - 1 else []
+                if disagreed and turns < state["max_turns"] - 1:
                     wait.append(f"the engine disagreed with your expectations in this turn ({'; '.join(disagreed[:3])}): "
                                 "fix the blocks or the expectation, compile and simulate again")
                 if wait:
@@ -154,14 +158,15 @@ def _after_model(state):
 
 
 def _after_tools(state):
-    return END if state.get("result") or state.get("fin") is not None or state["turns"] >= MAX_TURNS else "model"
+    return END if state.get("result") or state.get("fin") is not None or state["turns"] >= state["max_turns"] else "model"
 
 
 def _after_nudge(state):
-    return END if state["turns"] >= MAX_TURNS else "model"
+    return END if state["turns"] >= state["max_turns"] else "model"
 
 
 def build():
+    """The agent's graph (2-3 ms): built by each run."""
     g = StateGraph(AgentState)
     g.add_node("model", _model)
     g.add_node("tools", _tools)
@@ -173,23 +178,28 @@ def build():
     return g.compile()
 
 
-GRAPH = build()
-
-
-def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, context=None, existing=None, on_offer_main=None):
+def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, context=None, existing=None, on_offer_main=None,
+        settings=None, engine=None):
     """One agent run for the given parts of an offer.
     context: what is already handled elsewhere (prompt.rules_context). existing: {offer_status, counters} already on
     the offer (core/counters.py); None = not known. on_offer_main(settings): called as soon as Offer Main is set.
+    settings: core.settings.Settings (default: the code defaults). engine: the core.engine.Engine to simulate on
+    (default: a cold one for this run, closed at its end).
     -> core.session.outcome, with the model's usage in diagnostics."""
     t0 = time.time()
+    settings = settings or Settings()
+    own_engine = engine is None
+    engine = engine or Engine(settings.engine_jar)
     parts = tuple(p for p in PARTS if p in parts)
-    s = Session(catalog, offer_id, existing, on_offer_main)
+    graph = build()
+    s = Session(catalog, offer_id, settings, engine, existing, on_offer_main)
     timing = {"model_s": 0.0, "tools_s": {}, "input_chars": {}, "turns": []}  # where the run's time went: per tool, per turn
     worker = ThreadPoolExecutor(1)  # tool calls started while the model streams: one at a time, in call order
     config = {"configurable": {"llm": llm, "session": s, "system": system_blocks(catalog, account_id), "parts": parts,
-                               "timing": timing, "worker": worker, "started": {}},
-              "recursion_limit": 2 * MAX_TURNS + 4}
-    last = {"messages": [{"role": "user", "content": intro(prompt, parts, context, existing)}], "turns": 0, "usage": {}}
+                               "settings": settings, "timing": timing, "worker": worker, "started": {}},
+              "recursion_limit": 2 * settings.max_turns + 4}
+    last = {"messages": [{"role": "user", "content": intro(prompt, parts, context, existing)}], "turns": 0,
+            "max_turns": settings.max_turns, "usage": {}}
 
     def done(res):
         res["diagnostics"].update(model=getattr(llm, "model", "?"), latency_s=round(time.time() - t0, 2),
@@ -200,18 +210,20 @@ def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, conte
         return res
 
     try:
-        for last in GRAPH.stream(last, config, stream_mode="values"):
+        for last in graph.stream(last, config, stream_mode="values"):
             pass
     except LLMError as e:
         return done(error_result(f"The rule generator is unavailable right now ({e}). Please try again."))
     finally:
         worker.shutdown(wait=True)
+        if own_engine:
+            engine.close()
     if last.get("result"):
         return done(last["result"])
     return done(outcome(s, last.get("fin"), parts, offer_id))
 
 
-def generate(prompt, catalog, llm, offer_id=None, account_id=None, context=None, existing=None, **_):
+def generate(prompt, catalog, llm, offer_id=None, account_id=None, context=None, existing=None, settings=None, engine=None, **_):
     """The rules of an offer (the GenAI popup, the CLI, /ai/offer-author/generate)."""
     return run(prompt, catalog, llm, offer_id=offer_id, parts=("rules",), account_id=account_id, context=context,
-               existing=existing)
+               existing=existing, settings=settings, engine=engine)

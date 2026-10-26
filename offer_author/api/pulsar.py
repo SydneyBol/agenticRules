@@ -162,9 +162,14 @@ class Store:
         return job
 
 
-def pulsar_blueprint(llm, catalog_for, store=None, counters_for=None):
-    """counters_for(offer_id, authorization) -> {offer_status, counters} | None (counters.BolapiCounterSource.get)."""
+def pulsar_blueprint(llm, catalog_for, store=None, counters_for=None, settings=None, engine=None):
+    """counters_for(offer_id, authorization) -> {offer_status, counters} | None (counters.BolapiCounterSource.get).
+    settings, engine: from the entry point (core.settings.Settings, core.engine.Engine), handed to every agent run."""
     bp = Blueprint("pulsar", __name__)
+
+    def agent(prompt, catalog, **kw):  # one agent run with this service's model, settings and engine
+        return run_agent(prompt, catalog, llm, settings=settings, engine=engine, **kw)
+
     store = store or Store()
     bp.store = store
 
@@ -192,12 +197,12 @@ def pulsar_blueprint(llm, catalog_for, store=None, counters_for=None):
             def on_main(om):
                 job["offer_main"] = om
                 job["main"].set()
-            return run_agent(prompt, catalog_for(sponsor_id, None, auth), llm, on_offer_main=on_main)
+            return agent(prompt, catalog_for(sponsor_id, None, auth), on_offer_main=on_main)
         return store.start(store.key("offer", prompt), work, track=False, prompt=prompt)
 
     def rules_only(body, prompt, auth, context, existing):
-        return run_agent(prompt, catalog_for(body.get("sponsor_id"), None, auth), llm, offer_id=body.get("id"),
-                         parts=("rules",), context=context, existing=existing)
+        return agent(prompt, catalog_for(body.get("sponsor_id"), None, auth), offer_id=body.get("id"), parts=("rules",),
+                     context=context, existing=existing)
 
     def rules_job(body, prompt, auth, reuse_offer):
         """The offer run when this is its prompt or its rules prompt; otherwise a rules-only run, told what the
@@ -297,8 +302,8 @@ def pulsar_blueprint(llm, catalog_for, store=None, counters_for=None):
 
     # ------------------------------------------------------------ Select Members: segment rules
     def segment_job(prompt, sponsor_id, auth):
-        return store.start(store.key("segment", prompt), lambda job: run_agent(
-            prompt, catalog_for(sponsor_id, None, auth), llm, parts=("segment",)), track=False)
+        return store.start(store.key("segment", prompt),
+                           lambda job: agent(prompt, catalog_for(sponsor_id, None, auth), parts=("segment",)), track=False)
 
     @bp.post("/ai/pulsar/segment/rules", strict_slashes=False)
     def segment_rules():

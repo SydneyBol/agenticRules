@@ -18,14 +18,10 @@ REF = os.path.join(os.path.dirname(__file__), "data", "block_reference.json")
 XMLNS = "https://developers.google.com/blockly/xml"
 MUT_NS = "http://www.w3.org/1999/xhtml"
 
-_REF = {}
-
-
 def reference(canvas="rules"):
-    """block type -> generated spec, for one canvas ('rules' or 'segment')."""
-    if canvas not in _REF:
-        _REF[canvas] = {b["type"]: b for b in json.load(open(REF))["canvases"][canvas]["toolbox"]}
-    return _REF[canvas]
+    """block type -> generated spec, for one canvas ('rules' or 'segment'), read from data/block_reference.json."""
+    with open(REF) as f:
+        return {b["type"]: b for b in json.load(f)["canvases"][canvas]["toolbox"]}
 
 
 class TreeError(ValueError):

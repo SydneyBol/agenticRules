@@ -4,22 +4,21 @@ The UI is the compiler: it loads the XML through the stock upload path, keeps wh
 the engine will run, and creates the offer counters the XML refers to. Nothing here interprets blocks.
 """
 import json
-import os
 import time
 import urllib.error
 import urllib.request
 
-URL = os.environ.get("OFFER_AUTHOR_COMPILE_URL", "http://127.0.0.1:8078")
 
 
 class CompileUnavailable(Exception):
     pass
 
 
-def compile_xml(xml, tenant=None, url=None, timeout=120, canvas="rules", retries=1):
-    """canvas 'rules': the offer-rules screen through Upload Rules; 'segment': the add-segment screen."""
+def compile_xml(xml, url, tenant=None, timeout=120, canvas="rules", retries=1):
+    """url: the compile service (Settings.compile_url). canvas 'rules': the offer-rules screen through Upload Rules;
+    'segment': the add-segment screen."""
     body = {"xml": xml, "tenant": tenant or "", "canvas": canvas}
-    req = urllib.request.Request((url or URL) + "/compile", data=json.dumps(body).encode(),
+    req = urllib.request.Request(url + "/compile", data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"}, method="POST")
     for attempt in range(retries + 1):  # a compile in flight when the service's Chrome died: once more on a fresh one
         try:
@@ -27,7 +26,7 @@ def compile_xml(xml, tenant=None, url=None, timeout=120, canvas="rules", retries
                 return json.loads(r.read())
         except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
             if attempt == retries:
-                raise CompileUnavailable(f"compile service at {url or URL} not reachable: {e}") from e
+                raise CompileUnavailable(f"compile service at {url} not reachable: {e}") from e
             time.sleep(3)
 
 
