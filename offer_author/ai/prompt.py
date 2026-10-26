@@ -10,8 +10,9 @@ import glob
 import json
 import os
 
+from ..core.counters import normalize
 from ..core.session import DATA
-from ..core.tree import selections
+from ..core.tree import compact, selections
 
 CONTEXT = os.path.join(os.path.dirname(__file__), "context")
 
@@ -30,11 +31,16 @@ gravty-ui offer wizard. An offer has three parts, each where the engine evaluate
    ("Gold earn 3x, Silver 2x") or are OR-ed with activity conditions.
 Every clause of the description lands in exactly one part; nothing is built twice or dropped.
 
-You compose each canvas from its toolbox blocks as a block tree:
-  {"type": ..., "fields": {name: value}, "picked": "CODE1,CODE2", "inputs": {name: [blocks] | block}}
-- fields: the block's field values (dropdown options, typed values, catalog codes in a field).
+You compose each canvas from its toolbox blocks as a block tree. A block holds its fields and inputs directly, by
+the names the block reference lists:
+  {"type": ..., <field>: value, ..., "picked": "CODE1,CODE2", <input>: [blocks] | block, ...}
+- a field: the block's field value (dropdown option, typed value, catalog code in a field).
 - picked: codes chosen in the block's lookup popup (the "saved picked codes" lines), comma-separated.
-- inputs: a statement input holds a list (blocks chained in order); a value input holds one block.
+- an input: a statement input holds a list (blocks chained in order); a value input holds one block.
+- The tools fill these fields when you leave them out, so leave them out unless you want something else: a
+  condition's OBJECT and attribute_level (from its attribute: a declared counter at its level, an activity attribute,
+  a member attribute at MA_P); update_attribute's mta_type_value (the counter's level); give_points' LOYALTY_ACCOUNT
+  and REWARD_TAGS (the tenant's account and reward tag below).
 - counters: declare once, beside the tree, every offer counter (MA_O) the blocks refer to:
   {"name", "data_type" NUMBER|TEXT|DATE|BOOLEAN, "counter_type" REGULAR|VECTOR, "target_type"?, "namespace"? (VECTOR:
   what it counts per, e.g. h_location), "level" MA_O}. The rules screen creates them on upload.
@@ -59,8 +65,10 @@ Work like this:
    the expected outcome of each. This is how you confirm each rule does what was asked. If the engine disagrees,
    decide whether the blocks or your expectation is wrong, fix, compile and simulate again.
 5. finish once, after the last compile of each canvas you deliver was clean.
-Tools in one turn run in call order and each sees what the previous one did, so compile, simulate and finish can go in
-one turn. A finish is sent back when that turn's compile had problems or its simulate disagreed with an expectation.
+Tools in one turn run in call order and each sees what the previous one did. Once you know the blocks and the
+transactions that test them, send compile, simulate and finish in that same turn: every turn costs the manager
+waiting time. A finish is sent back when that turn's compile had problems or its simulate disagreed with an
+expectation, and then you fix and send them again.
 
 Offer semantics:
 - Every restriction the manager states must be built in the part the engine evaluates it in. A rules condition every
@@ -93,7 +101,7 @@ def examples(folder, title):
     out, seen = [], set()
     for f in sorted(glob.glob(os.path.join(DATA, folder, "*.xml"))):
         tree, counters = selections(open(f).read())
-        text = json.dumps(tree, separators=(",", ":"))
+        text = json.dumps(compact(tree, counters), separators=(",", ":"))
         if text in seen:
             continue
         seen.add(text)
@@ -127,7 +135,7 @@ def system_blocks(catalog, account_id=None):
 def _account_line(catalog, account_id):
     acc = catalog.account(account_id)
     tags = [t["code"] for t in (acc or {}).get("tags") or []]
-    tag = catalog.default_tag or (tags[0] if tags else None)
+    tag = catalog.reward_tag(account_id)
     return f"\nReward tag for points: {tag}" + (f" (tags on this account: {', '.join(tags)})" if tags else "") if acc else ""
 
 
@@ -152,8 +160,10 @@ def intro(prompt, parts, context=None, existing=None):
     if context:
         text += f"\n\n{context}"
     if existing and existing.get("counters"):
-        text += ("\n\nCounters already on this offer (reuse one only when its type fits; the upload reuses counters by "
-                 "name): " + "; ".join(f"{c['name']} ({c.get('data_type')} {c.get('counter_type')})" for c in existing["counters"]))
+        text += ("\n\nCounters already on this offer (reuse one only at its own level and type; a name is unique "
+                 "across levels): " + "; ".join(f"{c['name']} ({c['level']} {c['data_type']} {c['counter_type']}"
+                                                + (f" per {c['namespace']})" if c.get("namespace") else ")")
+                                                for c in normalize(existing["counters"])))
     return text
 
 

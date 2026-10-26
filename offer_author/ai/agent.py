@@ -12,6 +12,7 @@ One graph run per request and no checkpointer: nothing is kept after the run. Th
 system blocks, parts) come in through config["configurable"]; the state holds only the conversation and counters.
 """
 import json
+import logging
 import operator
 import os
 import time
@@ -29,6 +30,7 @@ from .tool_specs import TOOLS
 MAX_TURNS = int(os.environ.get("OFFER_AUTHOR_TURNS", 14))
 PARALLEL = {"lookup_values"}  # read only the catalog: one turn's calls run together; the rest run in call order
 NUDGE = "Use the tools: compile, simulate, then finish."
+log = logging.getLogger("offer_author.agent")
 
 
 class AgentState(TypedDict, total=False):
@@ -53,6 +55,8 @@ def _model(state, config):
     t0 = time.time()
     turn = c["llm"].turn(c["system"], _cached(state["messages"]), tools=TOOLS)
     c["timing"]["model_s"] += time.time() - t0
+    c["timing"]["turns"].append({"s": round(time.time() - t0, 1), "out": turn.usage.get("output_tokens"),
+                                 "calls": [f"{name}:{len(json.dumps(x))}" for _, name, x in turn.tool_calls]})
     usage = dict(state.get("usage") or {})
     for k, v in turn.usage.items():
         usage[k] = usage.get(k, 0) + (v or 0)
@@ -81,6 +85,12 @@ def _tools(state, config):
         t0 = time.time()
         try:
             return s.run(name, x)
+        except ui.CompileUnavailable:
+            raise
+        except Exception as e:  # noqa: BLE001  a malformed input the tool did not foresee: the model fixes it, the job goes on
+            log.exception("tool %s failed on the model's input", name)
+            return {"ok": False, "error": f"{name} could not read this input ({type(e).__name__}: {e}); check its shape "
+                                          "against the tool schema and send it again"}
         finally:
             tools_s[name] = tools_s.get(name, 0) + time.time() - t0
 
@@ -147,7 +157,7 @@ def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, conte
     t0 = time.time()
     parts = tuple(p for p in PARTS if p in parts)
     s = Session(catalog, offer_id, existing, on_offer_main)
-    timing = {"model_s": 0.0, "tools_s": {}, "input_chars": {}}  # where the run's time went, per tool name
+    timing = {"model_s": 0.0, "tools_s": {}, "input_chars": {}, "turns": []}  # where the run's time went: per tool, per turn
     config = {"configurable": {"llm": llm, "session": s, "system": system_blocks(catalog, account_id), "parts": parts,
                                "timing": timing},
               "recursion_limit": 2 * MAX_TURNS + 4}
@@ -158,7 +168,7 @@ def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, conte
                                   turns=last.get("turns", 0), usage=last.get("usage") or {},
                                   timing={"model_s": round(timing["model_s"], 2),
                                           "tools_s": {k: round(v, 2) for k, v in timing["tools_s"].items()},
-                                          "input_chars": timing["input_chars"]})
+                                          "input_chars": timing["input_chars"], "turns": timing["turns"]})
         return res
 
     try:

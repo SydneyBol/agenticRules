@@ -1,7 +1,9 @@
 """Block tree <-> Blockly XML, generically: the model picks blocks and field values, this writes the XML the UI saves.
 
 Node: {"type", "id"?, "fields": {name: value}, "picked"?: "CODE1,CODE2", "inputs": {name: node | [nodes]}}
-A statement input holds a list (the blocks chained under it, in order); a value input holds one node. `picked` is the
+The model writes the compact form, fields and inputs directly in the node ({"type", "attribute": ..., "RHS_INPUT":
+{...}}): `expand` turns it into the node form, `compact` writes examples in it, and `fill` adds the fields the tools
+know (a condition's object and level, an action's counter level, account and reward tag). A statement input holds a list (the blocks chained under it, in order); a value input holds one node. `picked` is the
 codes chosen in a lookup popup (the UI keeps them only in the mutation); the offer counters the blocks use are
 declared once beside the tree. The whole mutation is derived here as the UI's mutationToDom derives it (`derive`). Which input is which, where each
 mutation attribute comes from and their order (the upload dialog finds counters by regex over that order) come from
@@ -155,9 +157,13 @@ def number(root):
     return root
 
 
+EDIT_KEYS = ("id", "fields", "picked", "replace", "remove")
+
+
 def apply_edits(root, edits):
     """The last tree with edits applied, by block id: {"id", "fields": {...}} merges fields, "picked" replaces the
-    picked codes, "replace": node swaps the block (and what hangs under it), "remove": true drops it."""
+    picked codes, "replace": node swaps the block (and what hangs under it), "remove": true drops it. Any other key is
+    a field or an input of that block, as in the compact form ({"id": "b9", "operators": ">"})."""
     root = json.loads(json.dumps(root))
     for e in edits or []:
         if not isinstance(e, dict) or not e.get("id"):
@@ -175,14 +181,18 @@ def apply_edits(root, edits):
                 holder.pop(key)
             continue
         if e.get("replace") is not None:
-            new = dict(e["replace"])
+            new = expand(dict(e["replace"]))
             if holder is None:
                 root = new
             else:
                 holder[key] = new
             node = new
-        if e.get("fields"):
-            node["fields"] = {**(node.get("fields") or {}), **e["fields"]}
+        own = expand({"type": "-", **{k: v for k, v in e.items() if k not in EDIT_KEYS}})
+        fields = {**(e.get("fields") or {}), **own.get("fields", {})}
+        if fields:
+            node["fields"] = {**(node.get("fields") or {}), **fields}
+        if own.get("inputs"):
+            node["inputs"] = {**(node.get("inputs") or {}), **own["inputs"]}
         if "picked" in e:
             node["picked"] = e["picked"]
     return root
@@ -209,6 +219,113 @@ def ui_fields(node, mut, counters, catalog):
     return dict(fields, vector_counter_name=first)
 
 
+NODE_KEYS = ("type", "id", "picked", "mutation")
+
+
+def _blocks(v):
+    return isinstance(v, dict) or (isinstance(v, list) and all(isinstance(x, dict) for x in v))
+
+
+def expand(root):
+    """The model's compact nodes -> the node form. In a compact node a block or a list of blocks is an input and any
+    other value a field (the action block has a field and an input of the same name: the value says which); a list of
+    plain values is one field, comma-separated. A node already in the node form is kept as it is."""
+    if isinstance(root, list):
+        return [expand(n) for n in root]
+    if not isinstance(root, dict):
+        return root
+    out = {k: root[k] for k in NODE_KEYS if k in root}
+    fields = dict(root["fields"]) if isinstance(root.get("fields"), dict) else {}
+    inputs = {k: expand(v) for k, v in root["inputs"].items()} if isinstance(root.get("inputs"), dict) else {}
+    for k, v in root.items():
+        if k in NODE_KEYS or (k in ("fields", "inputs") and isinstance(v, dict)):
+            continue
+        if _blocks(v):
+            inputs[k] = expand(v)
+        else:
+            fields[k] = ",".join(map(str, v)) if isinstance(v, list) else v
+    if fields:
+        out["fields"] = fields
+    if inputs:
+        out["inputs"] = inputs
+    return out
+
+
+CONDITIONS = ("if_generic_adaptive", "activity_criteria")
+
+
+def _put(fields, name, value, after):
+    """fields with name added right after `after` (first when None): where the screen's saved XML has it."""
+    out = {name: value} if after is None else {}
+    for k, v in fields.items():
+        out[k] = v
+        if k == after:
+            out[name] = value
+    out.setdefault(name, value)
+    return out
+
+
+def fill(node, catalog=None, counters=None):
+    """The block's fields with those the model may leave out, filled as the screen would have them:
+    - a condition (if_generic_adaptive, activity_criteria): OBJECT member for an offer/activity counter or a member
+      attribute, activity for an activity attribute; attribute_level the counter's level, MA_P for a member attribute;
+    - give_points: LOYALTY_ACCOUNT and REWARD_TAGS, the tenant's account and reward tag;
+    - update_attribute: mta_type_value, the level of the counter it updates.
+    A field the model gave is never changed."""
+    t, f = node.get("type"), dict(node.get("fields") or {})
+    counters, inputs = counters or {}, node.get("inputs") or {}
+    attr = lambda obj, code: catalog.attr(obj, code) if catalog is not None and code else None  # noqa: E731
+    if t in CONDITIONS:
+        code = f.get("attribute")
+        counter = counters.get(code)
+        if "OBJECT" not in f:
+            obj = ("member" if counter or f.get("attribute_level") else
+                   "activity" if str(code or "").startswith(("h_", "l_")) or attr("activity", code) else
+                   "member" if attr("member", code) else None)
+            if obj:
+                f = _put(f, "OBJECT", obj, None)
+        if f.get("OBJECT") == "member" and "attribute_level" not in f:
+            level = (counter.get("level") or "MA_O") if counter else "MA_P" if attr("member", code) else None
+            if level:
+                f = _put(f, "attribute_level", level, "OBJECT")
+    elif t == "action" and f.get("action_type") == "give_points" and catalog is not None:
+        if "LOYALTY_ACCOUNT" not in f and "LOYALTY_ACCOUNT" not in inputs and catalog.default_account:
+            f = _put(f, "LOYALTY_ACCOUNT", str(catalog.default_account), "action_type")
+        if "REWARD_TAGS" not in f and "REWARD_TAGS" not in inputs and catalog.reward_tag():
+            f = _put(f, "REWARD_TAGS", catalog.reward_tag(), "LOYALTY_ACCOUNT" if "LOYALTY_ACCOUNT" in f else "action_type")
+    elif t == "action" and f.get("action_type") == "update_attribute" and "mta_type_value" not in f:
+        counter = counters.get(f.get("mta_attribute"))
+        if counter:
+            f = _put(f, "mta_type_value", counter.get("level") or "MA_O", "action_type")
+    return f
+
+
+def compact(root, counters=()):
+    """The node form -> the compact form, without the fields `fill` gives back without the catalog (for examples:
+    what the model sends). A give_points action shows no account or tag: the tenant's are filled in."""
+    if isinstance(root, list):
+        return [compact(n, counters) for n in root]
+    byname = {c["name"]: c for c in counters}
+    t, f, inputs = root["type"], dict(root.get("fields") or {}), dict(root.get("inputs") or {})
+    if t in CONDITIONS:
+        counter = byname.get(f.get("attribute"))
+        if counter and f.get("attribute_level") == (counter.get("level") or "MA_O"):
+            f.pop("attribute_level")
+        if (f.get("OBJECT") == "member" and (counter or "attribute_level" in f)) or (
+                f.get("OBJECT") == "activity" and not counter and "attribute_level" not in f
+                and str(f.get("attribute", "")).startswith(("h_", "l_"))):
+            f.pop("OBJECT")
+    elif t == "action" and f.get("action_type") == "give_points":
+        f.pop("LOYALTY_ACCOUNT", None), f.pop("REWARD_TAGS", None), inputs.pop("LOYALTY_ACCOUNT", None)
+    elif t == "action" and f.get("action_type") == "update_attribute":
+        counter = byname.get(f.get("mta_attribute"))
+        if counter and f.get("mta_type_value") == (counter.get("level") or "MA_O"):
+            f.pop("mta_type_value")
+    out = {"type": t, **f, **({"picked": root["picked"]} if root.get("picked") not in (None, "") else {})}
+    out.update({k: compact(v, counters) for k, v in inputs.items()})
+    return out
+
+
 def to_xml(root, catalog=None, counters=None, canvas="rules"):
     """-> (xml, paths): paths maps every block id to where it sits, for readable problem reports.
     counters: the offer counters the rules use, {name: {data_type, counter_type, target_type?, namespace?, entity_level?}}."""
@@ -229,6 +346,10 @@ def to_xml(root, catalog=None, counters=None, canvas="rules"):
         here = f"{where} > {label}" if where else label
         paths[bid] = here
         parts = [f"<block type={quoteattr(t)} id={quoteattr(bid)}>"]
+        if spec:
+            filled = fill(node, catalog, counters)
+            if filled != (node.get("fields") or {}):
+                node = dict(node, fields=filled)
         mut = derive(node, spec, catalog, counters) if spec else dict(node.get("mutation") or {})
         if spec:
             fixed = ui_fields(node, mut, counters, catalog)

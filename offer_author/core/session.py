@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 from . import engine, ui
 from .check import check
 from .counters import Guard, notes as counter_notes
-from .tree import TreeError, apply_edits, counter_ref, number, to_xml
+from .tree import TreeError, apply_edits, counter_ref, expand, number, to_xml
 
 DATA = os.path.join(os.path.dirname(__file__), "data")
 CATALOGS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "catalogs")
@@ -146,6 +146,7 @@ class Session:
                 return {"ok": False, "problems": [str(e)]}
             if counters is None:
                 counters = (self.last.get(canvas) or {}).get("counters")
+        blocks = expand(blocks)
         own = _mutations(blocks)
         if own:
             return {"ok": False, "problems": [f"{p}: remove 'mutation'; give fields, picked codes and counters, the tools "

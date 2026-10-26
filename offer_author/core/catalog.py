@@ -64,6 +64,11 @@ class Catalog:
         aid = str(account_id or self.default_account)
         return next((a for a in self.loyalty_accounts if str(a["id"]) == aid), None)
 
+    def reward_tag(self, account_id=None):
+        """The reward tag points go to: the tenant's configured tag, else the account's first tag."""
+        tags = [t["code"] for t in (self.account(account_id) or {}).get("tags") or []]
+        return self.default_tag or (tags[0] if tags else None)
+
     def label(self, obj, code, value):
         a = self.attr(obj, code)
         if obj == "activity" and code == "h_bit_type":

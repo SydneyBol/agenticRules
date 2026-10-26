@@ -25,8 +25,9 @@ CANVAS_ARGS = {"canvas": {"type": "string", "enum": ["rules", "segment"]},
                "counters": {"type": "array", "items": COUNTER, "description": "The offer counters the blocks refer to "
                                                                              "(with edits: kept from the last compile unless given)"},
                "edits": {"type": "array", "description": "Instead of blocks: changes to this canvas's last tree, by the "
-                                                         "block ids problems name (rule#b9 -> b9). {id, fields} merges "
-                                                         "fields; {id, picked}; {id, replace: node}; {id, remove: true}",
+                                                         "block ids problems name (rule#b9 -> b9). {id, <field>: value} sets "
+                                                         "fields (and inputs) as in a block; {id, picked}; {id, replace: "
+                                                         "block}; {id, remove: true}",
                          "items": {"type": "object", "properties": {"id": S, "fields": {"type": "object"}, "picked": S,
                                                                     "replace": {"type": "object"}, "remove": {"type": "boolean"}},
                                    "required": ["id"]}}}
