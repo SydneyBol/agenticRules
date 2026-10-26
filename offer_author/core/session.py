@@ -170,7 +170,7 @@ class Session:
         # the tenant's privilege products exist for the engine, as they do on the tenant
         priv = {pid: {"name": p.get("name"), "cost": p.get("cost", 0)} for pid, p in self.catalog.privileges.items()}
         r = engine.simulate(rules["res"]["drl"], dict(x, privilege_products={**priv, **(x.get("privilege_products") or {})}),
-                            sponsor_id=self.catalog.sponsor_id, segment_drl=(seg["res"].get("drl") if seg else None) or None,
+                            sponsor_id=self.catalog.sponsor_id, header_defaults=self.catalog.bit_defaults(), segment_drl=(seg["res"].get("drl") if seg else None) or None,
                             offer_main=self.offer_main)
         if r.get("compile") != "ok":  # the engine's message quotes the compiled rules: never shown to the model
             r = {"compile": "error", "error": "the engine could not compile these rules; simplify or rebuild the blocks"}

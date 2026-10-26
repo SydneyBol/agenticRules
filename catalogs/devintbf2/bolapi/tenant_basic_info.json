@@ -1,0 +1,22 @@
+{
+ "status": 200,
+ "body": {
+  "id": 2,
+  "logo": "https://master-media.devintbf2.gravty.info/cf-data/2/program/logos/27c2e538-889e-4d28-9ba8-78ad52b310d0-images.png",
+  "domain_url": "master.devintbf2.gravty.info",
+  "is_saml_enabled": true,
+  "enabled_saml_services": [
+   "sso",
+   "lji-sso"
+  ],
+  "currency": "AED",
+  "currency_format": "Millions",
+  "date_format": "DD/MM/YYYY",
+  "precision": 3,
+  "2fa_status": "OPTIONAL",
+  "2fa_status_for_sso": "OPTIONAL",
+  "2fa_status_for_lji_sso": "MANDATORY",
+  "min_password_length": 12,
+  "max_password_length": 32
+ }
+}

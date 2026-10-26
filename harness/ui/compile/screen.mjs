@@ -32,13 +32,19 @@ const LOOKUP_DUMPS = { TIER_CLASS: 'extra_tierclass', PRODUCT_CATEGORY: 'extra_p
 export function tenantGetter(tenant) {
   if (!tenant) return () => null;
   const dir = path.resolve(HERE, '../../../catalogs', tenant, 'bolapi');
-  const tdump = (f) => { const x = path.join(dir, f + '.json'); return fs.existsSync(x) ? JSON.parse(fs.readFileSync(x, 'utf8')).body : null; };
+  const tdump = (f) => {  // a dump bolapi refused (403 for this role) is no data: the fixture answers and `mocked` says so
+    const x = path.join(dir, f + '.json');
+    const d = fs.existsSync(x) ? JSON.parse(fs.readFileSync(x, 'utf8')) : null;
+    return d && (d.status ?? 200) < 300 ? d.body : null;
+  };
   return (u) => {
     const p = u.pathname, q = u.searchParams;
     const table = [
       [/\/attributelibrary\/activity\/?$/, () => tdump('activity_attributes')],
       [/\/attributelibrary\/member\/?$/, () => tdump('member_attributes')],
-      [/\/attributelibrary\/custom\/?$/, () => (q.get('module_type') === 'PRODUCT' ? tdump('product_attributes') : null)],
+      [/\/attributelibrary\/custom\/?$/, () => (q.get('module_type') === 'PRODUCT' ? tdump('product_attributes') : tdump('custom_' + q.get('module_type')))],
+      [/\/programs\/?$/, () => tdump('programs')],
+      [/\/tenants\/basic-info\/?$/, () => tdump('tenant_basic_info')],
       // typed (lookups/?type=X) or all lookups at once, which the screen filters by type itself
       [/\/lookups\/?$/, () => (q.get('type') ? tdump('lookup_' + q.get('type')) || tdump(LOOKUP_DUMPS[q.get('type')] || '-')
         : [...fs.readdirSync(dir).filter((f) => f.startsWith('lookup_')).map((f) => f.slice(0, -5)), ...Object.values(LOOKUP_DUMPS)]
@@ -73,6 +79,7 @@ export async function openScreen(browser, { tenant = null, ctx, stats = { endpoi
   const spec = SCREENS[kind];
   const raw = tenantGetter(tenant);
   const tenantGet = (u) => { const b = raw(u); return b && spec.paged.some((re) => re.test(u.pathname)) ? page1(b) : b; };
+  const mocked = new Set();  // tenant mode: GET paths the fixture answered
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
   await page.setViewport({ width: 1600, height: 1000 });
@@ -104,7 +111,11 @@ export async function openScreen(browser, { tenant = null, ctx, stats = { endpoi
     if (/\/pulsar\/offer\/metadata\/?$/.test(u.pathname)) {  // segment name/description asked by the add-segment screen
       body = { success: true, metadata: { member_segment_name: 'AI segment', segment_description: 'Generated segment' } };
     }
-    try { body = body || (req.method() === 'GET' && tenantGet(u)) || M.route(req.method(), u, req.postData(), ctx); } catch (e) { body = null; }
+    try {
+      const fromTenant = body || (req.method() === 'GET' && tenantGet(u));
+      body = fromTenant || M.route(req.method(), u, req.postData(), ctx);
+      if (tenant && !fromTenant && req.method() === 'GET' && body !== null) mocked.add(u.pathname + u.search);  // not from the tenant's bolapi dumps
+    } catch (e) { body = null; }
     if (req.method() === 'POST' && /\/member-tracked-attributes\/$/.test(u.pathname) && body) {
       ctx.posted.push(JSON.parse(req.postData() || '{}'));
       ctx.counters.push({ name: body.name, level: 'MA_O', data_type: body.data_type, counter_type: body.counter_type,
@@ -131,7 +142,7 @@ export async function openScreen(browser, { tenant = null, ctx, stats = { endpoi
   const t0 = Date.now();
   await page.setCookie({ name: 'XSRF-COOKIE', value: 'mock-xsrf-local', url: 'http://localhost:4200/' });
   await page.goto(`${APP}/${spec.hash}`, { waitUntil: 'domcontentloaded', timeout: 120000 });
-  const screen = { page, context, console: consoleLines, ctx, kind };
+  const screen = { page, context, console: consoleLines, ctx, kind, mocked };
   if (kind === 'segment') {
     try {
       await page.waitForFunction(() => {

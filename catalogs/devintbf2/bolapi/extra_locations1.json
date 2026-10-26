@@ -10,7 +10,7 @@
    "location_code": "MAF",
    "address": "MAF Tower 2,8th Street,Deira,Near Deira City Centre - Dubai - United Arab Emirates",
    "location_type": "SHPMALL",
-   "phone_number": null,
+   "phone_number": "3434343434",
    "landline": "",
    "acquisition_url": null,
    "country": 2,
@@ -109,7 +109,7 @@
    "id": 5047,
    "sponsor": 1,
    "sponsor_name": "MAF",
-   "contact_phone": null,
+   "contact_phone": "9876543210",
    "location_name": "Automation Online Location",
    "location_code": "AUTO5",
    "address": "",
@@ -141,13 +141,13 @@
    "pin": "8956",
    "city_code": null,
    "country_code": "INDIAASIA",
-   "contact_user_name": null,
+   "contact_user_name": "N56E7RA",
    "destination": null,
    "system_user": 3543,
    "tags": null,
    "location_level_reward_redemption_limits": false,
-   "contact_email": null,
-   "contact_name": null
+   "contact_email": "sandeepkumar.saraf-e+123@lji.io",
+   "contact_name": "Sandeep Saraf"
   },
   {
    "id": 5048,
@@ -183,13 +183,13 @@
    "pin": "2425",
    "city_code": null,
    "country_code": "INDIAASIA",
-   "contact_user_name": null,
+   "contact_user_name": "N56E7RA",
    "destination": null,
    "system_user": 3543,
    "tags": null,
    "location_level_reward_redemption_limits": false,
-   "contact_email": null,
-   "contact_name": null
+   "contact_email": "sandeepkumar.saraf-e+123@lji.io",
+   "contact_name": "Sandeep Saraf"
   },
   {
    "id": 5301,
@@ -447,13 +447,13 @@
    "pin": "5737",
    "city_code": "KUMTHAMADHYAPRADESH",
    "country_code": "INDIAASIA",
-   "contact_user_name": null,
+   "contact_user_name": "RBZNTF6",
    "destination": "TEST",
    "system_user": 6329,
    "tags": null,
    "location_level_reward_redemption_limits": false,
-   "contact_email": null,
-   "contact_name": null
+   "contact_email": "sponsor1234@yopmail.com",
+   "contact_name": "sandeep"
   },
   {
    "id": 7067,
@@ -483,13 +483,13 @@
    "pin": "6730",
    "city_code": "KUTUBSHAHAPURWADIMAHARASHTRA",
    "country_code": "INDIAASIA",
-   "contact_user_name": null,
+   "contact_user_name": "8KA4PNA",
    "destination": null,
    "system_user": 6330,
    "tags": null,
    "location_level_reward_redemption_limits": false,
-   "contact_email": null,
-   "contact_name": null
+   "contact_email": "sand@yopmail.com",
+   "contact_name": "qa"
   },
   {
    "id": 7165,
@@ -519,13 +519,13 @@
    "pin": "7153",
    "city_code": "LINGAMPALLEKHURDTELANGANA",
    "country_code": "INDIAASIA",
-   "contact_user_name": null,
+   "contact_user_name": "2A2TB9Y",
    "destination": null,
    "system_user": 7181,
    "tags": null,
    "location_level_reward_redemption_limits": false,
-   "contact_email": null,
-   "contact_name": null
+   "contact_email": "sponsorep12@yopmail.com",
+   "contact_name": "QA"
   },
   {
    "id": 7192,
@@ -555,13 +555,13 @@
    "pin": "3837",
    "city_code": null,
    "country_code": "INDIAASIA",
-   "contact_user_name": null,
+   "contact_user_name": "WO2BRJZ",
    "destination": null,
    "system_user": 7263,
    "tags": null,
    "location_level_reward_redemption_limits": false,
-   "contact_email": null,
-   "contact_name": null
+   "contact_email": "sponsortest12@yopmail.com",
+   "contact_name": "Test QA"
   },
   {
    "id": 7213,

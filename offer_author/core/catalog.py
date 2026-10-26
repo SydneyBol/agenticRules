@@ -40,6 +40,7 @@ class Attribute:
     lookup_type: str | None = None
     values: dict | None = None  # code -> label, when known
     line_level: bool = False
+    payment_level: bool = False  # a payment attribute (the payment blocks' payment_attribute dropdown)
 
 
 @dataclass
@@ -75,6 +76,15 @@ class Catalog:
             return self.activity_types
         a = self.attr(obj, code)
         return (a.values or {}) if a else {}
+
+    def bit_defaults(self):
+        """BIT header defaults for a test transaction, from the tenant's own codes: the activity type labelled Spend
+        (else SPEND if it is a code, else the first type) and the Accrual category of the BIT_CATEGORY LOV."""
+        types = self.activity_types
+        spend = next((k for k, v in types.items() if norm(v) == "spend"), "SPEND" if "SPEND" in types else next(iter(types), None))
+        cats = self.values_of("activity", "h_bit_category")
+        cat = next((k for k, v in cats.items() if norm(v) == "accrual" or k == "ACCRUAL"), None)
+        return {k: v for k, v in (("h_bit_type", spend), ("h_bit_category", cat)) if v}
 
     def lookup(self, obj, code, text, k=8):
         """Best catalog codes for the manager's words. A value scores by the share of the query's words found in its
@@ -121,7 +131,7 @@ class Catalog:
         for obj in OBJECTS:
             out.append(f"\n## {names[obj]}  (code | label | type [| values])")
             for a in self.attributes.get(obj, {}).values():
-                line = f"{a.code} | {a.label} | {a.type}"
+                line = f"{a.code} | {a.label} | {a.type}" + (" (payment)" if a.payment_level else "")
                 if a.values and (obj, a.code) != ("activity", "h_bit_type"):  # activity types are listed once, below
                     if len(a.values) <= INLINE_VALUES:
                         line += " | " + ", ".join(f"{k}={v}" for k, v in a.values.items())
@@ -166,6 +176,10 @@ class Catalog:
             if name.startswith("lookup:"):
                 lookups[name[7:]] = {x["code"]: x.get("name") or x["code"] for x in rows(body) if x.get("code")}
         locations = {x["location_code"]: x["location_name"] for x in rows(responses.get("locations"))}
+        lov_value = lambda x, m: ((str(m.get(x.get("code") or "code")), m.get(x.get("display") or "name"))
+                                  if isinstance(m, dict) else (str(m), str(m)))
+        lovs = {x["name"]: dict(lov_value(x, m) for m in x["model"])
+                for x in rows(responses.get("lovs")) if x.get("name") and isinstance(x.get("model"), list)}  # LOVs that carry their values (BIT_CATEGORY)
         cat = cls(tenant=tenant, sponsor_id=sponsor_id, default_account=str(account_id), default_tag=default_tag)
 
         def take(obj, body):
@@ -174,10 +188,10 @@ class Catalog:
                 if not (x.get("enabled", True) and x.get("available_for_rules", True)) or x["data_type"] == "BOOL":
                     continue
                 lt = x.get("lookup_type") if x.get("lookup_type") not in (None, "None", "") else None
-                values = lookups.get(lt) if x["data_type"] == "LOOKUP" else (locations if lt == "SPONSOR_LOCATION_LIST" else None)
+                values = lookups.get(lt) if x["data_type"] == "LOOKUP" else (locations if lt == "SPONSOR_LOCATION_LIST" else lovs.get(lt))
                 attrs[x["name"]] = Attribute(code=x["name"], label=x.get("visible_name") or x.get("business_name") or x["name"],
                                              type=x["data_type"], lookup_type=lt, values=values or None,
-                                             line_level=bool(x.get("line_level")))
+                                             line_level=bool(x.get("line_level")), payment_level=bool(x.get("payment_level")))
             cat.attributes[obj] = attrs
 
         take("activity", responses["activity_attributes"])
@@ -208,6 +222,8 @@ class Catalog:
         for fname, lt in (("extra_prodcat", "PRODUCT_CATEGORY"), ("extra_tierclass", "TIER_CLASS")):
             if os.path.exists(os.path.join(directory, fname + ".json")):
                 resp["lookup:" + lt] = body(fname)
+        if os.path.exists(os.path.join(directory, "lovs.json")):
+            resp["lovs"] = body("lovs")
         if os.path.exists(os.path.join(directory, "extra_tiers.json")):
             resp["tiers"] = body("extra_tiers")
         if os.path.exists(os.path.join(directory, f"extra_locations{sponsor_id}.json")):
@@ -237,6 +253,7 @@ class BolapiCatalogSource:
             "locations": f"sponsors/{sponsor_id}/locations/?active=True&page_size=1000",
             f"tags:{account_id}": f"loyaltyaccounts/{account_id}/tags/?active=true&page_size=1000",
             "tiers": "tier-list/?page_size=500",  # blockly-lov-registry.ts (segment tier dropdowns)
+            "lovs": "lovs/",  # LOV definitions; BIT_CATEGORY carries its values (model)
             "lookup:BIT_TYPE": "lookups/?type=BIT_TYPE&active=True&page_size=1000",
             "lookup:PRODUCT_CATEGORY": "lookups/?type=PRODUCT_CATEGORY&active=True&page_size=1000",
             "lookup:TIER_CLASS": "lookups/?type=TIER_CLASS&active=True&page_size=1000",

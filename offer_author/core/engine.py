@@ -91,13 +91,15 @@ def run_offer(job, bits, offer_main=None, timeout=300, save_to=None):
     return out
 
 
-def simulate(drl, scenario, sponsor_id=10, program_id=1, segment_drl=None, offer_main=None, timeout=300):
+def simulate(drl, scenario, sponsor_id, header_defaults, program_id=1, segment_drl=None, offer_main=None, timeout=300):
     """scenario: {member: {attributes, tier}, products: {sku: {attr: v}}, privilege_products, bits: [{header, lines, expect}]}
+    header_defaults: the tenant's BIT codes (Catalog.bit_defaults: h_bit_type, h_bit_category); a BIT's own header wins.
+    program_id only labels the local harness's BIT (the engine harness runs one program).
     -> {compile, bits: [{points, privileges, counters, ok, skipped?}], member_in_segment?}.
     Counters: MA_O after the BIT, MA_A at its end."""
     bits = []
     for i, b in enumerate(scenario.get("bits") or []):
-        h = {"h_bit_category": "ACCRUAL", "h_bit_type": "SPEND", "h_sponsor_id": sponsor_id, "h_program_id": program_id,
+        h = {**header_defaults, "h_sponsor_id": sponsor_id, "h_program_id": program_id,
              "h_member_id": "M1", "h_bit_amount": 10, "h_bit_date": (BASE_DATE + dt.timedelta(days=i)).strftime("%Y-%m-%dT%H:%M:%S")}
         h.update(b.get("header") or {})
         lines = b.get("lines") or []

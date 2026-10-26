@@ -42,6 +42,7 @@
        ]
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -99,16 +100,9 @@
        "<statement:RULES>": [
         "Rule"
        ]
-      },
-      "<statement:ACTIVITY_CRITERIA>": {
-       "Filter": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "OR": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -563,6 +557,9 @@
        }
       }
      },
+     "tenant_fields": [
+      "attribute"
+     ],
      "evidence": {
       "signatures": {
        "object attribute operators payoperators iscountertypevector value visible_value type blueprinttypes": 24,
@@ -574,11 +571,6 @@
        "OBJECT": [
         "activity",
         "airport"
-       ],
-       "attribute": [
-        "airport_name",
-        "h_bit_type",
-        "h_date_of_booking"
        ],
        "operators": [
         "==",
@@ -687,6 +679,7 @@
        ]
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -754,30 +747,9 @@
         "Filter",
         "OR"
        ]
-      },
-      "<statement:OPERAND1>": {
-       "If": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Filter": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "OR": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
-      },
-      "<statement:OPERAND2>": {
-       "If": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Filter": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "OR": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
       }
      },
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -849,24 +821,9 @@
         "Action",
         "Rule"
        ]
-      },
-      "<statement:CONDITION>": {
-       "If": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "OR": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
-      },
-      "<statement:ACTION>": {
-       "Action": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Rule": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {
@@ -942,16 +899,9 @@
        "<statement:ACTION>": [
         "Action"
        ]
-      },
-      "<statement:CONDITION>": {
-       "If": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "OR": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {
@@ -1023,6 +973,7 @@
        ]
       }
      },
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -1573,6 +1524,9 @@
        }
       }
      },
+     "tenant_fields": [
+      "attribute"
+     ],
      "evidence": {
       "signatures": {
        "object attribute_level attribute operators payoperators iscountertypevector type target_type": 32,
@@ -1594,14 +1548,6 @@
         "member",
         "products_attrs",
         "sponsor"
-       ],
-       "attribute": [
-        "Category 1 Purchase Completed",
-        "Category 2 Purchase Completed",
-        "Points Earned for Activity",
-        "Points Rewarded to Date",
-        "category",
-        "h_bit_date"
        ],
        "datetime_operator": [
         "DAY_OF_WEEK",
@@ -1817,6 +1763,9 @@
        "payment_attribute": []
       }
      },
+     "tenant_fields": [
+      "payment_attribute"
+     ],
      "evidence": null,
      "mutation_order": [
       "payment_object",
@@ -2371,6 +2320,14 @@
        }
       }
      },
+     "tenant_fields": [
+      "LOYALTY_ACCOUNT",
+      "PRIVILEGE_USAGEPOLICY",
+      "REWARD_TAGS",
+      "SELECTED_EXPIRE_LOYALTY_ACC",
+      "SELECTED_PRIVILEGE",
+      "mta_type_value"
+     ],
      "evidence": {
       "signatures": {
        "iscountertypevector attribute_type_input mta_type_value mta_attribute type target_type action_operator": 35,
@@ -2388,24 +2345,6 @@
         "give_privilege",
         "update_attribute"
        ],
-       "REWARD_TAGS": [
-        "loyalty_account_tag",
-        "loyalty_account_tag_",
-        "loyalty_tag",
-        "tag"
-       ],
-       "mta_type_value": [
-        "MA_A",
-        "MA_O"
-       ],
-       "mta_attribute": [
-        "Category 1 Purchase Completed",
-        "Category 2 Purchase Completed",
-        "Points Earned for Activity",
-        "Points Rewarded to Date",
-        "Track Amount",
-        "Track Payment"
-       ],
        "action_operator": [
         "INCREMENT_BY",
         "RESET",
@@ -2413,13 +2352,6 @@
        ],
        "previlege_Validity": [
         "product_validity"
-       ],
-       "PRIVILEGE_USAGEPOLICY": [
-        "product_usage_policy_1",
-        "product_usage_policy_2",
-        "product_usage_policy_3",
-        "third_activity_voucher_usage_policy",
-        "voucher_usage_policy"
        ],
        "value": [
         ""
@@ -2940,6 +2872,7 @@
        }
       }
      },
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [
       "third_parties_dropdown",
@@ -2989,6 +2922,7 @@
        "value": "<string>"
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {
@@ -3039,6 +2973,7 @@
        "value": "<string>"
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {
@@ -3137,35 +3072,6 @@
         "Blueprint Variable",
         "Current Date"
        ]
-      },
-      "<value:LHS>": {
-       "Static Value": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Activity Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Product Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Payment Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Number": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Currency Converter": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Arithmetic": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Blueprint Variable": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Current Date": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
       },
       "operator": {
        "/": {
@@ -3323,37 +3229,9 @@
          "Current Date"
         ]
        }
-      },
-      "<value:RHS>": {
-       "Static Value": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Activity Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Product Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Payment Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Number": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Currency Converter": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Arithmetic": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Blueprint Variable": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Current Date": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {
@@ -3456,38 +3334,6 @@
         "MONTHS",
         "YEARS"
        ]
-      },
-      "<value:LHS>": {
-       "Activity Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Current Date": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Product Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Payment Attribute": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Number": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Static date": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Static date time": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Static String Value": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Arithmetic date": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       },
-       "Blueprint Variable": {
-        "error": "TypeError: Cannot read properties of null (reading 'onItemSelected_')"
-       }
       },
       "operator": {
        "+": {
@@ -3642,6 +3488,7 @@
        }
       }
      },
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [
       "opt"
@@ -3829,6 +3676,7 @@
        }
       }
      },
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -3861,6 +3709,7 @@
        "value": "<string>"
       }
      },
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -3893,6 +3742,7 @@
        "value": "<string>"
       }
      },
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -4006,6 +3856,9 @@
        }
       }
      },
+     "tenant_fields": [
+      "LOYALTY_ACCOUNT"
+     ],
      "evidence": null,
      "mutation_order": [
       "attribute"
@@ -4252,19 +4105,14 @@
        }
       }
      },
+     "tenant_fields": [
+      "ATTRIBUTE"
+     ],
      "evidence": {
       "signatures": {
        "operators payoperators attribute type": 28
       },
       "fields": {
-       "ATTRIBUTE": [
-        "",
-        "h_bit_amount",
-        "h_bit_date",
-        "l_amount",
-        "l_product_external_id",
-        "l_quantity"
-       ],
        "datetime_operator": [
         "DATE",
         "MONTH"
@@ -4607,6 +4455,9 @@
        }
       }
      },
+     "tenant_fields": [
+      "ATTRIBUTE"
+     ],
      "evidence": {
       "signatures": {
        "attribute_type_input attribute iscountertypevector attr_type": 14
@@ -4616,14 +4467,6 @@
         "MA_A",
         "MA_O",
         "MA_P"
-       ],
-       "ATTRIBUTE": [
-        "Points Earned for Activity",
-        "Points Rewarded to Date",
-        "Spend on 1st Category",
-        "Spend on 2nd Category",
-        "date_of_birth",
-        "wedding_anniversary"
        ],
        "date_operator": [
         "DAY_OF_YEAR",
@@ -4746,6 +4589,9 @@
        }
       }
      },
+     "tenant_fields": [
+      "ATTRIBUTE"
+     ],
      "evidence": null,
      "mutation_order": [
       "attribute_type_input",
@@ -4849,6 +4695,9 @@
        "payment_attribute": []
       }
      },
+     "tenant_fields": [
+      "payment_attribute"
+     ],
      "evidence": null,
      "mutation_order": [
       "PAYMENT_OBJECT",
@@ -4919,6 +4768,7 @@
        }
       }
      },
+     "tenant_fields": [],
      "evidence": {
       "signatures": {
        "payment_object airportpair_attribute operators type": 1
@@ -4974,6 +4824,7 @@
      "cls": "TargetingHolderSegmentBlock",
      "source": "segment-level/targeting-holder-segment.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -5028,6 +4879,7 @@
      "cls": "OrBlock",
      "source": "offer-level/or.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -5469,6 +5321,7 @@
      "cls": "TargetingConditionSegmentBlock",
      "source": "segment-level/targeting-condition-segment.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": {
       "signatures": {
        "attr_level attribute operators value visible_value iscountertypevector": 19,
@@ -5768,6 +5621,7 @@
      "cls": "TargetingMemberAttributeSegmentBlock",
      "source": "segment-level/member-attribute-segment.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": {
       "signatures": {
        "attribute_type_input attribute iscountertypevector attr_type selected_card_attribute_targeted": 1,
@@ -5843,6 +5697,7 @@
      "cls": "StaticValueBlock",
      "source": "attributes-variables/static-value.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {
@@ -5887,6 +5742,7 @@
      "cls": "StaticStringValueBlock",
      "source": "attributes-variables/static-string-value.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -5915,6 +5771,7 @@
      "cls": "StaticDateBlock",
      "source": "attributes-variables/static-date.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": {
       "signatures": {},
       "fields": {
@@ -5960,6 +5817,7 @@
      "cls": "CurrentDateBlock",
      "source": "attributes-variables/current-date.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -6001,6 +5859,7 @@
      "cls": "CurrencyConvertorRateBlock",
      "source": "attributes-variables/currency-convertor-rate.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [
       "attribute"
@@ -6060,6 +5919,7 @@
      "cls": "ArithmeticGenericBlock",
      "source": "attributes-variables/arithmetic-generic.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -6121,6 +5981,7 @@
      "cls": "ArithmeticDateBlock",
      "source": "attributes-variables/arithmetic-date.block.ts",
      "live": null,
+     "tenant_fields": [],
      "evidence": null,
      "mutation_order": [
       "opt"

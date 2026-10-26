@@ -25,7 +25,8 @@ CANVAS_ARGS = {"canvas": {"type": "string", "enum": ["rules", "segment"]},
                "counters": {"type": "array", "items": COUNTER, "description": "The offer counters the blocks refer to"}}
 BIT = {"type": "object", "properties": {
     "header": {"type": "object", "description": "BIT header attributes (h_bit_type, h_bit_amount, h_bit_date "
-                                                "YYYY-MM-DDTHH:MM:SS, h_location, ...); defaults: SPEND, 10, one day apart from 2026-10-20"},
+                                                "YYYY-MM-DDTHH:MM:SS, h_location, ...); defaults: the tenant's Spend activity type "
+                                                "and Accrual category, amount 10, one day apart from 2026-10-20"},
     "lines": {"type": "array", "items": {"type": "object"}, "description": "line items: l_product_external_id, l_quantity, l_amount"},
     "expect": {"type": "object", "description": "what the manager's offer should do on this BIT: points (REWARD_POINTS "
                                                 "total), privilege (id or null), mto {counter: value after}, mta {...}"}}}

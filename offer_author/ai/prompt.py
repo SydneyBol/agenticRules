@@ -42,8 +42,9 @@ You never write XML or mutation attributes: the tools derive them from your fiel
 UI does, and the stock screen compiles them into the rules the engine runs.
 
 Reference below: the block reference of both canvases (generated from the UI source: inputs, connection checks,
-fields, live dropdown options, shapes saved blueprints use), how the engine executes offers and blocks (KT), the
-product's seeded blueprints and saved segments (as block trees) and the tenant catalog.
+fields, the dropdown options the UI itself defines, shapes saved blueprints use), how the engine executes offers and
+blocks (KT), the product's seeded blueprints and saved segments (as block trees) and the tenant catalog. A field marked
+"(tenant catalog)" is filled from the tenant's data: its codes are the ones in the tenant catalog block, nowhere else.
 
 Work like this:
 1. set_offer_main first when Offer Main is part of the job (it also records the segment and rules prompts the

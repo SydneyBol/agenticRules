@@ -1,5 +1,6 @@
 // Warm compile service: the stock gravty-ui rules screen, headless, kept loaded so a rule XML can be checked in ~2 s.
-// POST /compile {xml, tenant?, canvas?: 'rules'|'segment', path?: 'upload'|'append'} -> what the UI made of it:
+// POST /compile {xml, tenant?, canvas?: 'rules'|'segment', path?: 'upload'|'append'} -> what the UI made of it
+// (with a tenant, `mocked` lists the GET paths the fixture answered because the tenant's dumps had no response):
 // rules: canonical XML, DRL, validation messages, exceptions, dropped/changed fields, and the counters the upload
 // dialog created (the offer starts with none); segment: the add-segment screen's saved XML, DRL, target_json, error.
 // POST /introspect {types, tenant?} -> the dropdown options the screen offers per block field (tools/block_reference.py --live).
@@ -69,7 +70,7 @@ async function compile({ xml, tenant = '', canvas = 'rules', path: loadPath = 'u
     if (canvas === 'segment') {
       const out = await loadSegmentInScreen(s.page, xml);
       const cmp = out.canonical ? await s.page.evaluate(compareInPage, xml, out.canonical) : {};
-      return { ...out, ms: Date.now() - t0, validation_errors: out.error ? [out.error] : [], block_warnings: out.warnings,
+      return { ...out, ms: Date.now() - t0, mocked: [...(s.mocked || [])].sort(), validation_errors: out.error ? [out.error] : [], block_warnings: out.warnings,
                ...cmp, console: s.console.filter((l) => !/favicon|DevTools/.test(l)).slice(0, 20) };
     }
     const out = await loadInScreen(s.page, xml, loadPath);
@@ -77,7 +78,7 @@ async function compile({ xml, tenant = '', canvas = 'rules', path: loadPath = 'u
     return {
       loaded: true, ms: Date.now() - t0, drl: out.drl, canonical: out.canonical, validation_errors: out.validation_errors,
       exceptions: out.exceptions, block_warnings: out.warnings, disabled_blocks: out.disabled, top_blocks: out.topBlocks,
-      counters_created: s.ctx.posted, ...cmp, console: s.console.filter((l) => !/favicon|DevTools/.test(l)).slice(0, 20),
+      counters_created: s.ctx.posted, mocked: [...(s.mocked || [])].sort(), ...cmp, console: s.console.filter((l) => !/favicon|DevTools/.test(l)).slice(0, 20),
     };
   } finally {
     s.context.close().catch(() => {});

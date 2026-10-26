@@ -21,14 +21,14 @@ lookup popup); the tools write every mutation attribute from them as the UI does
 - fields: OBJECT, attribute, attribute_level, airporttypes, selected_partner_program, fb_pages, operators, value, target_type_value, mto_ladder_value, vector_counter_name, vector_counter_namespace, attribute_entity_map_level, index_datatype, dummy_date_value, date_operator, datetime_operator, tiers, selected_partner_program_attribute, payment_operators, visible_value, blueprinttypes, selected_subscription_plan, selected_subscription_attribute, card_main_option, activecard_mainoperators, onlycard_second_option, cardvalue, card_annual_option, cardannualr_opperater, tierdefault, loyaltyaccount, opperater, opperatervalue, PAYMENT_MODE, payment_visible_value, payment_value
 - live dropdowns: OBJECT [airport, airport_pair, activity, location, member, sponsor]
   - OBJECT=airport adds: airporttypes [destination, origin]
-  - OBJECT=airport_pair adds: attribute []
-  - OBJECT=activity adds: attribute [h_bit_amount, h_bit_date, h_bit_type, l_amount, l_product_external_id, l_quantity, h_location, amount]
-  - OBJECT=location adds: attribute []
+  - OBJECT=airport_pair adds: attribute (tenant catalog)
+  - OBJECT=activity adds: attribute (tenant catalog)
+  - OBJECT=location adds: attribute (tenant catalog)
   - OBJECT=member adds: attribute_level [MA_A, MA_CA, MA_CC, MP_S, MA_O, MA_P, MA_SP]
-  - OBJECT=sponsor adds: attribute []
+  - OBJECT=sponsor adds: attribute (tenant catalog)
 - seen inside: activity.ACTIVITY_CRITERIA (29)
 - saved picked codes: activity / activity_type / bit_type
-- saved fields: OBJECT=activity/airport; attribute=airport_name/h_bit_type/h_date_of_booking; operators===/between/in; value=BOOKING/activity/activity_/activity_1/activity_type/airport_name; airporttypes=origin; date_operator=DATE
+- saved fields: OBJECT=activity/airport; operators===/between/in; value=BOOKING/activity/activity_/activity_1/activity_type/airport_name; airporttypes=origin; date_operator=DATE
 
 ## event  (Offer Level Block; EventBlock, blocks/offer-level/event.block.ts)
 - previous: Event
@@ -71,22 +71,22 @@ lookup popup); the tools write every mutation attribute from them as the UI does
 - live dropdowns: OBJECT [third_party, airport, airport_pair, activity, location, member, products_attrs, sponsor]
   - OBJECT=third_party adds: third_parties_dropdown [ACTIVITY_REFERRER, COMPANION, CORPORATE, EMPLOYEE, ENROLLMENT_REFERRER, FAMILY_HEAD, INSTITUTION, TRANSFEREE]; attribute_level [MA_A, MA_S, MA_CA, MA_CC, MA_O, MA_P, MA_SP]
   - OBJECT=airport adds: airporttypes [destination, origin]
-  - OBJECT=airport_pair adds: attribute []
-  - OBJECT=activity adds: attribute [h_bit_amount, h_bit_date, h_bit_type, l_amount, l_product_external_id, l_quantity, h_location, amount]
-  - OBJECT=location adds: attribute []
+  - OBJECT=airport_pair adds: attribute (tenant catalog)
+  - OBJECT=activity adds: attribute (tenant catalog)
+  - OBJECT=location adds: attribute (tenant catalog)
   - OBJECT=member adds: attribute_level [MA_A, MA_S, MA_CA, MA_CC, MP_S, MA_O, MA_P, MA_SP]
-  - OBJECT=products_attrs adds: ProductOrOfferContext [products_attrs, product_cluster, product_offer_attributes]; attribute [category]
-  - OBJECT=sponsor adds: attribute []
+  - OBJECT=products_attrs adds: ProductOrOfferContext [products_attrs, product_cluster, product_offer_attributes]; attribute (tenant catalog)
+  - OBJECT=sponsor adds: attribute (tenant catalog)
 - seen inside: rule.CONDITION (105), rule_line.CONDITION (29)
 - saved picked codes: eligible_product_category_ / eligible_product_category_2 / eligible_product_category_3 / menu_1 / menu_2 / menu_3
-- saved fields: OBJECT=activity/member/products_attrs/sponsor; attribute=Category 1 Purchase Completed/Category 2 Purchase Completed/Points Earned for Activity/Points Rewarded to Date/category/h_bit_date; datetime_operator=DAY_OF_WEEK/DAY_OF_YEAR/HOUR_OF_DAY/MONTH; operators=!=/</<=/==/>/in; attribute_level=MA_A/MA_O; ProductOrOfferContext=products_attrs; value=PAYMENT_WITH_POINTS/Yes/activity/target_product_1/target_product_2/ 1 ; date_operator=MONTH; vector_counter_name=unique/ Activity Type / Destination Airport / H_Sponsor ID / Line Product / Sponsor ; vector_counter_namespace=h_bit_type/h_destination_airport/h_location/h_sponsor_id/l_product_external_id
+- saved fields: OBJECT=activity/member/products_attrs/sponsor; datetime_operator=DAY_OF_WEEK/DAY_OF_YEAR/HOUR_OF_DAY/MONTH; operators=!=/</<=/==/>/in; attribute_level=MA_A/MA_O; ProductOrOfferContext=products_attrs; value=PAYMENT_WITH_POINTS/Yes/activity/target_product_1/target_product_2/ 1 ; date_operator=MONTH; vector_counter_name=unique/ Activity Type / Destination Airport / H_Sponsor ID / Line Product / Sponsor ; vector_counter_namespace=h_bit_type/h_destination_airport/h_location/h_sponsor_id/l_product_external_id
 
 ## if_payment_attribute  (Rule Level Block; IfPaymentBlock, blocks/rule-level/if-payment.block.ts)
 - previous: If Payment
 - next: If Payment
 - value inputs: RHS_INPUT [any], RHS_VALUE [any]
 - fields: payment_attribute, date_operator, operators, datetime_operator, value, visible_value, PAYMENT_MODE
-- live dropdowns: payment_attribute []
+- live dropdowns: payment_attribute (tenant catalog)
 
 ## action  (Rule Level Block; ActionBlock, blocks/rule-level/actionblock.block.ts)
 - previous: Action
@@ -95,16 +95,16 @@ lookup popup); the tools write every mutation attribute from them as the UI does
 - fields: action_type, LOYALTY_ACCOUNT, SELECTED_PRIVILEGE, mta_type_value, WHAT, SELECTED_EXPIRE_LOYALTY_ACC, sweepstakeid, playwintype, playwinsetup, playwinusagepolicy, selected_card_id, SELECTED_EXP_OPERATOR, tiername, tierenddateopt, REWARD_TAGS, PENDING_DAYS_VALUE, mta_attribute, value, action_operator, vector_counter_name, vector_counter_namespace, attribute_entity_map_level, index_datatype, target_type_value, mto_ladder_value, PRIVILEGE_USAGEPOLICY, Privilege_Quantity, previlege_Validity, dynamic_privilege_config, visible_value, blueprinttypes
 - live dropdowns: action_type [assign_play_win_reward, give_privilege, assign_sweepstakes, expire_points, take_points, reset_points, return_points, give_points, update_attribute]
   - action_type=assign_play_win_reward adds: playwintype [SCRATCH_CARD, SPIN_THE_WHEEL]
-  - action_type=give_privilege adds: SELECTED_PRIVILEGE [501]; PRIVILEGE_USAGEPOLICY [9]; <value:PRIVILEGE_QUANTITY> [Number, Static Value, Activity Attribute, Product Attribute, Payment Attribute, Arithmetic, Blueprint Variable]; previlege_Validity [product_validity, custom_validity]
+  - action_type=give_privilege adds: SELECTED_PRIVILEGE (tenant catalog); PRIVILEGE_USAGEPOLICY (tenant catalog); <value:PRIVILEGE_QUANTITY> [Number, Static Value, Activity Attribute, Product Attribute, Payment Attribute, Arithmetic, Blueprint Variable]; previlege_Validity [product_validity, custom_validity]
   - action_type=assign_sweepstakes adds: sweepstakeid []
-  - action_type=expire_points adds: SELECTED_EXPIRE_LOYALTY_ACC [1]
-  - action_type=take_points adds: LOYALTY_ACCOUNT [1]; <value:FORMULA> [Number, Static Value, Activity Attribute, Product Attribute, Currency Converter, Arithmetic, Payment Attribute, Blueprint Variable]
-  - action_type=reset_points adds: LOYALTY_ACCOUNT [1]
-  - action_type=return_points adds: LOYALTY_ACCOUNT [1]; <value:FORMULA> [Number, Static Value, Activity Attribute, Product Attribute, Currency Converter, Arithmetic, Payment Attribute, Blueprint Variable]
-  - action_type=give_points adds: LOYALTY_ACCOUNT [1]; REWARD_TAGS [BASE, BONUS]; <value:FORMULA> [Number, Static Value, Activity Attribute, Product Attribute, Currency Converter, Arithmetic, Payment Attribute, Blueprint Variable]
-  - action_type=update_attribute adds: mta_type_value [MA_A, MA_O, MA_P]
+  - action_type=expire_points adds: SELECTED_EXPIRE_LOYALTY_ACC (tenant catalog)
+  - action_type=take_points adds: LOYALTY_ACCOUNT (tenant catalog); <value:FORMULA> [Number, Static Value, Activity Attribute, Product Attribute, Currency Converter, Arithmetic, Payment Attribute, Blueprint Variable]
+  - action_type=reset_points adds: LOYALTY_ACCOUNT (tenant catalog)
+  - action_type=return_points adds: LOYALTY_ACCOUNT (tenant catalog); <value:FORMULA> [Number, Static Value, Activity Attribute, Product Attribute, Currency Converter, Arithmetic, Payment Attribute, Blueprint Variable]
+  - action_type=give_points adds: LOYALTY_ACCOUNT (tenant catalog); REWARD_TAGS (tenant catalog); <value:FORMULA> [Number, Static Value, Activity Attribute, Product Attribute, Currency Converter, Arithmetic, Payment Attribute, Blueprint Variable]
+  - action_type=update_attribute adds: mta_type_value (tenant catalog)
 - seen inside: rule.ACTION (104), rule_line.ACTION (31)
-- saved fields: action_type=give_points/give_privilege/update_attribute; REWARD_TAGS=loyalty_account_tag/loyalty_account_tag_/loyalty_tag/tag; mta_type_value=MA_A/MA_O; mta_attribute=Category 1 Purchase Completed/Category 2 Purchase Completed/Points Earned for Activity/Points Rewarded to Date/Track Amount/Track Payment; action_operator=INCREMENT_BY/RESET/SET; previlege_Validity=product_validity; PRIVILEGE_USAGEPOLICY=product_usage_policy_1/product_usage_policy_2/product_usage_policy_3/third_activity_voucher_usage_policy/voucher_usage_policy; value=; vector_counter_name=Sponsor/ Activity Type / Destination Airport / H_Sponsor ID / Line Product / Location ; vector_counter_namespace=h_bit_type/h_destination_airport/h_location/h_sponsor_id/l_product_external_id
+- saved fields: action_type=give_points/give_privilege/update_attribute; action_operator=INCREMENT_BY/RESET/SET; previlege_Validity=product_validity; value=; vector_counter_name=Sponsor/ Activity Type / Destination Airport / H_Sponsor ID / Line Product / Location ; vector_counter_namespace=h_bit_type/h_destination_airport/h_location/h_sponsor_id/l_product_external_id
 
 ## action_third_party  (Rule Level Block; ThirdPartyActionBlock, blocks/rule-level/thirdparty-action.block.ts)
 - previous: Action
@@ -164,43 +164,42 @@ lookup popup); the tools write every mutation attribute from them as the UI does
 ## currency_converter  (Attributes & Variables; CurrencyConvertorRateBlock, blocks/attributes-variables/currency-convertor-rate.block.ts)
 - output: Currency Converter
 - fields: conversion_type, LOYALTY_ACCOUNT
-- live dropdowns: conversion_type [redemption_conversion, conversion, accrual_conversion, sponsor_award_rate, sponsor_base_rate]; LOYALTY_ACCOUNT [1]
+- live dropdowns: conversion_type [redemption_conversion, conversion, accrual_conversion, sponsor_award_rate, sponsor_base_rate]; LOYALTY_ACCOUNT (tenant catalog)
 
 ## activity_attribute  (Attributes & Variables; BitAttributesBlock, blocks/attributes-variables/bit-attributes.block.ts)
 - output: Activity Attribute
 - value inputs: RHS_INPUT [any], RHS_VALUE [any]
 - fields: ATTRIBUTE, payment_operators, date_operator, datetime_operator, PAYMENT_MODE, payment_visible_value, payment_value, value
-- live dropdowns: ATTRIBUTE [h_bit_amount, h_bit_date, h_bit_type, l_amount, l_product_external_id, l_quantity, h_location, amount]
-  - ATTRIBUTE=h_bit_date adds: datetime_operator [CALENDAR_DATE, DATE, DATETIME, DAY_OF_MONTH, DAY_OF_WEEK, DAY_OF_YEAR, HOUR_OF_DAY, MINUTE_OF_HOUR, MONTH, WEEK_OF_YEAR, YEAR]
-  - ATTRIBUTE=amount adds: payment_operators [in, not_in]
+- live dropdowns: ATTRIBUTE (tenant catalog)
+  - depending on the ATTRIBUTE chosen, adds: datetime_operator [CALENDAR_DATE, DATE, DATETIME, DAY_OF_MONTH, DAY_OF_WEEK, DAY_OF_YEAR, HOUR_OF_DAY, MINUTE_OF_HOUR, MONTH, WEEK_OF_YEAR, YEAR]; payment_operators [in, not_in]
 - seen inside: arithmetic_generic.RHS (10), action.RHS_INPUT_VALUE (10), arithmetic_generic.LHS (5), if_generic_adaptive.RHS_INPUT (1), if_generic_adaptive.vector_counter_namespace (1), action.vector_counter_namespace (1)
-- saved fields: ATTRIBUTE=/h_bit_amount/h_bit_date/l_amount/l_product_external_id/l_quantity; datetime_operator=DATE/MONTH
+- saved fields: datetime_operator=DATE/MONTH
 
 ## member_attribute  (Attributes & Variables; MemberAttributesBlock, blocks/attributes-variables/member-attributes.block.ts)
 - output: Number
 - value inputs: vector_counter_namespace [any], RHS_INPUT [any], RHS_VALUE [any]
 - fields: ATTRIBUTE_TYPE, ATTRIBUTE, tieractionoperator, tierloyaltyaction, segment_id, date_operator, datetime_operator, selected_subscription_attribute, selected_partner_program_attribute, vector_counter_name, vector_counter_namespace, attribute_entity_map_level, index_datatype, onlycard_second_option, cardattribute, card_annual_option, operators
 - live dropdowns: ATTRIBUTE_TYPE [MA_A, MA_S, MA_CA, MA_CC, MP_S, MA_O, MA_P, MA_SP, MA_T]
-  - ATTRIBUTE_TYPE=MA_CA adds: ATTRIBUTE [TRANSACTION_ACCOUNT]
-  - ATTRIBUTE_TYPE=MA_CC adds: ATTRIBUTE []
-  - ATTRIBUTE_TYPE=MA_O adds: ATTRIBUTE []
-  - ATTRIBUTE_TYPE=MA_P adds: ATTRIBUTE [date_of_birth, enrollment_date, tier]
-  - ATTRIBUTE_TYPE=MA_T adds: ATTRIBUTE []
+  - ATTRIBUTE_TYPE=MA_CA adds: ATTRIBUTE (tenant catalog)
+  - ATTRIBUTE_TYPE=MA_CC adds: ATTRIBUTE (tenant catalog)
+  - ATTRIBUTE_TYPE=MA_O adds: ATTRIBUTE (tenant catalog)
+  - ATTRIBUTE_TYPE=MA_P adds: ATTRIBUTE (tenant catalog)
+  - ATTRIBUTE_TYPE=MA_T adds: ATTRIBUTE (tenant catalog)
 - seen inside: arithmetic_generic.RHS (7), if_generic_adaptive.RHS_INPUT (4), action.FORMULA (1), action.RHS_INPUT_VALUE (1), arithmetic_generic.LHS (1)
-- saved fields: ATTRIBUTE_TYPE=MA_A/MA_O/MA_P; ATTRIBUTE=Points Earned for Activity/Points Rewarded to Date/Spend on 1st Category/Spend on 2nd Category/date_of_birth/wedding_anniversary; date_operator=DAY_OF_YEAR/MONTH
+- saved fields: ATTRIBUTE_TYPE=MA_A/MA_O/MA_P; date_operator=DAY_OF_YEAR/MONTH
 
 ## product_attribute  (Attributes & Variables; ProductAttributesBlock, blocks/attributes-variables/product-attributes.block.ts)
 - output: Product Attribute
 - fields: ATTRIBUTE_PRODUCTS, ATTRIBUTE, date_operator, datetime_operator
 - live dropdowns: ATTRIBUTE_PRODUCTS [products_attrs, product_cluster, product_offer_attributes]
-  - ATTRIBUTE_PRODUCTS=products_attrs adds: ATTRIBUTE [category]
-  - ATTRIBUTE_PRODUCTS=product_cluster adds: ATTRIBUTE <string>
+  - ATTRIBUTE_PRODUCTS=products_attrs adds: ATTRIBUTE (tenant catalog)
+  - ATTRIBUTE_PRODUCTS=product_cluster adds: ATTRIBUTE (tenant catalog)
 
 ## payment_attribute  (Attributes & Variables; PaymentAttributeBlock, blocks/attributes-variables/payment-attributes.block.ts)
 - output: Payment Attribute
 - value inputs: RHS_INPUT [any], RHS_VALUE [any]
 - fields: payment_attribute, date_operator, operators, datetime_operator, value, visible_value
-- live dropdowns: payment_attribute []
+- live dropdowns: payment_attribute (tenant catalog)
 
 ## airport_attribute  (Attributes & Variables; AirportPairAttributeBlock, blocks/attributes-variables/airport-pair-attributes.block.ts)
 - output: Payment Attribute
