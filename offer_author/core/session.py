@@ -86,10 +86,9 @@ def counter_problems(xml, counters, guard):
     for c in counters:
         if c.get("counter_type") == "VECTOR" and not c.get("namespace"):
             out.append(f"counter '{c.get('name')}' is VECTOR: give its namespace")
-        if guard and guard.taken(c.get("name"), c.get("data_type"), c.get("counter_type", "REGULAR"), c.get("namespace")):
-            out.append(f"counter '{c['name']}' already exists on this offer and "
-                       f"{guard.why(c['name'], c.get('data_type'), c.get('counter_type', 'REGULAR'), c.get('namespace'))}: "
-                       "use another name")
+        spec = (c.get("name"), c.get("data_type"), c.get("counter_type", "REGULAR"), c.get("namespace"), c.get("level") or "MA_O")
+        if guard and guard.taken(*spec):
+            out.append(f"counter '{c['name']}' already exists on this offer and {guard.why(*spec)}: use another name")
     used = set()
     for m in ET.fromstring(xml).iter():
         if m.tag.split("}")[-1] == "mutation":

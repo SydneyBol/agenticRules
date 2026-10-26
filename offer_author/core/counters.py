@@ -2,8 +2,10 @@
 
 The stock Upload Rules path (rules-upload-model.component.ts) reuses an offer counter whenever the NAME matches, without
 checking its type, creates the rest, and never deletes any. So the generator decides names knowing what is there:
-  - reuse an existing counter only when name, data type, counter type and vector namespace all match AND the offer is
-    in planning (no member holds a value yet, so the old counter is as good as new);
+  - reuse an existing counter only when name, level, data type, counter type and vector namespace all match AND the
+    offer is in planning (no member holds a value yet, so the old counter is as good as new). Level matters: the
+    dialog looks a counter up by name in the list of its own level (MA_O = OFFER, MA_A = ACTIVITY) and creates it when
+    missing there, and bolapi keeps names unique per offer across levels (400 "offer, name must make a unique set");
   - otherwise pick a free name ("Total spend 2") and say so in the readback;
   - list the offer's counters the new rules do not use (never deleted here; the manager decides).
 Where the counters come from: GET offers/{id}/ and offers/{id}/member-tracked-attributes/ on bolapi with the caller's
@@ -20,14 +22,19 @@ def _status(x):
     return str(x or "").lower()
 
 
+LEVELS = {"OFFER": "MA_O", "ACTIVITY": "MA_A", "TIER": "MA_TO", "TIER-ACTIVITY": "MA_A"}  # bolapi level -> block level
+
+
 def normalize(counters):
-    """bolapi member-tracked-attributes records (or already-normalised dicts) -> [{name, data_type, counter_type, namespace}]."""
+    """bolapi member-tracked-attributes records (or already-normalised dicts) -> [{name, level, data_type, counter_type,
+    namespace}]."""
     out = []
     for c in counters or []:
         ns = c.get("vector_namespace") or c.get("namespace")
         if not ns and isinstance(c.get("entity_attribute_map"), dict):
             ns = next((v[0] for v in c["entity_attribute_map"].values() if v), None)
-        out.append({"name": c["name"], "data_type": (c.get("data_type") or "").upper(),
+        level = str(c.get("level") or "MA_O").upper()
+        out.append({"name": c["name"], "level": LEVELS.get(level, level), "data_type": (c.get("data_type") or "").upper(),
                     "counter_type": (c.get("counter_type") or "REGULAR").upper(), "namespace": ns or None})
     return out
 
@@ -42,12 +49,12 @@ class Guard:
         self.existing = {c["name"]: c for c in normalize(existing.get("counters"))}
         self.reused, self.renamed = [], []
 
-    def taken(self, name, data_type, counter_type, namespace):
+    def taken(self, name, data_type, counter_type, namespace, level="MA_O"):
         """True when the generator must not use this name; records a reuse when it may."""
         have = self.existing.get(name)
         if have is None:
             return False
-        want = {"data_type": data_type, "counter_type": counter_type, "namespace": namespace or None}
+        want = {"level": level or "MA_O", "data_type": data_type, "counter_type": counter_type, "namespace": namespace or None}
         same = all(have[k] == v for k, v in want.items())
         if same and self.planning:
             if name not in self.reused:
@@ -55,13 +62,13 @@ class Guard:
             return False
         return True
 
-    def why(self, name, data_type, counter_type, namespace):
+    def why(self, name, data_type, counter_type, namespace, level="MA_O"):
         have = self.existing[name]
-        if not self.planning and all(have[k] == v for k, v in (("data_type", data_type), ("counter_type", counter_type),
-                                                                  ("namespace", namespace or None))):
+        want = {"level": level or "MA_O", "data_type": data_type, "counter_type": counter_type, "namespace": namespace or None}
+        if not self.planning and all(have[k] == v for k, v in want.items()):
             return f"the offer is in {self.offer_status or 'an unknown status'}, so members may already hold values in it"
-        kind = lambda d: f"{d['data_type']} {d['counter_type']}" + (f" per {d['namespace']}" if d.get("namespace") else "")
-        return f"the offer's counter is {kind(have)}, these rules need {kind({'data_type': data_type, 'counter_type': counter_type, 'namespace': namespace})}"
+        kind = lambda d: f"{d['level']} {d['data_type']} {d['counter_type']}" + (f" per {d['namespace']}" if d.get("namespace") else "")
+        return f"the offer's counter is {kind(have)}, these rules need {kind(want)}"
 
     def report(self, used):
         """-> {checked, offer_status, reused, renamed, created, unused} for the response and the readback."""
