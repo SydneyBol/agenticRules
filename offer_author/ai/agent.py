@@ -4,11 +4,21 @@ The model solves the offer: it sets Offer Main and composes the member segment a
 choosing only blocks, field values, picked catalog codes and the offer counters it needs. Everything it reads is in
 prompt.py, everything it may call in tool_specs.py; every tool runs as code in core/session.py, which writes the
 XML, checks it the way the UI does, compiles it in the stock screen and runs it in the real engine.
-This file is only the loop: model turn -> tool calls -> results back, until finish.
+This file is only the loop, as a LangGraph graph: model turn -> tool calls -> results back, until finish.
+
+    START -> model -> tools -> model ... -> END      (model -> nudge -> model when a turn calls no tool)
+
+One graph run per request and no checkpointer: nothing is kept after the run. The per-run objects (llm, session,
+system blocks, parts) come in through config["configurable"]; the state holds only the conversation and counters.
 """
 import json
+import operator
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import Annotated, TypedDict
+
+from langgraph.graph import END, START, StateGraph
 
 from ..core import ui
 from ..core.session import PARTS, Session, error_result, finish_blockers, outcome
@@ -17,18 +27,95 @@ from .prompt import intro, system_blocks
 from .tool_specs import TOOLS
 
 MAX_TURNS = int(os.environ.get("OFFER_AUTHOR_TURNS", 14))
+PARALLEL = {"lookup_values"}  # read only the catalog: one turn's calls run together; the rest run in call order
+NUDGE = "Use the tools: compile, simulate, then finish."
 
 
-def _cache_last(messages):
-    """Sliding cache point on the newest message, so each turn re-reads the conversation so far from cache."""
-    for m in messages:
-        for b in m["content"] if isinstance(m["content"], list) else []:
-            if isinstance(b, dict):
-                b.pop("cache_control", None)
+class AgentState(TypedDict, total=False):
+    messages: Annotated[list, operator.add]  # append-only: earlier turns (and their thinking) are resent unchanged
+    calls: list  # the last model turn's tool calls [(id, name, input)]
+    turns: int
+    usage: dict
+    fin: dict | None  # the accepted finish input
+    result: dict | None  # an early end (refusal, compiler unavailable)
+
+
+def _cached(messages):
+    """The messages with a sliding cache point on the newest one (a copy: the history itself is never edited)."""
     last = messages[-1]
-    if isinstance(last["content"], str):
-        last["content"] = [{"type": "text", "text": last["content"]}]
-    last["content"][-1]["cache_control"] = {"type": "ephemeral"}
+    blocks = [{"type": "text", "text": last["content"]}] if isinstance(last["content"], str) else list(last["content"])
+    blocks[-1] = dict(blocks[-1], cache_control={"type": "ephemeral"})
+    return messages[:-1] + [dict(last, content=blocks)]
+
+
+def _model(state, config):
+    c = config["configurable"]
+    turn = c["llm"].turn(c["system"], _cached(state["messages"]), tools=TOOLS)
+    usage = dict(state.get("usage") or {})
+    for k, v in turn.usage.items():
+        usage[k] = usage.get(k, 0) + (v or 0)
+    out = {"turns": state.get("turns", 0) + 1, "usage": usage, "calls": turn.tool_calls,
+           "messages": [{"role": "assistant", "content": turn.content}]}
+    if turn.stop_reason == "refusal":
+        out["result"] = error_result("The model declined this request. Please rephrase the offer description.")
+    return out
+
+
+def _nudge(state, config):
+    return {"messages": [{"role": "user", "content": NUDGE}]}
+
+
+def _tools(state, config):
+    c = config["configurable"]
+    s, turns, fin = c["session"], state["turns"], None
+    calls = state["calls"]
+    with ThreadPoolExecutor(4) as pool:
+        early = {tid: pool.submit(s.run, name, x) for tid, name, x in calls if name in PARALLEL}
+        results = []
+        for tid, name, x in calls:
+            if name == "finish":
+                wait = finish_blockers(s, c["parts"], x) if turns < MAX_TURNS - 1 else []
+                if wait:
+                    out = {"error": "not finished: fix these and compile again before finish", "problems": wait}
+                else:
+                    fin, out = x, {"ok": True}
+            else:
+                try:
+                    out = early[tid].result() if tid in early else s.run(name, x)
+                except ui.CompileUnavailable as e:
+                    return {"result": error_result(f"The rules compiler is unavailable right now ({e}).")}
+            s.trace.append({"turn": turns, "tool": name, **({"canvas": x.get("canvas")} if x.get("canvas") else {}),
+                            **{k: out[k] for k in ("ok", "problems", "error") if k in out},
+                            **({"sim": [b.get("mismatch") or "ok" for b in out.get("bits", [])]} if name == "simulate" else {})})
+            results.append({"type": "tool_result", "tool_use_id": tid, "content": json.dumps(out)[:60000]})
+    return {"messages": [{"role": "user", "content": results}], "fin": fin}
+
+
+def _after_model(state):
+    return END if state.get("result") else ("tools" if state.get("calls") else "nudge")
+
+
+def _after_tools(state):
+    return END if state.get("result") or state.get("fin") is not None or state["turns"] >= MAX_TURNS else "model"
+
+
+def _after_nudge(state):
+    return END if state["turns"] >= MAX_TURNS else "model"
+
+
+def build():
+    g = StateGraph(AgentState)
+    g.add_node("model", _model)
+    g.add_node("tools", _tools)
+    g.add_node("nudge", _nudge)
+    g.add_edge(START, "model")
+    g.add_conditional_edges("model", _after_model, ["tools", "nudge", END])
+    g.add_conditional_edges("tools", _after_tools, ["model", END])
+    g.add_conditional_edges("nudge", _after_nudge, ["model", END])
+    return g.compile()
+
+
+GRAPH = build()
 
 
 def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, context=None, existing=None, on_offer_main=None):
@@ -38,48 +125,24 @@ def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, conte
     -> core.session.outcome, with the model's usage in diagnostics."""
     t0 = time.time()
     parts = tuple(p for p in PARTS if p in parts)
-    system = system_blocks(catalog, account_id)
-    messages = [{"role": "user", "content": intro(prompt, parts, context, existing)}]
-    s, usage, fin, turns = Session(catalog, offer_id, existing, on_offer_main), {}, None, 0
+    s = Session(catalog, offer_id, existing, on_offer_main)
+    config = {"configurable": {"llm": llm, "session": s, "system": system_blocks(catalog, account_id), "parts": parts},
+              "recursion_limit": 2 * MAX_TURNS + 4}
+    last = {"messages": [{"role": "user", "content": intro(prompt, parts, context, existing)}], "turns": 0, "usage": {}}
 
     def done(res):
-        res["diagnostics"].update(model=getattr(llm, "model", "?"), latency_s=round(time.time() - t0, 2), turns=turns, usage=usage)
+        res["diagnostics"].update(model=getattr(llm, "model", "?"), latency_s=round(time.time() - t0, 2),
+                                  turns=last.get("turns", 0), usage=last.get("usage") or {})
         return res
 
     try:
-        while turns < MAX_TURNS and fin is None:
-            turns += 1
-            _cache_last(messages)
-            turn = llm.turn(system, messages, tools=TOOLS)
-            for k, v in turn.usage.items():
-                usage[k] = usage.get(k, 0) + (v or 0)
-            if turn.stop_reason == "refusal":
-                return done(error_result("The model declined this request. Please rephrase the offer description."))
-            if not turn.tool_calls:
-                messages += [{"role": "assistant", "content": turn.content},
-                             {"role": "user", "content": "Use the tools: compile, simulate, then finish."}]
-                continue
-            results = []
-            for tid, name, x in turn.tool_calls:
-                if name == "finish":
-                    wait = finish_blockers(s, parts, x) if turns < MAX_TURNS - 1 else []
-                    if wait:
-                        out = {"error": "not finished: fix these and compile again before finish", "problems": wait}
-                    else:
-                        fin, out = x, {"ok": True}
-                else:
-                    try:
-                        out = s.run(name, x)
-                    except ui.CompileUnavailable as e:
-                        return done(error_result(f"The rules compiler is unavailable right now ({e})."))
-                s.trace.append({"turn": turns, "tool": name, **({"canvas": x.get("canvas")} if x.get("canvas") else {}),
-                                **{k: out[k] for k in ("ok", "problems", "error") if k in out},
-                                **({"sim": [b.get("mismatch") or "ok" for b in out.get("bits", [])]} if name == "simulate" else {})})
-                results.append({"type": "tool_result", "tool_use_id": tid, "content": json.dumps(out)[:60000]})
-            messages += [{"role": "assistant", "content": turn.content}, {"role": "user", "content": results}]
+        for last in GRAPH.stream(last, config, stream_mode="values"):
+            pass
     except LLMError as e:
         return done(error_result(f"The rule generator is unavailable right now ({e}). Please try again."))
-    return done(outcome(s, fin, parts, offer_id))
+    if last.get("result"):
+        return done(last["result"])
+    return done(outcome(s, last.get("fin"), parts, offer_id))
 
 
 def generate(prompt, catalog, llm, offer_id=None, account_id=None, context=None, existing=None, **_):

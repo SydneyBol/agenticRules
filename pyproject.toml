@@ -7,7 +7,7 @@ name = "offer-xml-generator"
 version = "0.1.0"
 description = "English description of a Gravty reward offer -> Blockly rule XML the stock gravty-ui loads"
 requires-python = ">=3.11"
-dependencies = ["anthropic[bedrock]>=1.17", "langchain-aws==1.8.1", "langchain-core==1.6.9", "Flask>=3.1", "jsonschema>=4.26", "httpx>=0.28"]
+dependencies = ["anthropic[bedrock]>=1.17", "langchain-aws==1.8.1", "langchain-core==1.6.9", "langgraph==1.2.14", "Flask>=3.1", "jsonschema>=4.26", "httpx>=0.28"]
 
 [project.scripts]
 offer-xml = "offer_author.api.cli:main"
