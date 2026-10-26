@@ -9,13 +9,53 @@ import datetime as dt
 import json
 import os
 import re
+import select
 import subprocess
 import tempfile
+import threading
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 JAR = os.environ.get("OFFER_AUTHOR_ENGINE_JAR", os.path.join(ROOT, "harness", "engine", "target", "harness.jar"))
 OFFER_ID = 1001
 BASE_DATE = dt.datetime(2026, 10, 20, 10, 0, 0)  # a Tuesday
+WARM = os.environ.get("OFFER_AUTHOR_ENGINE_WARM", "1") != "0"  # one long-lived harness (--serve) instead of a JVM per run
+
+
+class _Warm:
+    """The harness in --serve mode: one case path per line in, one JSON line out. A dead or stuck process is
+    dropped; the next run starts a fresh one."""
+
+    def __init__(self):
+        self.p, self.lock = None, threading.Lock()
+
+    def run(self, path, timeout):
+        with self.lock:
+            if self.p is None or self.p.poll() is not None:
+                self.p = subprocess.Popen(["java", "-jar", JAR, "--serve"], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                          stderr=subprocess.DEVNULL, text=True, bufsize=1)
+            try:
+                self.p.stdin.write(path + "\n")
+                self.p.stdin.flush()
+                if not select.select([self.p.stdout], [], [], timeout)[0]:
+                    raise TimeoutError(f"engine gave no answer in {timeout}s")
+                line = self.p.stdout.readline()
+                if not line:
+                    raise EOFError("engine exited")
+                return json.loads(line)
+            except Exception:
+                self.p.kill()
+                self.p = None
+                raise
+
+
+_WARM = _Warm()
+
+
+def warm():
+    """Start the long-lived harness and pay its JVM start and first rule compile now, not on the first simulate."""
+    if WARM and available():
+        sample = {"offer_id": OFFER_ID, "drl": "", "params": {}, "priority": 1, "bits": []}
+        threading.Thread(target=lambda: run(sample, timeout=120), daemon=True).start()
 
 
 def available():
@@ -41,6 +81,11 @@ def run(job, timeout=300, save_to=None):
             json.dump(job, f)
         path = f.name
     try:
+        if WARM:
+            try:
+                return _WARM.run(path, timeout)
+            except (OSError, ValueError, TimeoutError, EOFError):
+                pass  # one cold run below
         p = subprocess.run(["java", "-jar", JAR, path], capture_output=True, text=True, timeout=timeout)
     finally:
         if not save_to:

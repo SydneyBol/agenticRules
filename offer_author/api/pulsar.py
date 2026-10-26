@@ -143,11 +143,13 @@ class Store:
             job["state"], job["done_at"] = "done", time.time()
             d = job["result"].get("diagnostics") or {}
             u = d.get("usage") or {}
+            tm = d.get("timing") or {}
             log.info("pulsar job offer=%s status=%s latency_s=%s repairs=%s rules=%s model=%s turns=%s tokens_in=%s "
-                     "tokens_out=%s cache_read=%s cache_write=%s", k[0], job["result"].get("status"), d.get("latency_s"),
-                     d.get("repairs"), (job["result"].get("rules") or {}).get("rule_count"), d.get("model"), d.get("turns"),
-                     u.get("input_tokens"), u.get("output_tokens"), u.get("cache_read_input_tokens"),
-                     u.get("cache_creation_input_tokens"))
+                     "tokens_out=%s cache_read=%s cache_write=%s model_s=%s tools_s=%s input_chars=%s", k[0], job["result"].get("status"),
+                     d.get("latency_s"), d.get("repairs"), (job["result"].get("rules") or {}).get("rule_count"), d.get("model"),
+                     d.get("turns"), u.get("input_tokens"), u.get("output_tokens"), u.get("cache_read_input_tokens"),
+                     u.get("cache_creation_input_tokens"), tm.get("model_s"), json.dumps(tm.get("tools_s") or {}, separators=(",", ":")),
+                     json.dumps(tm.get("input_chars") or {}, separators=(",", ":")))
             if track:
                 with self.lock:
                     self.latest[k[0]] = k

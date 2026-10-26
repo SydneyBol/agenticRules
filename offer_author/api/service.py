@@ -120,6 +120,8 @@ def main():
     a = ap.parse_args()
     cat = Catalog.from_bolapi_dumps(a.catalog_dir, a.tenant, a.sponsor, a.account, a.tag)
     counters_for = BolapiCounterSource(a.bolapi_base).get if a.bolapi_base else None
+    from ..core import engine
+    engine.warm()  # the first simulate then answers in milliseconds, not after a JVM start
     create_app(make_llm(), lambda sponsor, account, auth: cat, counters_for=counters_for).run(port=a.port)
 
 

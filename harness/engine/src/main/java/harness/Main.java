@@ -13,6 +13,9 @@ import java.util.TimeZone;
 /**
  * Usage: java -jar target/harness.jar case.json [--show-drl]
  * Prints a single JSON document on stdout. Engine logging (WARN+) goes to stderr.
+ *        java -jar target/harness.jar --serve
+ * A warm engine: one case path per stdin line, one JSON line per case on stdout, until stdin closes (the JVM start
+ * and the shim relaunch are paid once, not per simulate).
  */
 public final class Main {
     public static void main(String[] args) throws Exception {
@@ -27,6 +30,10 @@ public final class Main {
         TimeZone.setDefault(TimeZone.getTimeZone(jvmTz));
         DateTimeZone.setDefault(DateTimeZone.forID(jvmTz));
 
+        if ("--serve".equals(args[0])) {
+            serve(jvmTz);
+            return;
+        }
         ObjectMapper m = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         JsonNode cse = m.readTree(new File(args[0]));
         if (args.length > 1 && "--show-drl".equals(args[1])) ((ObjectNode) cse).put("show_drl", true);
@@ -52,6 +59,27 @@ public final class Main {
         realOut.println(m.writeValueAsString(result));
         realOut.flush();
         System.exit(code); // engine may leave non-daemon threads around
+    }
+
+    static void serve(String jvmTz) throws Exception {
+        ObjectMapper m = new ObjectMapper();
+        PrintStream realOut = System.out;
+        System.setOut(System.err);
+        java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
+        for (String line; (line = in.readLine()) != null; ) {
+            if (line.isBlank()) continue;
+            ObjectNode result;
+            try {
+                result = Harness.run(m.readTree(new File(line.trim())));
+            } catch (Throwable t) {
+                result = m.createObjectNode();
+                result.put("harness_error", t.toString());
+            }
+            result.put("jvm_default_timezone", jvmTz);
+            realOut.println(m.writeValueAsString(result));
+            realOut.flush();
+        }
+        System.exit(0);
     }
 
     /**

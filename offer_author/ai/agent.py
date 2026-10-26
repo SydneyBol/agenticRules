@@ -50,7 +50,9 @@ def _cached(messages):
 
 def _model(state, config):
     c = config["configurable"]
+    t0 = time.time()
     turn = c["llm"].turn(c["system"], _cached(state["messages"]), tools=TOOLS)
+    c["timing"]["model_s"] += time.time() - t0
     usage = dict(state.get("usage") or {})
     for k, v in turn.usage.items():
         usage[k] = usage.get(k, 0) + (v or 0)
@@ -69,21 +71,40 @@ def _tools(state, config):
     c = config["configurable"]
     s, turns, fin = c["session"], state["turns"], None
     calls = state["calls"]
+    disagreed = []  # this turn's simulate mismatches: a finish later in the same turn is sent back
+    tools_s = c["timing"]["tools_s"]
+
+    chars = c["timing"]["input_chars"]
+
+    def timed(name, x):
+        chars[name] = chars.get(name, 0) + len(json.dumps(x))
+        t0 = time.time()
+        try:
+            return s.run(name, x)
+        finally:
+            tools_s[name] = tools_s.get(name, 0) + time.time() - t0
+
     with ThreadPoolExecutor(4) as pool:
-        early = {tid: pool.submit(s.run, name, x) for tid, name, x in calls if name in PARALLEL}
+        early = {tid: pool.submit(timed, name, x) for tid, name, x in calls if name in PARALLEL}
         results = []
         for tid, name, x in calls:
             if name == "finish":
+                chars["finish"] = chars.get("finish", 0) + len(json.dumps(x))
                 wait = finish_blockers(s, c["parts"], x) if turns < MAX_TURNS - 1 else []
+                if disagreed and turns < MAX_TURNS - 1:
+                    wait.append(f"the engine disagreed with your expectations in this turn ({'; '.join(disagreed[:3])}): "
+                                "fix the blocks or the expectation, compile and simulate again")
                 if wait:
                     out = {"error": "not finished: fix these and compile again before finish", "problems": wait}
                 else:
                     fin, out = x, {"ok": True}
             else:
                 try:
-                    out = early[tid].result() if tid in early else s.run(name, x)
+                    out = early[tid].result() if tid in early else timed(name, x)
                 except ui.CompileUnavailable as e:
                     return {"result": error_result(f"The rules compiler is unavailable right now ({e}).")}
+            if name == "simulate":
+                disagreed += [str(bit["mismatch"]) for bit in out.get("bits") or [] if bit.get("mismatch")]
             s.trace.append({"turn": turns, "tool": name, **({"canvas": x.get("canvas")} if x.get("canvas") else {}),
                             **{k: out[k] for k in ("ok", "problems", "error") if k in out},
                             **({"sim": [b.get("mismatch") or "ok" for b in out.get("bits", [])]} if name == "simulate" else {})})
@@ -126,13 +147,18 @@ def run(prompt, catalog, llm, offer_id=None, parts=PARTS, account_id=None, conte
     t0 = time.time()
     parts = tuple(p for p in PARTS if p in parts)
     s = Session(catalog, offer_id, existing, on_offer_main)
-    config = {"configurable": {"llm": llm, "session": s, "system": system_blocks(catalog, account_id), "parts": parts},
+    timing = {"model_s": 0.0, "tools_s": {}, "input_chars": {}}  # where the run's time went, per tool name
+    config = {"configurable": {"llm": llm, "session": s, "system": system_blocks(catalog, account_id), "parts": parts,
+                               "timing": timing},
               "recursion_limit": 2 * MAX_TURNS + 4}
     last = {"messages": [{"role": "user", "content": intro(prompt, parts, context, existing)}], "turns": 0, "usage": {}}
 
     def done(res):
         res["diagnostics"].update(model=getattr(llm, "model", "?"), latency_s=round(time.time() - t0, 2),
-                                  turns=last.get("turns", 0), usage=last.get("usage") or {})
+                                  turns=last.get("turns", 0), usage=last.get("usage") or {},
+                                  timing={"model_s": round(timing["model_s"], 2),
+                                          "tools_s": {k: round(v, 2) for k, v in timing["tools_s"].items()},
+                                          "input_chars": timing["input_chars"]})
         return res
 
     try:

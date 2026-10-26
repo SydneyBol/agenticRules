@@ -58,6 +58,8 @@ Work like this:
    the expected outcome of each. This is how you confirm each rule does what was asked. If the engine disagrees,
    decide whether the blocks or your expectation is wrong, fix, compile and simulate again.
 5. finish once, after the last compile of each canvas you deliver was clean.
+Tools in one turn run in call order and each sees what the previous one did, so compile, simulate and finish can go in
+one turn. A finish is sent back when that turn's compile had problems or its simulate disagreed with an expectation.
 
 Offer semantics:
 - Every restriction the manager states must be built in the part the engine evaluates it in. A rules condition every

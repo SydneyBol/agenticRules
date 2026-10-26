@@ -120,6 +120,27 @@ def derive(node, spec, catalog=None, counters=None):
     return mut
 
 
+VECTOR_MODES = ("across", "unique")  # block-definition.service.ts getMAOVectorattributes: the options after the first
+
+
+def ui_fields(node, mut, counters, catalog):
+    """The block's fields as the stock screen leaves them, where its dropdown values are fixed by data the tools know.
+    vector_counter_name (a condition on a VECTOR counter): the options are [the namespace attribute, across, unique];
+    the first one's value is the attribute code for a NUMBER counter and its label otherwise, so any other text the
+    model gives for "the attribute itself" becomes that value (the screen rewrote ' Location ' to 'h_location')."""
+    fields = node.get("fields") or {}
+    v = fields.get("vector_counter_name")
+    level, name = counter_ref(mut)
+    counter = (counters or {}).get(name) if name else None
+    if v is None or not counter or not counter.get("namespace") or str(v).strip() in VECTOR_MODES:
+        return fields
+    code = counter["namespace"]
+    obj = "member" if (counter.get("entity_level") or "Activity") == "Member" else "activity"
+    a = catalog.attr(obj, code) if catalog is not None else None
+    first = code if counter.get("data_type") == "NUMBER" else (a.label if a else code)
+    return dict(fields, vector_counter_name=first)
+
+
 def to_xml(root, catalog=None, counters=None, canvas="rules"):
     """-> (xml, paths): paths maps every block id to where it sits, for readable problem reports.
     counters: the offer counters the rules use, {name: {data_type, counter_type, target_type?, namespace?, entity_level?}}."""
@@ -141,6 +162,11 @@ def to_xml(root, catalog=None, counters=None, canvas="rules"):
         paths[bid] = here
         parts = [f"<block type={quoteattr(t)} id={quoteattr(bid)}>"]
         mut = derive(node, spec, catalog, counters) if spec else dict(node.get("mutation") or {})
+        if spec:
+            fixed = ui_fields(node, mut, counters, catalog)
+            if fixed is not (node.get("fields") or {}):
+                node = dict(node, fields=fixed)
+                mut = derive(node, spec, catalog, counters)
         if mut:
             order = spec.get("mutation_order") or []
             keys = [k for k in order if k in mut] + [k for k in mut if k not in order]
