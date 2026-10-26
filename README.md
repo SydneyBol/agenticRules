@@ -37,7 +37,7 @@ an XML through that the stock screen did not accept. Design: `~/Documents/Gravty
 
 | Path | What |
 |---|---|
-| `offer_author/ai/` | model-facing: the loop, prompt, tool schemas, Bedrock clients (`llm.py`: AnthropicBedrock, or LangChain Converse with `OFFER_AUTHOR_CLIENT=converse`), `context/*.md` |
+| `offer_author/ai/` | model-facing: the loop, prompt, tool schemas, the Bedrock client (`llm.py`: AnthropicBedrock, streamed), `context/*.md` |
 | `offer_author/core/` | deterministic: session (the tools), tree, checks, compile and engine clients, catalog, counters, `data/` (block reference, saved blueprint and segment XML) |
 | `offer_author/api/` | HTTP service and CLI. Dependencies point one way: api → ai → core |
 | `harness/ui/compile/` | the `compile` tool's service: stock gravty-ui screens, headless, against a mocked backend |
