@@ -1,0 +1,26 @@
+{
+ "offer_name": {
+  "required": true,
+  "max_length": 50
+ },
+ "frequency": {
+  "choices": [
+   "day",
+   "month",
+   "total",
+   "week"
+  ],
+  "blank": true
+ },
+ "offer_frequency_type": {
+  "choices": [
+   "day",
+   "lifetime"
+  ],
+  "blank": true
+ },
+ "sources": {
+  "ui:src/app/workspaces/offer/modules/offer-setup/screens/offer-main/components/offer-main-forms/offer-details-form/offer-details-form.component.html": "58e3a7f74e8fb9a9",
+  "bolapi:offers/models.py": "0a84e7313f0ebae2"
+ }
+}

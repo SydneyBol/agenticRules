@@ -1,0 +1,76 @@
+# Words -> catalog codes on devintbf2: how well the manager's own words find the tenant's attributes and values.
+#
+# values: the lookup_values tool alone (catalog.lookup: word overlap + string similarity, no model), top-1 code against
+#   the expected one. Run: tools/qa/check_lookup.py.
+# cases: end to end through the model and the tools, as single blocks on the saved canvas (check_edit_flow.py
+#   --cases=tests/cases/semantic_match.yaml): the block must carry the expected code (attr: any field or picked value).
+#   Attribute names are chosen by the model from the catalog in its context; values through lookup_values.
+# Kinds: exact (the label's own words), paraphrase (other words, same meaning), abbreviation, synonym (a different name
+# for the same thing: Calcutta for Kolkata).
+saved: results/devintbf2/hosted_combos/H12_rate_by_tier.saved.xml
+
+values:
+  - [member, tier_class, "Gold", GLDGLW, exact]
+  - [member, tier_class, "gold tier", GLDGLW, exact]
+  - [member, tier_class, "golden members", GLDGLW, paraphrase]
+  - [member, tier_class, "silver", SLVR, exact]
+  - [member, tier_class, "platinum card holders", PLTNM, paraphrase]
+  - [member, tier_class, "diamond tier", DIA, exact]
+  - [activity, h_location, "Hyderabad", HYD, exact]
+  - [activity, h_location, "Hyderabad outlet", HYD, paraphrase]
+  - [activity, h_location, "Hyd", HYD, abbreviation]
+  - [activity, h_location, "Kolkata branch", "3263", paraphrase]
+  - [activity, h_location, "Calcutta", "3263", synonym]
+  - [activity, h_location, "One West mall", "678934", paraphrase]
+  - [activity, h_location, "Gachibowli", "Test@1311", exact]
+  - [activity, h_location, "online automation store", AUTO5, paraphrase]
+  - [activity, h_location, "Automation Online Location", AUTO5, exact]
+  - [activity, h_bit_type, "spend", SPEND, exact]
+  - [activity, h_bit_type, "shopping", PURCHASE, exact]
+  - [activity, h_bit_type, "purchases", PURCHASE, paraphrase]
+  - [activity, h_bit_type, "bill payment", BILL_PAYMENT, exact]
+  - [activity, h_bit_type, "paying a bill", BILL_PAYMENT, paraphrase]
+  - [activity, h_bit_type, "hotel stay", STAY, paraphrase]
+  - [activity, h_bit_type, "referring a friend", MEMBER_REFERRAL, paraphrase]
+  - [activity, h_bit_type, "member referral", MEMBER_REFERRAL, exact]
+  - [activity, h_bit_type, "joining the programme", ENROL, paraphrase]
+  - [activity, h_bit_type, "enrolment", ENROL, synonym]
+  - [activity, h_bit_type, "travel", Travel, exact]
+  - [activity, h_bit_type, "buying a tier with cash", TIER_PAYMENT, paraphrase]
+  - [activity, h_bit_type, "points transfer", POINTS_TRANSFER, exact]
+  - [activity, h_bit_type, "returns", RETURN, paraphrase]
+  - [activity, h_bit_type, "spin the wheel", SPIN_THE_WHEEL, exact]
+
+cases:
+  # ---------------------------------------------------------------- attributes named in other words (model)
+  - {id: S01_bill_amount, prompt: "Add an activity attribute block for the bill amount.", loose: [{type: activity_attribute, attr: h_bit_amount}], rules_kept: true}
+  - {id: S02_purchase_value, prompt: "Add an activity attribute block for the purchase value.", loose: [{type: activity_attribute, attr: h_bit_amount}], rules_kept: true}
+  - {id: S03_pos_terminal, prompt: "Add an activity attribute block for the point-of-sale terminal id.", loose: [{type: activity_attribute, attr: h_pos_id}], rules_kept: true}
+  - {id: S04_booking_reference, prompt: "Add an activity attribute block for the booking reference (PNR).", loose: [{type: activity_attribute, attr: h_pnr_number}], rules_kept: true}
+  - {id: S05_tax_paid, prompt: "Add an activity attribute block for the tax paid on the transaction.", loose: [{type: activity_attribute, attr: h_tax_amount}], rules_kept: true}
+  - {id: S06_items_on_line, prompt: "Add an activity attribute block for the number of items on a line.", loose: [{type: activity_attribute, attr: l_quantity}], rules_kept: true}
+  - {id: S07_dob, prompt: "Add a member attribute block for the member's DOB.", loose: [{type: member_attribute, attr: date_of_birth}], rules_kept: true}
+  - {id: S08_how_old, prompt: "Add a member attribute block for how old the member is.", loose: [{type: member_attribute, attr: age}], rules_kept: true}
+  - {id: S09_sex, prompt: "Add a member attribute block for the member's sex.", loose: [{type: member_attribute, attr: gender}], rules_kept: true}
+  - {id: S10_home_city, prompt: "Add a member attribute block for the member's home city.", loose: [{type: member_attribute, attr: city}], rules_kept: true}
+  - {id: S11_signup_channel, prompt: "Add a member attribute block for the channel the member signed up through.", loose: [{type: member_attribute, attr: enrollment_channel}], rules_kept: true}
+  - {id: S12_email_verified, prompt: "Add a member attribute block for whether the member's email is verified.", loose: [{type: member_attribute, attr: email_validated}], rules_kept: true}
+  - {id: S13_brand, prompt: "Add a product attribute block for the brand.", loose: [{type: product_attribute, attr: brand_name}], rules_kept: true}
+  - {id: S14_product_cost, prompt: "Add a product attribute block for what the product costs.", loose: [{type: product_attribute, attr: cost}], rules_kept: true}
+  # ---------------------------------------------------------------- values named in other words (model + lookup_values)
+  - {id: S20_golden_tier, prompt: "Add a condition block for members in the golden tier.", loose: [{type: if_generic_adaptive, attr: GLDGLW}], rules_kept: true}
+  - {id: S21_platinum_holders, prompt: "Add a condition block for platinum card holders.", loose: [{type: if_generic_adaptive, attr: PLTNM}], rules_kept: true}
+  - {id: S22_calcutta, prompt: "Add an activity filter block for transactions at the Calcutta store.", loose: [{type: activity_criteria, attr: "3263"}], rules_kept: true}
+  - {id: S23_hyd, prompt: "Add an activity filter block for transactions at the Hyd outlet.", loose: [{type: activity_criteria, attr: HYD}], rules_kept: true}
+  - {id: S24_one_west, prompt: "Add an activity filter block for the One West mall.", loose: [{type: activity_criteria, attr: "678934"}], rules_kept: true}
+  - {id: S25_shopping, prompt: "Add an activity filter block for purchases.", loose: [{type: activity_criteria, attr: PURCHASE}], rules_kept: true}
+  - {id: S26_paying_bill, prompt: "Add an activity filter block for paying a bill.", loose: [{type: activity_criteria, attr: BILL_PAYMENT}], rules_kept: true}
+  - {id: S27_hotel_stay, prompt: "Add an activity filter block for hotel stays.", loose: [{type: activity_criteria, attr: STAY}], rules_kept: true}
+  - {id: S28_referral, prompt: "Add an activity filter block for referring a friend.", loose: [{type: activity_criteria, attr: MEMBER_REFERRAL}], rules_kept: true}
+  - {id: S29_joining, prompt: "Add an activity filter block for joining the programme.", loose: [{type: activity_criteria, attr: ENROL}], rules_kept: true}
+  # ---------------------------------------------------------------- privileges named in other words (model)
+  - {id: S30_ski_pass, prompt: "Add an action block that gives the free ski pass.", loose: [{type: action, attr: "13829"}], rules_kept: true}
+  - {id: S31_vox_ticket, prompt: "Add an action block that gives a free movie ticket at VOX.", loose: [{type: action, attr: "13828"}], rules_kept: true}
+  - {id: S32_magic_planet, prompt: "Add an action block that gives the Magic Planet bonus play.", loose: [{type: action, attr: "13830"}], rules_kept: true}
+  - {id: S33_aspen_dining, prompt: "Add an action block that gives the two-for-one dinner at Aspen Cafe.", loose: [{type: action, attr: "13832"}], rules_kept: true}
+  - {id: S34_apple_music, prompt: "Add an action block that gives two months of Apple Music.", loose: [{type: action, attr: "12560"}], rules_kept: true}

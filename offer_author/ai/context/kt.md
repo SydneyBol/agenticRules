@@ -1,265 +1,218 @@
-# How offer rules execute (KT extract: gravty-ui, bolapi, engine)
+# How offers and blocks run in the engine
 
-<!-- from OfferRules-Blockly.md -->
-### Runtime evaluation
+What a loyalty manager who builds offers in the Offer Rules screen knows about how the engine runs them: block by
+block, in the order the engine meets them. The screen compiles the canvas; how it does that is not part of this.
 
-`POST /api/bits` → `BitOpenApi.bitProcessing` → `executeBit` → `handleRequest` (JWT decode, program-id validation, `PermissionValidator`) → `bitExecution` (`BitDataValidator`, `BitDuplicateValidatorImpl` → 409 on duplicate) → `PipelineBitController(ExecutionMode.PIPELINE_SYNC).execute(...)`.
+## 1. When an offer runs for a transaction (BIT)
 
-`BitProcessor.execute()` phase order (`BitProcessor.java:139`):
+A BIT is one member transaction sent to the program: a header (activity type `h_bit_type`, category
+`h_bit_category`, amount `h_bit_amount`, date `h_bit_date`, store `h_location`, sponsor, ...), optional line items
+(one per product, `l_*` attributes) and optional payment items.
+
+For each BIT the engine, in this order:
+1. Rejects the BIT before any offer when it is invalid: an unknown store code (LOCATION_NOT_FOUND), a duplicate of a
+   BIT already processed, a member whose membership does not allow it.
+2. Finds the offers that apply: launched offers (test offers only for test members), for the member's segment, at a
+   location the offer allows, opted into when the offer needs opt-in, whose dates contain the BIT date (program
+   timezone), whose per-member limit and frequency (per day, week, month or lifetime; there is no yearly frequency)
+   and total limit are not used up. A BIT before the offer's start date is refused for that offer
+   (REWARD_OFFER_DOES_NOT_QUALIFY). These are Offer Main and segment settings: they are checked before any block of
+   the rules runs, and a BIT they stop never reaches the rules.
+3. Runs the rules of each offer that applies, as described below. Offers that are not cumulative are exclusive: at
+   most one of them rewards a BIT's header, and at most one rewards each line item's product.
+4. Saves the outcome: points credited, privileges issued, counters updated, each action labelled with the name of the
+   rule that fired it.
+
+Reward offer rules run for accrual BITs (and event BITs, through On Event). A cancellation BIT reverses the original
+BIT's rewards and counters. Availment, payment, service, sweepstake, play & win and subscription BITs run no offer
+rules.
+
+## 2. The canvas
+
 ```
-loadMember() → validateThirdPartyMembers() → processRules() →
-verifyThirdPartyMembershipStage() → processBillingRules() →
-validateExecution() → analyseExecution() → persistMembers() →
-persistMemberOffers() → persistPrivileges() → persistBits()
+Offer (offer_generic)
+├── activities: On Activity (activity), one or more
+│   ├── Filter (activity_criteria) and OR blocks: which BITs this activity takes
+│   └── Rules: Rule (rule), Line Rule (rule_line), Payment Rule (payment_rule), in order
+│       ├── Condition: If blocks (if_generic_adaptive) and OR blocks
+│       └── Action: Action blocks (action) and Rule blocks (a rule inside a rule)
+└── events: On Event (event), one or more
+    └── Rules: Rule ...
 ```
 
-`StatelessDroolsExecution` iterates `ruleBase.getDroolsKb()` and fires a separate `StatelessKieSession` per `KieBase` — Base, MultiSponsor, Sponsor and Tier KieBases each fire over the same `BitExecutionContext`.
+## 3. How each block runs
 
----
+**On Activity.** Runs for every BIT that reaches the offer. Its Filter decides whether the BIT is taken: every Filter
+condition must hold. When it does not, nothing under this activity runs for that BIT. When it does, the activity's
+rules run, top to bottom.
 
-## 4. Blockly capability catalog
+**Filter (and OR inside the filter).** Filter conditions chained one under another must all hold (AND). An OR block
+holds when either of its two branches holds; each branch may hold several chained conditions (AND inside the branch).
+A Filter condition applies to every rule under its activity. The standard: a condition that every rule under the
+activity needs is written once, in the Filter; a rule holds only the conditions that make it different from the other
+rules (moving a shared condition into the Filter does not change what the offer does).
 
-### Structural grammar
+**Several On Activity blocks in one offer.** Each takes BITs by its own Filter and runs its own rules. The engine
+promises no order between two On Activity blocks of one offer: logic in which one part must see what another part did
+in the same BIT (a counter update) belongs in one activity.
 
-The workspace is a strict containment hierarchy, enforced by Blockly `setCheck()` type constraints:
+**Rule.** Its conditions (If blocks chained one under another = AND; an OR block = either branch) are checked once per
+BIT, at header level; when they hold, its actions run once, top to bottom. A rule with no condition always runs.
+There is no "else": every rule under the activity is checked, top to bottom, and every rule whose conditions hold
+runs. Two rules that both hold both reward (they stack). To make rules alternatives, give them conditions that exclude
+each other (bands such as `>= 100` and `>= 50 and < 100`, a tier `in` and `not in`) or put one inside the other.
 
-```
-offer_generic ("Offer")
-├── A: activities   [check 'Activity']
-│   └── activity ("On Activity")
-│       ├── F: ACTIVITY_CRITERIA  [check 'Filter' | 'OR']   ← eligibility gate
-│       └── R: RULES              [check 'Rule']
-│           └── rule ("Rule" + tag)
-│               ├── C: CONDITION  [check 'If' | 'OR']
-│               └── A: ACTION     [check 'Action' | 'Rule']
-└── E: events       [check 'Event']
-    └── event ("On Event") → RULES → rule …
-```
+**A rule inside a rule** (a Rule block in another rule's actions). Checked only when the outer rule's conditions held,
+at its place among the outer rule's actions. Use it for a condition that refines the outer one ("Gold members get 100;
+among them, those at the airport store get 50 more") or for a step that must follow the outer rule's actions.
 
-### Block categories
+**Line Rule.** Runs once per line item of the BIT: its conditions and actions see that line's attributes (`l_*`) and
+the attributes of the line's product; its actions run for each line whose conditions hold (points per qualifying
+product, counting products of a category).
 
-Toolboxes declare three categories: **Offer Level Block**, **Rule Level Block**, **Attributes & Variables**.
+**Payment Rule.** Runs once per payment item of the BIT, on that payment's attributes.
 
-| Category | Block types |
+**On Event.** Runs for event BITs (activity type Event), with the same rule blocks.
+
+**Member segment (Select Members canvas).** Decides which members the offer is for, from member data only, before
+any rule. The conditions under Select (`targeting_holder`) must all hold (AND); an OR block holds when either side
+does, and both sides need a condition (each side's conditions are ANDed). A condition reads a member attribute at
+its `attr_level`:
+- `MA_P`, the member profile: `tier_class`, `gender`, `date_of_joining`, the calculated `age`, account balances
+  (`<account id>_balance`), ... A coded attribute takes the tenant's codes.
+- `MA_T`, the tier programme: `tierslevel` is the tier class, `tiermainoption` what is tested (`name`, with the tier
+  in `tierlevelnamevalue`; `tier_start_date` or `tier_validity`, compared with a date).
+- `MA_CC`, `MA_SP`, ...: cobranded card, subscription and the other levels of the member attribute table.
+
+The tier a member is in can be read both ways: `tier_class` (MA_P) and the tier programme (MA_T) are separate data
+on a tenant. A member without the attribute reads as section 4 and the member dates notes say (a calculated
+attribute 0, a date part -1): `age < 30` also takes members with no date of birth, unless the segment also asks for one.
+
+**Actions.** Run top to bottom, each when it is reached.
+- Reward Points: credits the computed quantity to the loyalty account under the reward tag. The quantity is any value
+  block: a number, an attribute, arithmetic on them (`h_bit_amount * 2`).
+- Assign Privilege: issues the privilege product (its usage policy, how many, validity dates).
+- Update Attribute: changes a counter (section 5), at once.
+- Redeem / Reset / Return / Expire Points: debit, zero, return or expire points.
+- Assign Sweepstakes, Assign Play & Win Reward: issue those rewards.
+
+**Third-party conditions.** A condition on a third party the member does not have (family head, referrer, companion,
+employee, corporate, institution, transferee) skips that rule; the BIT is not failed.
+
+**Filling the blocks.** The block reference lists every field; these carry the logic, and the screen keeps a value
+only in the field it belongs to:
+- A condition (If, Filter): `OBJECT` (activity, member, products_attrs, location, sponsor, ...), `attribute` (the
+  attribute's code, or the counter's name), `attribute_level` for a member attribute or counter (the tools fill it for
+  catalog attributes and declared counters), `operators`, then the right-hand side. A coded (lookup / list)
+  attribute takes one code in `value`, or the codes of `in` / `not in` in `picked`. A number, a date or a date-time
+  has no `value` field: what it is compared with is a value block in `RHS_INPUT` (a number block for `h_bit_amount >
+  100`).
+- A date part (the condition's, or an attribute block's): a DATE attribute takes it in `date_operator`, a DATE-TIME
+  attribute in `datetime_operator`; HOUR_OF_DAY and MINUTE_OF_HOUR exist for date-times only. The part is then compared
+  with a number block in `RHS_INPUT` (Sunday: `datetime_operator` DAY_OF_WEEK, `==`, the number 7); DATE compares with
+  a date block.
+- Reward Points: `action_type` give_points; `FORMULA` = the quantity (a value block); the account and reward tag are
+  filled by the tools.
+- Assign Privilege: `action_type` give_privilege; `SELECTED_PRIVILEGE` (a privilege id from the catalog),
+  `PRIVILEGE_USAGEPOLICY` (its usage policy), `PRIVILEGE_QUANTITY` (how many, a value block).
+- Update Attribute: `action_type` update_attribute; `mta_attribute` = the counter's name (declared in counters);
+  `action_operator` = INCREMENT_BY, DECREMENT_BY, SET or RESET (RESET_ALL for a vector counter); `RHS_INPUT_VALUE` =
+  the value block (none for RESET). `mta_type_value` is the counter's level (MA_O, MA_A): the tools fill it from the
+  declaration. Without `mta_attribute` the screen has no counter for the action and keeps none of its operator.
+
+## 4. Conditions and values
+
+**What a condition can test** (the OBJECT dropdown): BIT (activity) attributes, member attributes (by level, below),
+product attributes (in a Line Rule), location, sponsor, airport and airport pair, payment attributes (Payment Rule),
+third parties.
+
+**Member attribute levels:**
+
+| Level | What it is |
 |---|---|
-| Offer-level | `offer_generic`, `offer_award`, `offer_deal`, `event`, `event_privilege`, `activity`, `activity_enrollment`, `activity_criteria`, `or`, `or_deal` |
-| Rule-level | `rule`, `billing_rule`, `rule_deal`, `rule_line`, `rule_award`, `payment_rule`, `if_generic_adaptive`, `if_deal_block`, `if_payment_attribute`, `action`, `action_third_party` |
-| Event-level | `targeting_holder`, `targeting_condition` |
-| Attributes & Variables | `static_value`, `static_string_value`, `static_date`, `static_date_time`, `current_date_block`, `arithmetic_generic`, `arithmetic_date`, `currency_converter`, `blueprint_variable`, `activity_attribute`, `member_attribute`, `product_attribute`, `payment_attribute`, `airport_attribute`, `tier_thresholds` |
+| `MA_P` | Program-level member profile: tier, dates of birth and joining, gender, ... |
+| `MA_O` | Offer counter: belongs to this member and this offer, kept from BIT to BIT |
+| `MA_A` | Activity counter: lives for one BIT only, starts empty on every BIT |
+| `MA_T` / `MA_TO` | Tier attributes / tier counters |
+| `MA_S`, `MP_S`, `MR_S` | Analytics, personalization and retention scores written back to the member |
+| `MA_CA`, `MA_CC`, `MA_SP` | Bank account, cobranded card, subscription |
 
-### Condition vocabulary
+Calculated member attributes are computed when read, from the current date (not the BIT date): `age` (whole years
+since `date_of_birth`), `membership_tenure` (days since `date_of_joining`), `days_since_bit` (days since the last
+activity), `email_domain`. A member without the source attribute reads 0. To test "members over 27", the member needs
+a `date_of_birth`, not an `age`.
 
-The **object** dropdown (`dropdownObject`) — what you can test against:
+**Operators:**
 
-```
-[['--',''], ['3rd Party','third_party'], ['Airport','airport'],
- ['Airport Pair','airport_pair'], ['BIT','activity'], ['Location','location'],
- ['Member','member'], ['Product','products_attrs'], ['Sponsor','sponsor']]
-```
-
-Narrowed per offer type: PRIVILEGE → Member only; DEAL → BIT + Product only.
-
-**Member attribute levels** (`MemberAttributeLevel` enum in the engine — these are the `MA_*` codes that appear in compiled rules):
-
-| Code | Meaning |
+| Values | Operators |
 |---|---|
-| `MA_P` | Program-Level |
-| `MA_O` | Offer-Level (counters / MTO) |
-| `MA_A` | Activity-Level |
-| `MA_S` | Analytics Write-back |
-| `MA_T` / `MA_TO` | Tier / Tier-MTO |
-| `MP_S` | Personalization (AI individualization) |
-| `MR_S` | Retention Score |
-| `MA_CA` / `MA_CC` | Bank Account / Cobranded Card |
-| `MA_SP` | Subscription |
+| numbers | `=` `!=` `>` `>=` `<` `<=` `between` `in` `not in` `is null` `is not-null` |
+| text | `=` `!=` `in` `not in` `contains` `does not contain` `starts with` `ends with` `matches` `doesn't match` `is null` `is not-null` |
+| lookup / list values | `=` `!=` `in` `not in` `matches` `doesn't match` `is null` `is not-null` |
+| payment mode, expiry | `in` `not in` only |
+| dates | compare a part of the date: DATE, DAY_OF_MONTH, DAY_OF_WEEK, DAY_OF_YEAR, MONTH, WEEK_OF_YEAR, YEAR; date-times add HOUR_OF_DAY, MINUTE_OF_HOUR |
 
-**Operators** (verbatim from `BlockDefinitionService`):
+Text: `=` and `matches` are exact and case-sensitive; contains, starts with and ends with test part of the text; on
+an attribute that holds several values, `=` holds when any of them equals the value. `in` / `not in` take the chosen
+codes from the value popup. Payment Amount is an old list attribute: it takes only `in` / `not in`.
 
-| Set | Values |
-|---|---|
-| `num_conditional_operators` | `=` `!=` `>` `>=` `<` `<=` `is null` `is not-null` `in` `not in` `between` |
-| `str_conditional_operators` (offers) | `=` `!=` `is null` `is not-null` `in` `not in` `contains` `does not contain` `doesn't match` `matches` `starts with` `ends with` |
-| `str_lov_lookup_operatorsforoffers` | `=` `!=` `matches` `doesn't match` `is null` `is not-null` `in` `not in` |
-| `payment_conditional_operators` | `in` `not in` only |
-| `date_operators` (dimensions) | DATE, DATETIME, DAY_OF_MONTH, DAY_OF_WEEK, DAY_OF_YEAR, MONTH, WEEK_OF_YEAR, YEAR |
-| `datetime_operators` | adds HOUR_OF_DAY, MINUTE_OF_HOUR |
-| `expiry_conditions` | `in` / `not in` only |
+**Dates and times.** Date conditions read dates in the program timezone. A BIT date sent without a timezone offset is
+read as UTC; one with an offset keeps it. DAY_OF_WEEK runs Monday = 1 to Sunday = 7; HOUR_OF_DAY 0-23.
 
-How text comparisons run: = / matches is an exact, case-sensitive match; contains, starts with and ends with test part of the text; on an attribute that holds several values, = holds when any of them equals the value.
+**Value blocks:** a number (digits, optional decimals), a text, a date, a date-time, the current date, arithmetic
+(operator `+` `-` `*` `/`, and `%` for the remainder), date arithmetic (`+` / `-` DAYS, MONTHS or YEARS, and snap to the start of
+the MONTH or YEAR), a currency rate (award, exchange, reward rates), and attribute blocks (BIT, member, product,
+payment, airport).
 
-**Third parties**: ACTIVITY_REFERRER, COMPANION, CORPORATE, EMPLOYEE, ENROLLMENT_REFERRER, FAMILY_HEAD, INSTITUTION, TRANSFEREE.
+## 5. Counters
 
-### Action vocabulary
+A counter is a member attribute the offer declares: `MA_O` (offer counter, kept across BITs) or `MA_A` (activity
+counter, one BIT only). Anything that must carry from one BIT to the next (counts, running totals, "once", caps,
+unlocks, the period something last happened in, distinct stores) is an offer counter.
 
-How actions run: Reward Points credits the computed quantity to the loyalty account under the reward tag; Redeem / Reset / Return / Expire Points debit, zero, return or expire points; Assign Privilege issues the privilege product (usage policy, how many, validity dates). Every action records the name of the rule that fired it.
+- **Reading.** A counter never set reads 0 (number) or empty (text). Numbers are kept at the program's decimal scale.
+- **Updating.** Update Attribute: INCREMENT_BY, DECREMENT_BY, SET, RESET (RESET_ALL for a vector counter); a text
+  counter takes SET only. The value can be any value block, including arithmetic on the counter itself.
+- **When an update is seen.** At once. In the same BIT, every condition and quantity reached after the update (later
+  actions of the rule, rules further down the activity) reads the new value; rules above it do not run again. So the
+  place of an update matters: a counter updated before a reward is read with its new value by that reward's quantity
+  and by the rules below.
+- **Regular and vector.** A regular counter holds one value. A vector counter holds one value per key of its
+  namespace (per store, per product category): a condition can read the current key's value, the sum across all keys
+  (Sum Across) or the number of keys with a value (Count of Unique), e.g. "visited 3 different stores". A condition
+  picks which in `vector_counter_name`: the namespace attribute (e.g. `h_location`) reads the current BIT's key,
+  `across` the sum, `unique` the number of keys. So "N different stores" is one vector counter per store, updated on
+  each visit, tested at `unique` >= N; read at the current store it only ever sees that one store's value.
+- **Targets.** A counter's target type: NO TARGET (any comparison), SINGLE (compared with its one target value) or
+  LADDER (compared with one of the ladder's levels).
+- **Per period.** A counter does not reset by itself at a month or week boundary. A per-period count keeps the period
+  it belongs to (e.g. the month's index from the BIT date) in a second counter, and starts over when the BIT's period
+  differs from it.
 
-`actiondropdownObject`, keyed by offer type:
+## 6. What blocks cannot express
 
-| Offer type | Available actions |
-|---|---|
-| **REWARD** | Assign Play & Win Reward, Assign Privilege, Assign Sweepstakes, Expire Points, Redeem Points, Reset Points, Return Points, Reward Points, Update Attribute |
-| **AWARD** | Award Product, Redeem Points |
-| **PRIVILEGE** | Assign Privilege, Reward Points, Update Attribute |
-| **ENROLLMENT** | Assign Privilege, Enroll Member, Redeem Points, Reward Points, Update Attribute |
-| **Tier setup** | Assign Play & Win Reward, Assign Tier, Assign Sweepstakes, Redeem Points, Reset Points, Reward Points, Update Attribute |
-| **SERVICE_MENU** | + Extend Privilege, Redeem Privilege, Reinstate Privilege, Transfer Points, Transfer Privilege |
+- Loops: the only iteration is per BIT, per line item and per payment item.
+- Looking at earlier BITs: anything from the past must have been kept in a counter when it happened.
+- Custom functions: actions are the closed list above; values are the value blocks.
+- Which offer runs first: the program orders offers; the rules of one offer cannot depend on another offer.
+- The number of days between two dates, or a member date moved to the BIT's year (see the member dates notes).
 
-**Update Attribute** operators: `INCREMENT_BY`, `DECREMENT_BY`, `RESET`, `SET` (+ `RESET_ALL` for vector counters). Non-numeric attributes get `SET` only.
+## 7. Example
 
-### Rule wrappers — the four iteration modes
+*"Earn 2x points on spend over $100 at sponsor X during December."*
 
-How each rule wrapper runs, per BIT:
-
-| Block | Runs |
-|---|---|
-| `rule` | once per BIT on its header attributes: when the conditions hold, the actions run once |
-| `rule_line` | once per line item: conditions and actions see that line (l_* and product attributes); actions can run per line |
-| `payment_rule` | once per payment item of the BIT |
-| `rule_award` | award offers: redeems the award price and assigns each product |
-
-A condition on a third party the member does not have skips that rule (logged), it does not fail the BIT.
-
-If the condition text references any third-party accessor, the whole `if` is auto-wrapped:
-
-### Value / variable blocks
-
-- `static_value` — validated against `/^[0-9]*\.?[0-9]+$/`
-- `arithmetic_generic` — operators `/` `X` `+` `-` `%`
-- `arithmetic_date` — `+` `-` `snap-to`; quantities DAYS / MONTHS / YEARS; snap to MONTH / YEAR
-- `currency_converter` — Award Rate, Exchange Rate, Reward Rate, Sponsor Award Rate, Sponsor Reward Rate
-
-**`in` / `not in` open a modal**, not an inline field — `inOperatorPopup` → `inLovsPopup` (LOV) / `inLookUpPopup` (LOOKUP) / `inTextPopup`. The chosen set is stored in `inLovLookupListMap` keyed by attribute + block id. Values can also be **bulk-uploaded** via an S3 path carrying the marker `bulk-values-validation`.
-
-### Counters (MTO)
-
-An `MA_O` / `MA_TO` attribute carries `counter_type` ∈ {REGULAR, VECTOR} and `target_type` ∈ {LADDER, SINGLE, NO TARGET}:
-- **LADDER** → dropdown of the ladder's target levels
-- **SINGLE** → read-only label of `MTO.target_value`
-- **NO TARGET** → full numeric operator set
-
-Vector counters add aggregation options: `Sum Across <name>` (`across`) and `Count of Unique <name>` (`unique`).
-
----
-
-## 5. Worked example
-
-In the engine: the filter (activity type SPEND, sponsor X) admits the BIT to the activity; the rule's condition (amount >= 100, month 12) is checked on the BIT header; when it holds, points = amount x 2 are credited to the account under tag BASE, once per BIT.
-
-*"Earn 2× points on spend over $100 at sponsor X during December."*
-
-**Canvas**
 ```
 Offer
-└─ A: On Activity
-   ├─ F: Filter [BIT]  h_bit_type == "SPEND"
-   │     Filter [Sponsor]  sponsor_id == X
-   └─ R: Rule "december-2x"
-      ├─ C: If [BIT] h_bit_amount >= 100
-      │     If [BIT] h_bit_date MONTH == 12
-      └─ A: Action → Reward Points in <account> Tag BASE
-              Quantity = Arithmetic( BIT.h_bit_amount × 2 )
+└─ On Activity
+   ├─ Filter [BIT]  h_bit_type == "SPEND"
+   │  Filter [Sponsor]  sponsor_id == X
+   └─ Rule "december-2x"
+      ├─ If [BIT] h_bit_amount > 100
+      │  If [BIT] h_bit_date MONTH == 12
+      └─ Action → Reward Points in <account>, tag BASE
+              Quantity = BIT h_bit_amount * 2
 ```
 
-Note the December window is **not** in the compiled rules — it's `Offer.start_date` / `end_date` on the bolapi row, enforced by offer selection before Drools ever runs. Only put a month condition in the rule if you need it *in addition to* the offer schedule.
-
----
-
-## 6. Limits and sharp edges
-
-**Blockly cannot express**
-- Arbitrary loops or recursion. Iteration is fixed to the four rule wrappers (header / line / payment / award).
-- Cross-BIT or historical queries. Everything reads the current `BitExecutionContext`. Accumulation must go through MTO counters.
-- Custom functions. The action vocabulary is a closed dropdown per offer type.
-- Offer *selection* logic — that is hand-written Java (`EligibileOfferStrategyImpl`), not authorable.
-
-**Where the abstraction leaks**
-- **Deal offers emit JSON, not compiled rules.** `offer_deal`, `rule_deal` and `if_deal_block` `JSON.stringify` their children and split on `//`. `Offer.compiled rules_EXCLUDED_OFFERS = (deal, award_catalog)`.
-- **No Drools at all for 8 BIT categories.** `KbGenerator.getKB()` returns `null` for AVAILMENT, SERVICE(EXPIRATION), CANCELLATION, DEAL_REDEMPTION, PAYMENT, SWEEPSTAKE, PLAY_AND_WIN, SUBSCRIPTION — those are pure hand-written Java.
-- **Block-type collisions.** `blocks/index.ts` deliberately omits `SEGMENT_LEVEL_BLOCKS` and `EVENT_LEVEL_BLOCKS` from `CUSTOM_BLOCKS`, and never imports `PRODUCT_LEVEL_BLOCKS` — three classes share the type `targeting_condition` and two share `targeting_holder`. Blockly registration is global and last-wins, so these are injected per-screen via `[customBlocks]`. Fragile.
-- **Mode detection via URL string matching.** Blueprint mode is `window.location.href.indexOf('offerblueprintrules/') !== -1`; tier mode likewise. Routing changes silently change compiled rules dialect.
-- **`Payment Amount` is a backward-compat hack.** Force-appended to BIT attributes with code `amount` and datatype forced to `LOV`, kept for offers created up to 2.4.7 — which is why it only offers `in` / `not in`.
-
-**Known gotchas**
-- `OfferStatus` seeds 11 codes (adds `review`, `runtest`) but `Offer.OFFER_STATUS_CHOICES` lists only 9 — the model choices tuple is out of sync with the seeded DB rows.
-- `OFFER_TYPE_PRIVILEDGE` is misspelled in `offers/models.py`.
-- Offer-movement components use plain `btoa(...)` with no UTF-8 pre-escape, unlike the offer-rules path — non-ASCII rule content will corrupt on migration.
-- `engine/offertemplates/` is not a Maven module and is referenced by zero Java files — it's a repo-stored library of FreeMarker templates meant for S3 upload.
-- `blocks/rule-level/sample.ts` is a zero-byte file.
-- `BlockMutator` (the framework's abstract mutator class) is declared and wired through `Blockly.Extensions.registerMutator` but **never instantiated by any block** — all real mutation uses direct `this.block.mutationToDom = …` assignment.
-
----
-
-<!-- from Engine.md -->
-## 3. How an offer is triggered for a BIT
-
-Entry: `POST /api/bits` (`BitOpenApi` :146), Kinesis (`AsyncBitsLambda`), batch
-(`bits_batch` / EMR), internal events (`event/ScheduledOfferTargetLambda`, `bg_offer_execution`).
-
-1. Raw BIT → Firehose; JWT; `BitDataValidatorImpl`; duplicate check
-   (`BitDuplicateValidatorImpl` — conditional `BIT_CORRELATION` insert; `DUPLICATE_BIT`).
-2. `PipelineBitController.executeBIT` :92 loads Member, MemberOffers, segmentation → `BitExecutionContextImpl`.
-3. `validateBitPolicy` (membership stage; `RewardBitPolicyValidator` etc. per category).
-4. `BitController.process` :243: processor by `h_bit_category` (`ProcessorFactory`): ACCRUAL→Reward,
-   REDEMPTION→Award, CANCELLATION→Revert, AVAILMENT, DEAL_REDEMPTION, SERVICE, POINTS_RESERVATION,
-   SWEEPSTAKE, PLAY_AND_WIN… Optional trust/fraud simulation (`fraud_status`).
-5. **Eligibility** — `EligibileOfferStrategyImpl.findAllEligibleOffers` :88:
-   base + multi-sponsor + sponsor active offers → LAUNCHED only (TEST for test members) →
-   qualifying segments → target type (all / sponsor / member-targeted / segment) :201 →
-   `RewardOfferValidator.checkBitEligibility` (location, opt-in, per-member day/week/month/lifetime
-   limit, date window, sponsor balance, multi-sponsor) → sort by priority.
-6. **KieBase** — `KbGenerator.Factory`: `RewardSpecificOfferKbGenerator` (BIT names `offer_id`),
-   `RewardKbOptimizedGenerator` (precompiled Base / MultiSponsor / Sponsor KieBases from Ehcache,
-   503 if missing), or `RewardKbGenerator` (compile eligible offers per BIT). Cached KBs contain all
-   active offers; per-BIT filtering happens inside the rule via `OfferEligibilityHelperImpl.checkEligibility`
-   :69, which also enforces non-cumulative exclusivity (one header offer per BIT / one line offer per SKU).
-7. **Fire** — `StatelessDroolsExecution.execute`: one stateless session per KieBase, sole fact = `BitExecutionContext`.
-   multiplier = computed value with tag BASE/BONUS), `adjustPoints`, `assignPrivilege` (coupons/vouchers),
-   `availPrivilege`, `updateMTA` (counters/accumulators), `resetAllMTO`, `transferPoints/Privilege`,
-   `updateMemberTier`, `enrol`, `assignSweepstake`, `assignPlayWinReward`, FX/award conversions.
-
-## 4. How the result is saved (`BitProcessor.execute` :160)
-1. `validateExecution` — program/sponsor/location accrual & redemption limits (`ACCRUAL_LIMIT`,
-   `REDEMPTION_LIMIT`), sponsor prepaid balance, deals.
-2. `analyseExecution` — last-activity dates, product counters.
-3. `persistMembers` — optional CRIS external accrual / pre-commit webhook → `MEMBER` (balances,
-   `@DynamoDbVersionAttribute` optimistic lock; retried, then MEMBER_LOCKED), `PENDING_POINTS`.
-4. `persistPrivileges` — `ASSIGNED_PRIVILEGE`, `AVAILMENT_LIMIT`.
-5. `persistMemberOffers` — `MEMBER_OFFER` usage counts; `Counter` and per-day/week/month `AvailmentLimit`.
-6. `persistBits` — BitOutput to Kinesis `kinesis_stream_bit_processed` (or SNS); processed BIT +
-   offer actions as LZ4 JSON to S3 (`processed_bit_storage_directory/{program}/{member}/{bit}`);
-   `TIER_ACTION`; source-id `Lookup`; limit tables.
-7. Firehose backup of processed BIT; correlation → SUCCESS; tier processing triggered; 201 with balances.
-
-Reversal: CANCELLATION BIT → `RevertBitProcessor` loads original from S3, checks `BIT_STATUS`,
-inverts actions (REVERSAL / PARTIAL_REFUND per SKU / HEADER_LEVEL_PARTIAL_REFUND), decrements counters.
-
-## Runtime behaviours confirmed by the local harness (2026-10-21)
-Source: the engine harness (real Drools + `OfferActionHelperImpl`, infra stubbed).
-- **MA_A is not persisted across BITs.** It lives only in `EngineMemberImpl` temp maps. Cross-transaction state must use MA_O.
-- **Unset MA_O reads 0 / "".** a number condition on it sees 0 and a text condition an empty value. Values are stored as strings at program decimal scale ("1.00").
-- **`updateMTA` is visible to later `if`s in the same Drools rule.** Order matters for cap/remainder logic.
-- **Timezones:** offset-less `h_bit_date` parses in the JVM zone (UTC on Lambda); date conditions read dates in the program timezone. A string with an offset keeps that offset and is not converted.
-- **`LimitFrequency` has no YEAR,** and `fromValue` maps unknown values to TOTAL.
-- **Calculated member attributes are never stored** (`CalculatedMemberAttribute`, `DerivedAttributeCalculator`): `age` = whole years since `date_of_birth`, `membership_tenure` = days since `date_of_joining`, `days_since_bit` = days since `last_activity_date`, `email_domain` = the part of `email` after `@`. The segment executor computes them against the current date (not the BIT date); a member without the source attribute reads 0. To test "members over 27", give `date_of_birth`, not `age` (confirmed 2026-10-25: `age: 30` alone is outside the segment).
-- **Local build on JDK 25** needs `-Dlombok.version=1.18.42 -Dmaven.compiler.proc=full`, plus a `java.lang.Compiler` shim for MVEL at runtime.
-
-<!-- from RulesXml-FilterStandard.md -->
-## Purpose
-
-Generated rules XML must read like a well-written offer, not just compile. The manager's review
-(2026-10-22, on `offer_rules_xml1281376581.xml`, the H10 "Gold members whose total spend reaches $500 get a
-complimentary voucher, once" draft) showed two violations:
-
-- The On Activity Filter already said `Activity Type in Spend`, yet each rule repeated `h_bit_type == SPEND`.
-- `tier_class in GOLD,Gold` was repeated in both rules (the counting rule and the reward rule), although the whole
-  offer is for Gold members.
-
-The standard is: **a condition that every rule under On Activity needs is global, and is written once, in the Filter
-(`activity_criteria`)**. A rule holds only the conditions that make it different from the other rules.
-
-## Why it is safe (stock UI + engine)
-
-- The stock Filter block (`gravty-ui/src/app/gravty-blockly/blocks/offer-level/filter.block.ts`) offers the same
-  objects as a rule condition: activity, member (MA_P and the other levels), location, sponsor.
-- The UI's compiled rules generator ANDs the Filter into every rule under the activity. Moving a condition that every rule
-  already has into the Filter therefore produces the same rule semantics.
+The filter takes Spend BITs at sponsor X; the rule's conditions are checked on the header; when they hold, the amount
+* 2 is credited once for the BIT. The December window is better set as the offer's dates in Offer Main (checked
+before the rules); a month condition in the rule is only needed in addition to them.

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:complexType name="fieldType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute type="xs:string" name="name" use="optional"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="mutationType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute type="xs:string" name="date_time_operator" use="optional"/>
+        <xs:attribute type="xs:string" name="attr_level" use="optional"/>
+        <xs:attribute type="xs:string" name="attribute" use="optional"/>
+        <xs:attribute type="xs:string" name="operators" use="optional"/>
+        <xs:attribute type="xs:string" name="value" use="optional"/>
+        <xs:attribute type="xs:string" name="type" use="optional"/>
+        <xs:attribute type="xs:string" name="visible_value" use="optional"/>
+        <xs:attribute type="xs:string" name="iscountertypevector" use="optional"/>
+        <xs:attribute type="xs:string" name="customblockoption2main" use="optional"/>
+        <xs:attribute type="xs:string" name="rhsselectedoption" use="optional"/>
+        <xs:attribute type="xs:string" name="rhs_level_option" use="optional"/>
+        <xs:attribute type="xs:string" name="tierslevel" use="optional"/>
+        <xs:attribute type="xs:string" name="tiermainoption" use="optional"/>
+        <xs:attribute type="xs:string" name="mto_attr_visible_value" use="optional"/>
+        <xs:attribute type="xs:string" name="mto_attr_value" use="optional"/>
+        <xs:attribute type="xs:string" name="mto_att_id" use="optional"/>
+        <xs:attribute type="xs:string" name="datesegmentoption1" use="optional"/>
+        <xs:attribute type="xs:string" name="datesegmentoption2" use="optional"/>
+        <xs:attribute type="xs:string" name="datesegmentvalue" use="optional"/>
+        <xs:attribute type="xs:string" name="segment_rhs_selectedattr" use="optional"/>
+        <xs:attribute type="xs:string" name="segrhsattribute" use="optional"/>
+        <xs:attribute type="xs:string" name="payoperators" use="optional"/>
+        <xs:attribute type="xs:string" name="loyaltyaccountid" use="optional"/>
+        <xs:attribute type="xs:string" name="attribute_type_input" use="optional"/>
+        <xs:attribute type="xs:string" name="object" use="optional"/>
+        <xs:attribute type="xs:string" name="target_type" use="optional"/>
+        <xs:attribute type="xs:string" name="mta_type_value" use="optional"/>
+        <xs:attribute type="xs:string" name="mta_attribute" use="optional"/>
+        <xs:attribute type="xs:string" name="action_operator" use="optional"/>
+        <xs:attribute type="xs:string" name="vector_counter_namespace" use="optional"/>
+        <xs:attribute type="xs:string" name="attribute_entity_map_level" use="optional"/>
+        <xs:attribute type="xs:string" name="mto_ladder_value" use="optional"/>
+        <xs:attribute type="xs:string" name="attribute_level" use="optional"/>
+        <xs:attribute type="xs:string" name="privilegetype" use="optional"/>
+        <xs:attribute type="xs:string" name="prodoffertype" use="optional"/>
+        <xs:attribute type="xs:string" name="third_parties_dropdown" use="optional"/>
+        <xs:attribute type="xs:string" name="datetime_operator" use="optional"/>
+        <xs:attribute type="xs:string" name="prod_offer_select_val" use="optional"/>
+        <xs:attribute type="xs:string" name="opt" use="optional"/>
+        <xs:attribute type="xs:string" name="attr_type" use="optional"/>
+        <xs:attribute type="xs:string" name="date_operator" use="optional"/>
+        <xs:attribute type="xs:string" name="payment_object" use="optional"/>
+        <xs:attribute type="xs:string" name="payment_attribute" use="optional"/>
+        <xs:attribute type="xs:string" name="exployaltyacc" use="optional"/>
+        <xs:attribute type="xs:string" name="expconditionopt" use="optional"/>
+        <xs:attribute type="xs:string" name="fb_pages" use="optional"/>
+        <xs:attribute type="xs:string" name="pvalue" use="optional"/>
+        <xs:attribute type="xs:string" name="pvisiblevalue" use="optional"/>
+        <xs:attribute type="xs:string" name="airporttypes" use="optional"/>
+        <xs:attribute type="xs:string" name="airportpair_attribute" use="optional"/>
+        <xs:attribute type="xs:string" name="tieroperator" use="optional"/>
+        <xs:attribute type="xs:string" name="cardmainoption" use="optional"/>
+        <!-- any other mutation attribute: the UI adds them by version (PAYMENT_OBJECT, activecardsoperator); a
+             closed list dropped every offer that used one -->
+        <xs:anyAttribute processContents="lax"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="blockType">
+    <xs:sequence>
+      <xs:element type="mutationType" name="mutation" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element type="fieldType" name="field" maxOccurs="unbounded" minOccurs="0"/>
+      <xs:element type="valueType" name="value" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element type="statementType" name="statement" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element type="commentType" name="comment" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute type="xs:string" name="type" use="optional"/>
+    <xs:attribute type="xs:string" name="id" use="optional"/>
+    <xs:attribute type="xs:string" name="x" use="optional"/>
+    <xs:attribute type="xs:string" name="y" use="optional"/>
+    <xs:attribute type="xs:string" name="disabled" use="optional"/>
+  </xs:complexType>
+
+  <xs:complexType name="statementType">
+    <xs:sequence>
+      <xs:element type="blockType" name="block"/>
+    </xs:sequence>
+    <xs:attribute type="xs:string" name="name" use="optional"/>
+  </xs:complexType>
+
+  <xs:complexType name="valueType">
+    <xs:sequence>
+      <xs:element type="blockType" name="block"/>
+    </xs:sequence>
+    <xs:attribute type="xs:string" name="name" use="optional"/>
+  </xs:complexType>
+
+  <xs:complexType name="commentType">
+      <xs:simpleContent>
+        <xs:extension base="xs:string">
+          <xs:attribute type="xs:string" name="pinned" use="optional"/>
+          <xs:attribute type="xs:string" name="h" use="optional"/>
+          <xs:attribute type="xs:string" name="w" use="optional"/>
+        </xs:extension>
+      </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="xmlType">
+    <xs:sequence>
+      <xs:element type="blockType" name="block" maxOccurs="unbounded" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="root">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="blockType" name="block" maxOccurs="unbounded" minOccurs="0"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

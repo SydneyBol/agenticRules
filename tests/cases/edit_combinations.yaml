@@ -1,0 +1,168 @@
+# Editing a saved rules canvas, single blocks, and blocks that cannot attach: the GenAI popup on a reward offer
+# that already has rules. Each case is sent as the popup sends it (prompt, sponsor_id, id, type) plus the canvas the
+# offer has saved now (current_rules_xml), through the running backend. Run: tools/qa/check_edit_flow.py.
+#
+# Saved canvas (every case starts from it): results/devintbf2/hosted_combos/H12_rate_by_tier.saved.xml, as the
+# tenant saved it. On Activity: Spend. Rules: "Gold 3x" (tier_class GLDGLW, 3 points per $1), "Silver 2x" (SLVR, 2 per
+# $1), "Others 1x" (tier neither of those, 1 per $1). Diamond (DIA) plays "everyone else".
+#
+# A case passes when every check it names holds:
+#   status       the answer's status is one of these (default [draft])
+#   loose        blocks on the canvas but not attached: top-level, disabled (they add nothing to the DRL), with the
+#                type and, where given, an attribute code or field values (attr: any field equal to it; fields: subset)
+#   has          blocks attached in the rules (enabled), same matching as loose; for attributes named in the prompt
+#   rules_kept   the DRL is the saved canvas's DRL, byte for byte (single blocks and incompatible ones change nothing)
+#   saved_kept   every saved block keeps its Blockly id (default true; false for cases that remove or replace blocks)
+#   refused_mentions  the answer has no usable block and its message or questions name these words (attributes the
+#                tenant has but does not allow in rules)
+#   sequences    engine BITs on the new DRL, as in hosted_combinations.yaml: [date, amount, store, expect]
+# and always: the stock rules screen loads it with no problems (loose blocks' own disabled state excepted).
+saved: results/devintbf2/hosted_combos/H12_rate_by_tier.saved.xml
+
+base_sequences: &base
+  - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 30]]}
+  - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 20]]}
+  - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 10, HYD, 10]]}
+
+cases:
+  # ================================================================ single blocks: every rules toolbox block on its own
+  - {id: L01_offer_generic, prompt: "Add another offer block to the canvas.", loose: [{type: offer_generic}], rules_kept: true}
+  - {id: L02_activity, prompt: "Add an empty activity block.", loose: [{type: activity}], rules_kept: true}
+  - {id: L03_activity_criteria, prompt: "Add an activity filter block for Spend activities.",
+     loose: [{type: activity_criteria, attr: h_bit_type}], rules_kept: true}
+  - {id: L04_event, prompt: "Add an event block.", loose: [{type: event}], rules_kept: true}
+  - {id: L05_or, prompt: "Add an OR block.", loose: [{type: or}], rules_kept: true}
+  - {id: L06_rule, prompt: "Add an empty rule block named Bonus.", loose: [{type: rule, fields: {IDENTIFIER: Bonus}}], rules_kept: true}
+  - {id: L07_rule_line, prompt: "Add a rule line block.", loose: [{type: rule_line}], rules_kept: true}
+  - {id: L08_payment_rule, prompt: "Add a payment rule block.", loose: [{type: payment_rule}], rules_kept: true}
+  - {id: L09_condition, prompt: "Add a condition block for Gold members.",
+     loose: [{type: if_generic_adaptive, attr: tier_class, fields: {value: GLDGLW}}], rules_kept: true}
+  - {id: L10_payment_condition, prompt: "Add a payment attribute condition block.", loose: [{type: if_payment_attribute}], rules_kept: true}
+  - {id: L11_action, prompt: "Add an action block that gives 10 points.", loose: [{type: action, fields: {action_type: give_points}}], rules_kept: true}
+  - {id: L12_third_party_action, prompt: "Add a third-party action block.", loose: [{type: action_third_party}], rules_kept: true}
+  - {id: L13_static_value, prompt: "Add a static value block with 100.", loose: [{type: static_value, fields: {value: "100"}}], rules_kept: true}
+  - {id: L14_static_string, prompt: "Add a static string block with the text promo.",
+     loose: [{type: static_string_value, attr: promo}], rules_kept: true}
+  - {id: L15_arithmetic, prompt: "Add an arithmetic block that multiplies the spend amount by 2.",
+     loose: [{type: arithmetic_generic}], rules_kept: true}
+  - {id: L16_date_arithmetic, prompt: "Add a date arithmetic block.", loose: [{type: arithmetic_date}], rules_kept: true}
+  - {id: L17_current_date, prompt: "Add a current date block.", loose: [{type: current_date_block}], rules_kept: true}
+  - {id: L18_static_date, prompt: "Add a static date block for 25 December 2026.", loose: [{type: static_date}], rules_kept: true}
+  - {id: L19_static_date_time, prompt: "Add a static date and time block for 25 December 2026 at 10:00.",
+     loose: [{type: static_date_time}], rules_kept: true}
+  - {id: L20_currency_converter, prompt: "Add a currency converter block.", loose: [{type: currency_converter}], rules_kept: true}
+  - {id: L21_activity_attribute, prompt: "Add an activity attribute block for the transaction amount.",
+     loose: [{type: activity_attribute, attr: h_bit_amount}], rules_kept: true}
+  - {id: L22_member_attribute, prompt: "Add a member attribute block for the member's age.",
+     loose: [{type: member_attribute, attr: age}], rules_kept: true}
+  - {id: L23_product_attribute, prompt: "Add a product attribute block for the brand name.",
+     loose: [{type: product_attribute, attr: brand_name}], rules_kept: true}
+  - {id: L24_payment_attribute, prompt: "Add a payment attribute block.", loose: [{type: payment_attribute}], rules_kept: true}
+  - {id: L25_airport_attribute, prompt: "Add an airport attribute block.", loose: [{type: airport_attribute}], rules_kept: true}
+  - {id: L26_two_blocks, prompt: "Add a static value block with 50 and a static string block with the text bonus.",
+     loose: [{type: static_value, fields: {value: "50"}}, {type: static_string_value, attr: bonus}], rules_kept: true}
+
+  # ================================================================ attributes named in the prompt
+  - {id: A01_activity_attribute_pos, prompt: "Add an activity attribute block for the POS id.",
+     loose: [{type: activity_attribute, attr: h_pos_id}], rules_kept: true}
+  - {id: A02_activity_attribute_pnr, prompt: "Add an activity attribute block for the PNR number.",
+     loose: [{type: activity_attribute, attr: h_pnr_number}], rules_kept: true}
+  # h_number_of_pax exists on devintbf2 but is disabled and not available for rules: the screen does not offer it,
+  # so the answer says so (no XML) instead of placing a block the screen would drop
+  - {id: A08_attribute_not_for_rules, prompt: "Add an activity attribute block for the number of passengers.",
+     status: ["http 422", needs_input], refused_mentions: [passenger]}
+  - {id: A03_member_attribute_dob, prompt: "Add a member attribute block for the date of birth.",
+     loose: [{type: member_attribute, attr: date_of_birth}], rules_kept: true}
+  - {id: A04_member_attribute_gender, prompt: "Add a member attribute block for gender.",
+     loose: [{type: member_attribute, attr: gender}], rules_kept: true}
+  - {id: A05_product_attribute_department, prompt: "Add a product attribute block for the department name.",
+     loose: [{type: product_attribute, attr: department_name}], rules_kept: true}
+  - id: A06_condition_on_named_attribute
+    prompt: "Keep the current rules, and make the Gold rule apply only when the transaction amount is at least $20."
+    has: [{type: if_generic_adaptive, attr: h_bit_amount}]
+    sequences:
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, null], ["2026-10-20T12:00:00", 25, HYD, 75]]}
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 20]]}
+  - id: A07_points_from_named_attribute
+    prompt: "Change the Others rule so it gives points equal to the transaction amount times 4 instead of times 1."
+    has: [{type: activity_attribute, attr: h_bit_amount}]
+    sequences:
+      - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 10, HYD, 40]]}
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 30]]}
+
+  # ================================================================ edits of the saved rules
+  - id: E01_change_value
+    prompt: "Change the Silver rule to 5 points per $1. Keep everything else as it is."
+    sequences:
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 30]]}
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 50]]}
+      - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 10, HYD, 10]]}
+  - id: E02_add_rule
+    prompt: "Keep the current rules and add one more: Diamond members earn 4 points per $1 instead of 1."
+    sequences:
+      - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 10, HYD, 40]]}
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 20]]}
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 30]]}
+  - id: E03_remove_rule
+    prompt: "Remove the Silver rule and leave the other rules exactly as they are."
+    saved_kept: false
+    sequences:
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, null]]}
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 30]]}
+      - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 10, HYD, 10]]}
+  - id: E04_add_action
+    prompt: "In the Gold rule, also give a bonus of 50 points on every spend, on top of the 3 points per $1."
+    sequences:
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 80]]}
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 20]]}
+  - id: E05_replace_formula
+    prompt: "Change the Gold rule to give a flat 100 points per spend instead of points per $1."
+    saved_kept: false
+    sequences:
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 100], ["2026-10-20T12:00:00", 25, HYD, 100]]}
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 20]]}
+  - id: E06_add_store_condition
+    prompt: "Keep the rules, but only reward spends at the Hyderabad store."
+    sequences:
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 30], ["2026-10-20T12:00:00", 10, "3263", null]]}
+      - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 10, "3263", null]]}
+  - id: E07_or_group
+    prompt: "Make the Gold rule apply to Gold or Diamond members, and keep Diamond out of the Others rule."
+    sequences:
+      - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 10, HYD, 30]]}
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 30]]}
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 20]]}
+  - id: E08_several_changes
+    prompt: "Change Silver to 4 points per $1, remove the Others rule, and add a rule giving Diamond members 6 points per $1."
+    saved_kept: false
+    sequences:
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 40]]}
+      - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 10, HYD, 60]]}
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 30]]}
+  - id: E09_edit_and_single_block
+    prompt: "Change the Gold rule to 4 points per $1, and also add a static string block with the text promo on its own."
+    loose: [{type: static_string_value, attr: promo}]
+    sequences:
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, 40]]}
+      - {member: {tier_class: SLVR}, bits: [["2026-10-20T12:00:00", 10, HYD, 20]]}
+  - id: E10_min_spend_filter
+    prompt: "Keep the rules, but no points at all for spends under $20."
+    sequences:
+      - {member: {tier_class: GLDGLW}, bits: [["2026-10-20T12:00:00", 10, HYD, null], ["2026-10-20T12:00:00", 25, HYD, 75]]}
+      - {member: {tier_class: DIA}, bits: [["2026-10-20T12:00:00", 25, HYD, 25]]}
+
+  # ================================================================ blocks that cannot attach where asked: left loose
+  - {id: I01_action_in_filter, prompt: "Keep the current rules and add a give points action of 10 points inside the On Activity filter.",
+     status: [draft, needs_input], loose: [{type: action}], rules_kept: true}
+  - {id: I02_value_in_action_list, prompt: "Put a static value block with 100 directly into the Gold rule's list of actions, after its existing action.",
+     status: [draft, needs_input], loose: [{type: static_value, fields: {value: "100"}}], rules_kept: true}
+  - {id: I03_rule_in_conditions, prompt: "Put a new rule block named Extra inside the Gold rule's conditions.",
+     status: [draft, needs_input], loose: [{type: rule}], rules_kept: true}
+  - {id: I04_member_attribute_as_action, prompt: "Put a member attribute block for age as an action of the Silver rule.",
+     status: [draft, needs_input], loose: [{type: member_attribute, attr: age}], rules_kept: true}
+  - {id: I05_event_in_rules, prompt: "Put an event block inside the activity's rules, next to the Gold rule.",
+     status: [draft, needs_input], loose: [{type: event}], rules_kept: true}
+  - {id: I06_condition_in_formula, prompt: "Use a condition block for Gold members as the points formula of the Silver rule.",
+     status: [draft, needs_input], loose: [{type: if_generic_adaptive}], rules_kept: true}
+  - {id: I07_string_in_conditions, prompt: "Put a static string block with the text vip into the Others rule's conditions.",
+     status: [draft, needs_input], loose: [{type: static_string_value}], rules_kept: true}

@@ -1,0 +1,49 @@
+# devintbf2 profile for live QA (one planning offer, many rule sets). Codes picked 2026-10-25 from the catalog dump
+# (node harness/ui/hosted/tenant-catalog.mjs --tenant=devintbf2; tools/qa/tenant_cases.py devintbf2 --suggest).
+# Program 1 "SHARE" (AED, Asia/Dubai), sponsor 1 "MAF".
+tenant: devintbf2
+program: 1
+sponsor: 1
+account: 9                          # "PointsAccrual": Redemption, no pending points (SHARE Points, id 1, holds points pending)
+tag: BASE
+currency: AED
+tier_attribute: tier_class          # LOOKUP TIER_CLASS, available for rules
+codes:
+  HQ: HYD                           # Hyderabad (OFFLINE)
+  VJD: "3263"                       # Kolkata (OFFLINE)
+  WEB: AUTO5                        # "Automation Online Location" (ONLINE); 5 ONLINE locations exist, so prompts name it
+  Chennai: "678934"                 # "One west" (OFFLINE), never named
+  GOLD: GLDGLW                      # Gold
+  Silver: SLVR                      # Silver
+  Basic: DIA                        # Diamond: no Basic class here; it plays "everyone else" (neither Gold nor Silver)
+  "37": "13829"                     # Ski Dubai Free Entry Pass
+  "64": "13828"                     # VOX Cinemas Complimentary Movie Ticket
+phrases:
+  HQ: ["Hyderabad store", "Hyderabad"]
+  VJD: ["Kolkata store", "Kolkata"]
+  WEB: ["Automation Online Location store"]
+  GOLD: ["Gold"]
+  Silver: ["Silver"]
+  "37": ["free Ski Dubai entry pass"]
+  "64": ["complimentary VOX Cinemas movie ticket"]
+# devintbf2's own cases (2026-10-29), in its words and role codes: each names an activity type by meaning, with no word
+# of its label or code, so the model finds it with lookup_values when the activity types are not in the prompt
+# (OFFER_AUTHOR_INLINE_ACTIVITY_TYPES below 139). bit_type: the type the rules must require; a BIT row's 5th item is
+# a BIT of another type, which earns nothing.
+cases:
+  - id: V01_trips_by_meaning
+    bit_type: Travel                # "Travel"
+    prompt: "Members earn 2 points per AED 1 on every trip they book with us."
+    sequences:
+      - bits: [["2026-10-20T12:00:00", 100, HQ, 200], ["2026-10-20T12:00:00", 25.5, WEB, 51], ["2026-10-20T12:00:00", 100, HQ, 0, SPEND]]
+  - id: V02_utility_invoice_by_meaning
+    bit_type: BILL_PAYMENT          # "Bill Payment"
+    prompt: "Every utility invoice a member settles earns 50 bonus points."
+    sequences:
+      - bits: [["2026-10-20T12:00:00", 80, HQ, 50], ["2026-10-20T12:00:00", 300, VJD, 50], ["2026-10-20T12:00:00", 80, HQ, 0, PAYMENT],
+               ["2026-10-20T12:00:00", 80, HQ, 0, SPEND]]
+  - id: V03_recommend_a_friend_by_meaning
+    bit_type: MEMBER_REFERRAL       # "Member Referral"
+    prompt: "Members earn 500 points for each friend they recommend to the programme."
+    sequences:
+      - bits: [["2026-10-20T12:00:00", 10, HQ, 500], ["2026-10-20T12:00:00", 10, HQ, 500], ["2026-10-20T12:00:00", 10, HQ, 0, ENROL]]

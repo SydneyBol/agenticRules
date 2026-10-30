@@ -1,0 +1,31 @@
+# Whole-offer prompts typed on Offer Main: each is split into metadata (Offer Main), segment (Select Members) and rules
+# (Offer Rules). expect: which parts must be non-empty, metadata values, and text the segment / rules part must
+# (not) mention. Run live: tests/live/test_offer_flow.py (devintam1 catalog).
+cases:
+  - id: F01_segment_metadata_rules
+    prompt: "Diwali Gold Rush: Gold tier class members get 3x points on every spend at the Chennai HQ store from 2026-11-01 to 2026-11-15, up to 5 times per member."
+    expect: {segment: true, metadata: {start_date: "2026-11-01", end_date: "2026-11-15", max_usage_per_user: 5},
+             rules_mentions: ["3x", "HQ"], rules_not: ["Gold", "2026-11", "5 times"]}
+  - id: F02_no_segment
+    prompt: "Every member earns 2 points per $1 on online store spends during December 2026."
+    expect: {segment: false, metadata: {start_date: "2026-12-01", end_date: "2026-12-31"}, rules_mentions: ["online"]}
+  - id: F03_rate_by_tier_stays_in_rules
+    prompt: "Gold tier class members earn 3 points per $1, Silver 2 points per $1, everyone else 1 point per $1, on all spends."
+    expect: {segment: false, rules_mentions: ["Gold", "Silver"]}
+  - id: F04_or_with_activity_stays_in_rules
+    prompt: "100 bonus points for Gold members spending at the Chennai HQ store, or for anyone spending over $500."
+    expect: {segment: false, rules_mentions: ["Gold", "500"]}
+  - id: F05_profile_segment
+    prompt: "Members aged over 30 who are female get a complimentary voucher on their first spend over $100 this offer period. Limit one per member."
+    # devintam1's gender lookup has no values in the catalog, so a question about the code is the right answer
+    expect: {segment: true, segment_status: [draft, needs_input], metadata: {max_usage_per_user: 1}, segment_mentions: ["30"],
+             rules_not: ["female", "aged"]}
+  - id: F06_tier_programme
+    prompt: "Members in the Bronze tier of Elite Levels earn 50 bonus points on every Vijayawada store spend."
+    expect: {segment: true, segment_mentions: ["Bronze"], rules_mentions: ["Vijayawada"]}
+  - id: F07_total_budget
+    prompt: "First 1000 spends over $50 across all members each day earn 200 bonus points; each member can earn it once a week."
+    expect: {segment: false, metadata: {num_of_clients: 1000, offer_frequency_type: day, max_usage_per_user: 1, frequency: week}}
+  - id: F08_relative_date_asks
+    prompt: "Gold members get double points this weekend on all spends."
+    expect: {segment: true, question: true}

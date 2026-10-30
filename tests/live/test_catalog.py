@@ -1,0 +1,79 @@
+"""Live: every prompt case in the catalog (tests/cases/*.yaml + spike scenarios) through Claude on Bedrock and the
+full pipeline, with the fixture catalog. Checks status, flags, required blocks/modes, toolbox-only blocks, nesting.
+
+Run:  AWS_PROFILE=MLCoreDeveloperAccess-384853870836 AWS_REGION=us-west-2 .venv/bin/python -m pytest -m live tests/live/test_catalog.py
+Writes results/live/catalog.json and results/live/catalog/<id>.xml (input to the dev workspace's qa_tests/test_catalog.py).
+"""
+
+import collections
+import json
+import os
+from concurrent.futures import ThreadPoolExecutor
+
+import pytest
+
+from offer_author.ai.agent import generate
+from offer_author.ai.model import make_llm
+from offer_author.api.pulsar import ascii_xml
+from tests.paths import LIVE
+from tests.support import cases
+
+pytestmark = pytest.mark.live
+PROMPT_CASES = [c for c in cases.load() if c.get("prompt")]
+
+
+@pytest.fixture(scope="module")
+def results(fixture_catalog):
+    llm = make_llm()
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futs = {c["id"]: pool.submit(generate, c["prompt"], fixture_catalog, llm, offer_id=1001) for c in PROMPT_CASES}
+        res = {k: f.result() for k, f in futs.items()}
+    out = os.path.join(LIVE, "catalog")
+    os.makedirs(out, exist_ok=True)
+    for f in os.listdir(out):
+        os.remove(os.path.join(out, f))
+    for k, r in res.items():
+        if (r.get("rules") or {}).get("xml"):
+            open(os.path.join(out, k + ".xml"), "w").write(ascii_xml(r["rules"]["xml"]))
+    json.dump(res, open(os.path.join(LIVE, "catalog.json"), "w"), indent=1)
+    return res
+
+
+@pytest.mark.parametrize("case", PROMPT_CASES, ids=[c["id"] for c in PROMPT_CASES])
+def test_case(results, case):
+    v, why = cases.verdict(case, results[case["id"]])
+    if v == "FLAGGED":
+        pytest.xfail(why)
+    assert v == "PASS", why
+
+
+def test_summary(results):
+    """Prints the per-group tally, latency, and which toolbox blocks the live outputs reached."""
+    tally = collections.defaultdict(collections.Counter)
+    seen, lat, rows = set(), [], []
+    for c in PROMPT_CASES:
+        r = results[c["id"]]
+        v, why = cases.verdict(c, r)
+        tally[c["group"]][v] += 1
+        xml = (r.get("rules") or {}).get("xml") or ""
+        seen |= {f[6:] for f in cases.features(xml) if f.startswith("block:")}
+        d = r.get("diagnostics") or {}
+        lat.append(d.get("latency_s") or 0)
+        rows.append(
+            {
+                "id": c["id"],
+                "group": c["group"],
+                "verdict": v,
+                "why": why,
+                "status": r.get("status"),
+                "latency_s": d.get("latency_s"),
+                "repairs": d.get("repairs"),
+            }
+        )
+    json.dump(rows, open(os.path.join(LIVE, "catalog_verdicts.json"), "w"), indent=1)
+    for g, t in tally.items():
+        print(f"{g:14s} PASS {t['PASS']:3d}  FLAGGED {t['FLAGGED']:3d}  FAIL {t['FAIL']:3d}")
+    lat = sorted(x for x in lat if x)
+    print(f"latency p50 {lat[len(lat) // 2]}s  p90 {lat[int(len(lat) * 0.9)]}s  max {lat[-1]}s")
+    print("toolbox blocks reached:", len(seen & cases.TOOLBOX), "of", len(cases.TOOLBOX), sorted(seen & cases.TOOLBOX))
+    print("not reached:", sorted(cases.TOOLBOX - seen))

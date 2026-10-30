@@ -1,18 +1,30 @@
 """What the model reads: the system prompt and its context, all generated or derived, none of it rule text.
 
   context/block_reference*.md  both toolboxes, generated from the gravty-ui source (tools/build/block_reference.py)
-  context/kt.md                how the engine executes offers and blocks (tools/build/kt_prompt.py; DRL scrubbed)
-  core/data/blueprints, segments  the product's saved offers and segments, shown as block selections
-  the tenant catalog           catalog.prompt_text()
-The compiled rules (DRL) are private: never part of anything here.
+  context/kt.md                how offers and blocks run in the engine, as a manager knows it (written by hand: no
+                               rule code, backend or UI source; tests/unit/test_agent.py guards it)
+  context/conventions.md       usual readings of loyalty terms (spend, Nx, over / at least, weekdays)
+  the tenant catalog           catalog_text()
+  earlier offers of the tenant core.tenant.history, at most two like the request, in the request message as reference
+No example offers: the model works from this knowledge, so a new block or pattern needs no example written for it.
+No compiled rules (DRL) exist in this service.
 """
-import glob
+
+from __future__ import annotations
+
 import json
 import os
+from pathlib import Path
+from textwrap import indent
+from typing import TYPE_CHECKING, Any
 
-from ..core.counters import normalize
-from ..core.session import DATA
-from ..core.tree import compact, selections, share
+from ..core.tenant.catalog import INLINE_ACTIVITY_TYPES, INLINE_VALUES, OBJECTS
+from ..core.tenant.existing_counters import normalize
+from ..core.vocabulary import ACTIVITY_TYPE
+
+if TYPE_CHECKING:
+    from ..core.tenant.catalog import Catalog
+    from ..core.tenant.history import PastOffer
 
 CONTEXT = os.path.join(os.path.dirname(__file__), "context")
 
@@ -46,46 +58,54 @@ the names the block reference lists:
 - counters: declare once, beside the tree, every counter the blocks refer to, offer (MA_O) and activity (MA_A) alike:
   {"name", "data_type" NUMBER|TEXT|DATE|BOOLEAN, "counter_type" REGULAR|VECTOR, "target_type"?, "namespace"? (VECTOR:
   what it counts per, e.g. h_location), "level" MA_O|MA_A}. The rules screen creates them on upload.
-You never write XML or mutation attributes: the tools derive them from your fields, picked codes and counters as the
-UI does, and the stock screen compiles them into the rules the engine runs.
+You never write the canvas file yourself: the tools write it from your fields, picked codes and counters as the
+screen does; the manager uploads it in the stock screen, which makes it into the offer the engine runs.
 
-Reference below: the block reference of both canvases (generated from the UI source: inputs, connection checks,
-fields, the dropdown options the UI itself defines, shapes saved blueprints use), how the engine executes offers and
-blocks (KT), the product's seeded blueprints and saved segments (as block trees) and the tenant catalog. A field marked
-"(tenant catalog)" is filled from the tenant's data: its codes are the ones in the tenant catalog block, nowhere else.
+Reference below: the blocks of both canvases (inputs, connection checks, fields, the screen's dropdown options,
+shapes saved offers use), how offers and blocks run in the engine, the usual readings of loyalty terms and the tenant
+catalog. A field marked "(tenant catalog)" is filled from the tenant's data: its codes are the ones in the tenant \
+catalog block, nowhere else.
 
 Work like this:
 1. set_offer_main first when Offer Main is part of the job (it also records the segment and rules prompts the
    screens show, in the manager's own words).
 2. Codes: use only codes from the tenant catalog. For values not listed, call lookup_values with the manager's words
    (one phrase per call; several calls per turn are fine) and use only codes it returns.
-3. compile each canvas you build. It runs the stock screen: fix every problem it reports (a dropped or changed field
-   means the screen did not accept that value or shape). validate is a faster offline check of the same tree.
+3. compose each canvas you build: the tools write it and check that every block fits where it is (the block
+   reference), its values and codes (the tenant catalog) and its counters. Fix every problem it reports.
    To fix a tree you already sent, send only edits by block id (the ids the problems name) instead of the whole tree.
-4. simulate with transactions that exercise every rule: qualifying and non-qualifying ones, boundaries, repeats for
-   anything that counts across transactions, BITs outside the offer dates, members in and out of the segment, and
-   the expected outcome of each. This is how you confirm each rule does what was asked. If the engine disagrees,
-   decide whether the blocks or your expectation is wrong, fix, compile and simulate again.
-5. Give the finish fields (readback, assumptions, blocking_questions, unsupported, segment name and description)
-   with that simulate. When every canvas's last compile is clean and every BIT's expect matches, that ends the run.
-   Call finish only to end without such a simulate (e.g. when you can only ask or report something unsupported).
-Tools in one turn run in call order and each sees what the previous one did. Once you know the blocks and the
-transactions that test them, send compile and simulate (with the finish fields) in that same turn: every turn costs
-the manager waiting time. If the compile had problems or the engine disagreed, the run goes on: fix and send them
-again.
+4. Before you compose, check the rules against how the engine runs them (the knowledge below): for each kind of
+   transaction the description implies, including boundaries and repeats across transactions, the rules give what
+   was asked, and every counter is read and updated where the knowledge says it is seen.
+5. finish with the readback, assumptions, blocking_questions, unsupported, segment name and description. It ends the
+   run when every canvas's last compose is clean.
+Tools in one turn run in call order and each sees what the previous one did. Send compose and finish in the same
+turn: a finish after a compose with problems is sent back with them, and you fix them in the next turn. Every turn
+costs the manager waiting time.
+
+Saved rules and single blocks:
+- When the message shows the rules saved on this offer, a request to change, add to, keep or remove part of them is
+  answered with edits on that canvas, by its block ids (insert_after / insert_before / append for new blocks): every
+  block no edit names stays exactly as saved. Never re-send the saved blocks; a whole tree (blocks) replaces them,
+  which is right only when the description is a whole offer of its own.
+- A block the manager asks for by itself ("a static value block with 100", "an empty rule block", "an offer block")
+  goes in `loose`, whatever its type, even where it could plug in and even when the saved rules already hold one like
+  it: it is placed on the canvas, not attached and disabled, and the rules stay as they are. The block's own settings
+  (its attribute, operator or value) do not place it; it is attached only when the manager names where it goes in the
+  rules or asks for a change to what the offer does. Such a change that the saved rules already make: finish saying
+  so, without a compose.
+- Attach a block only where it can plug in (the block reference lists each input's check and each block's
+  connections). Where it cannot, the tools leave it loose and the compose result says why: tell the manager in the
+  readback, never force it into the rules.
 
 Offer semantics:
 - Every restriction the manager states must be built in the part the engine evaluates it in. A rules condition every
   rule needs belongs once in the On Activity filter (activity_criteria), not repeated per rule.
-- "spend", "spends", "spending" mean the activity type labelled exactly "Spend"; use another type only when the
-  manager names it. No activity named: use Spend and record that as an assumption.
-- State that must survive from one transaction to the next (counts, totals, "once", caps, unlocks, distinct values)
-  lives in offer counters (MA_O); MA_A values do not persist across transactions.
+- Words the description leaves open read as the usual readings say (spend, Nx points, over / at least, days of the
+  week, state across transactions).
 - Dates: only dates the manager stated (YYYY-MM-DD; the end date is the last day included); none stated is normal
   (the offer starts when created and has no end). Ask only for relative dates ("this weekend").
-- "Nx points" means points = measure x N in total; record that as an assumption. "over X" is strict; "at least X" is >=.
-- DAY_OF_WEEK numbers: Mon=1 ... Sun=7. HOUR_OF_DAY is 0-23.
-- blueprint_variable blocks in the blueprints are template placeholders: never emit them; put concrete values there.
+- blueprint_variable blocks are template placeholders: never emit them; put concrete values there.
 - Points go to the loyalty account and reward tag the catalog names.
 - When the message says a part is already handled elsewhere, build only what you are asked to build.
 - Every assumption, blocking question and unsupported item names its part (offer_main, segment, rules): the part it
@@ -96,80 +116,211 @@ Offer semantics:
   codes (then ask even if the draft uses all of them). Still build everything else.
 - Something that cannot be expressed on a single member's own data and transactions goes in `unsupported` with an
   alternative.
-- Always end with a confirming simulate or finish. Do not answer in prose.
+- Always end with finish. Do not answer in prose.
+"""
+
+HISTORY_RULE = """
+Earlier offers, when the message shows them, are what this tenant built before for similar descriptions. They are
+not part of the request. Use them only to choose among things the description leaves open: which attribute, counter
+or tag this tenant uses for a concept. Never take a value from them (amount, multiplier, store, tier, date, limit,
+privilege) that the description does not state. When the description and an earlier offer differ, the description
+wins. Anything you took from an earlier offer goes in assumptions, naming the offer. An offer the manager refers to
+by name ("like our Ramadan offer") is part of the request: follow it where the description does not say otherwise. A
+name that appears only as ordinary words of the description ("in the birthday month") is not a reference.
 """
 
 
-def examples(folder, title):
-    """Saved XML as the selections the model writes; identical trees shown once. Never their compiled rules."""
-    out, seen = [], set()
-    for f in sorted(glob.glob(os.path.join(DATA, folder, "*.xml"))):
-        tree, counters = selections(open(f).read())
-        tree, defs = share(compact(tree, counters))
-        text = json.dumps(tree, separators=(",", ":")) + (f"\nDefs: {json.dumps(defs, separators=(',', ':'))}" if defs else "")
-        if text in seen:
-            continue
-        seen.add(text)
-        out.append(f"### {os.path.basename(f)[:-4].replace('_', ' ')}\nBlocks:\n{text}\n" +
-                   (f"Counters: {json.dumps(counters, separators=(',', ':'))}\n" if counters else ""))
-    return f"# {title}\n\n" + "\n".join(out)
+def system_text(history: bool = False) -> str:
+    """SYSTEM as sent: with the rule for earlier offers when those may be shown."""
+    return SYSTEM + HISTORY_RULE if history else SYSTEM
 
 
-def static_prompt():
-    """The reference text every run shares (~20 ms to read and render): read per run, the same bytes each time, so
-    it stays a prompt-cache hit."""
-    read = lambda n: open(os.path.join(CONTEXT, n)).read()  # noqa: E731
-    return "\n\n".join([read("block_reference.md"), read("block_reference_segment.md"), read("kt.md"), read("member_dates.md"),
-                        examples("blueprints", "Seeded blueprints (rules canvas)"),
-                        examples("segments", "Saved member segments (segment canvas)")])
+def static_prompt() -> str:
+    """The knowledge every run shares: block reference, how blocks run, member dates, usual readings.
+
+    Read per run (~5 ms), the same bytes each time, so it stays a prompt-cache hit.
+    """
+    return "\n\n".join(
+        Path(CONTEXT, n).read_text()
+        for n in ("block_reference.md", "block_reference_segment.md", "kt.md", "member_dates.md", "conventions.md")
+    )
 
 
+def system_blocks(
+    catalog: Catalog,
+    account_id: Any = None,
+    ttl: str = "1h",
+    history: bool = False,
+    inline_types: int = INLINE_ACTIVITY_TYPES,
+) -> list[dict[str, Any]]:
+    """The system prompt: the instructions, the knowledge every tenant shares and this tenant's catalog, each cached.
 
-def system_blocks(catalog, account_id=None):
-    return [{"type": "text", "text": SYSTEM},
-            {"type": "text", "text": static_prompt(), "cache_control": {"type": "ephemeral"}},
-            {"type": "text", "text": "Tenant catalog:\n" + catalog.prompt_text(account_id) + _account_line(catalog, account_id),
-             "cache_control": {"type": "ephemeral"}}]
+    Args:
+        catalog: The tenant catalog.
+        account_id: The loyalty account points go to (default: the tenant's).
+        ttl: The cache lifetime, "1h" or "5m" (the conversation's own sliding cache point is 5 minutes, after these).
+        history: Earlier offers may be shown in the request.
+        inline_types: Activity types are listed up to this many; more are looked up.
+
+    Returns:
+        The system content blocks.
+    """
+    mark = {"type": "ephemeral", **({"ttl": ttl} if ttl != "5m" else {})}
+    return [
+        {"type": "text", "text": system_text(history)},
+        {"type": "text", "text": static_prompt(), "cache_control": mark},
+        {
+            "type": "text",
+            "text": "Tenant catalog:\n"
+            + catalog_text(catalog, account_id, inline_types)
+            + _account_line(catalog, account_id),
+            "cache_control": mark,
+        },
+    ]
 
 
-
-def _account_line(catalog, account_id):
+def _account_line(catalog: Catalog, account_id: Any) -> str:
+    """The account's reward tag for points (or its tags, when none is configured)."""
     acc = catalog.account(account_id)
-    tags = [t["code"] for t in (acc or {}).get("tags") or []]
-    tag = catalog.reward_tag(account_id)
-    return f"\nReward tag for points: {tag}" + (f" (tags on this account: {', '.join(tags)})" if tags else "") if acc else ""
+    if not acc:
+        return ""
+    tags, tag = [t["code"] for t in acc.get("tags") or []], catalog.reward_tag(account_id)
+    if tag is None:
+        return (
+            f"\nReward tags on this account: {', '.join(tags) or 'none'} "
+            "(no configured reward tag: give_points needs REWARD_TAGS)"
+        )
+    return f"\nReward tag for points: {tag}" + (f" (tags on this account: {', '.join(tags)})" if tags else "")
 
 
+def intro(
+    prompt: str,
+    parts: tuple[str, ...] | list[str],
+    context: str | None = None,
+    existing: dict[str, Any] | None = None,
+    current: dict[str, Any] | None = None,
+    earlier: dict[str, Any] | None = None,
+) -> str:
+    """The run's first message: the manager's description, what to build, and what the offer already has.
 
-def intro(prompt, parts, context=None, existing=None):
-    names = {"offer_main": "Offer Main (set_offer_main)", "segment": "the member segment (segment canvas), if the "
-             "offer is limited to certain members", "rules": "the rules (rules canvas)"}
+    Args:
+        prompt: The manager's description.
+        parts: The parts to build (offer_main, segment, rules).
+        context: What is handled outside the parts built (rules_context).
+        existing: The offer's existing counters ({counters}).
+        current: The rules saved on the offer ({root, loose, counters}).
+        earlier: The tenant's earlier offers ({named, similar}, History.earlier).
+
+    Returns:
+        The message text.
+    """
+    names = {
+        "offer_main": "Offer Main (set_offer_main)",
+        "segment": "the member segment (segment canvas), if the offer is limited to certain members",
+        "rules": "the rules (rules canvas)",
+    }
     text = prompt + "\n\nBuild: " + "; ".join(names[p] for p in parts) + "."
     if tuple(parts) == ("rules",) and not context:
-        text += (" Nothing else of this offer exists for this job: no Offer Main settings and no member segment. Build"
-                 " every restriction the description states in the rules: a member limit (\"for Gold members\") as a"
-                 " member condition in the On Activity filter, a per-member limit (\"once\", \"up to 3 times\") with an"
-                 " offer counter. Never build dates into a canvas; name stated dates and per-member limits in an"
-                 " offer_main assumption as well, so the manager can also set them on Offer Main.")
+        text += (
+            " Nothing else of this offer exists for this job: no Offer Main settings and no member segment. Build"
+            ' every restriction the description states in the rules: a member limit ("for Gold members") as a'
+            ' member condition in the On Activity filter, a per-member limit ("once", "up to 3 times") with an'
+            " offer counter. Never build dates into a canvas; name stated dates and per-member limits in an"
+            " offer_main assumption as well, so the manager can also set them on Offer Main."
+        )
     else:
         if "offer_main" not in parts:
-            text += (" Offer Main is set on its own screen: never build its dates or limits into a canvas; when the"
-                     " description states some that are not listed below, name them in an offer_main assumption.")
+            text += (
+                " Offer Main is set on its own screen: never build its dates or limits into a canvas; when the"
+                " description states some that are not listed below, name them in an offer_main assumption."
+            )
         if "segment" not in parts:
-            text += (" No segment is built in this job: a member limit the description states (\"for Gold members\") that"
-                     " is not listed below as already handled is built in the rules as a member condition, never dropped.")
+            text += (
+                ' No segment is built in this job: a member limit the description states ("for Gold members") that'
+                " is not listed below as already handled is built in the rules as a member condition, never dropped."
+            )
     if context:
         text += f"\n\n{context}"
+    if current:
+        text += (
+            "\n\nRules saved on this offer now (rules canvas; block ids for edits):\n"
+            + _json(current["root"])
+            + ("\nLoose blocks already on the canvas: " + _json(current["loose"]) if current["loose"] else "")
+            + ("\nCounters these rules use: " + _json(current["counters"]) if current["counters"] else "")
+            + "\nIf the description changes, adds to, keeps or removes part of these rules, compose with edits (and "
+            "loose blocks) on this canvas. If it describes a whole offer of its own, compose a whole tree: it "
+            "replaces these rules."
+        )
     if existing and existing.get("counters"):
-        text += ("\n\nCounters already on this offer (reuse one only at its own level and type; a name is unique "
-                 "across levels): " + "; ".join(f"{c['name']} ({c['level']} {c['data_type']} {c['counter_type']}"
-                                                + (f" per {c['namespace']})" if c.get("namespace") else ")")
-                                                for c in normalize(existing["counters"])))
+        text += (
+            "\n\nCounters already on this offer (reuse one only at its own level and type; a name is unique "
+            "across levels): "
+            + "; ".join(
+                f"{c['name']} ({c['level']} {c['data_type']} {c['counter_type']}"
+                + (f" per {c['namespace']})" if c.get("namespace") else ")")
+                for c in normalize(existing["counters"])
+            )
+        )
+    if earlier and (earlier["named"] or earlier["similar"]):
+        text += "\n\n" + earlier_offers(earlier)
     return text
 
 
+SUBPROMPT_FORM = """Earlier offers show the manager's prompt and the offer's blocks in Pulsar's sub-prompt form,
+one line per block in canvas order: a label, then the block. "Filter_N, offer_criteria <object> <attribute> <operator>
+<value>" is a condition of the On Activity filter (activity_criteria). Lines labelled rule_N,
+rule_line_N or payment_rule_N belong to that rule: an "if" line is one of its conditions (if_generic_adaptive;
+"if_payment" is if_payment_attribute), the other lines are its actions: "give_points <loyalty account> <reward tag>
+<formula>", "give_privilege <privilege id> ... previlege_Validity <validity> <quantity>", "update_attribute <level>
+<attribute> <operator> <value>". A member attribute is "member <level> <attribute>": program_level_tracker is MA_P,
+offer_level_tracker an offer counter (MA_O), activity_level_tracker an activity counter (MA_A); a counter is quoted as
+"<data type> <name>". "activity_attribute->x" is the activity's attribute x; brackets are a formula. Rule names are not
+shown."""
 
-def rules_context(om, segment=None):
+
+def earlier_offers(earlier: dict[str, Any]) -> str:
+    """The tenant's earlier offers for this request, after the note on the sub-prompt form.
+
+    Each with its name, date, similarity, prompt and sub-prompt lines; named by the manager first (part of the
+    request), then the similar ones (reference only).
+    """
+
+    def record(i: int, score: float | None, e: PastOffer) -> str:
+        meta = ", ".join(
+            x for x in (e.launched and f"launched {e.launched}", score is not None and f"similarity {score:.2f}") if x
+        )
+        return (
+            f'{i}. "{e.name}"'
+            + (f" ({meta})" if meta else "")
+            + f"\n   Prompt: {e.text}\n   Sub-prompt:\n"
+            + indent(e.subprompt, "   ")
+        )
+
+    sections = (
+        (
+            (
+                "Earlier offers whose names appear in the description (part of the request if the manager refers to "
+                "that offer, where the description does not say otherwise):"
+            ),
+            [(None, e) for e in earlier["named"]],
+        ),
+        (
+            "Earlier offers of this tenant that look similar (reference only, not part of the request):",
+            earlier["similar"],
+        ),
+    )
+    return "\n\n".join(
+        [SUBPROMPT_FORM]
+        + [title + "\n" + "\n".join(record(i, *x) for i, x in enumerate(rows, 1)) for title, rows in sections if rows]
+    )
+
+
+def _json(value: Any) -> str:
+    """Compact JSON."""
+    return json.dumps(value, separators=(",", ":"))
+
+
+def rules_context(om: dict[str, Any], segment: dict[str, Any] | None = None) -> str:
     """Told to a rules-only run whose offer already has Offer Main (and maybe a segment): what is handled there."""
     settings = [f"{k}={om[k]}" for k in ("start_date", "end_date") if om.get(k)]
     if om.get("max_usage_per_user"):
@@ -177,6 +328,55 @@ def rules_context(om, segment=None):
     if om.get("num_of_clients"):
         settings.append(f"max {om['num_of_clients']} in total ({om.get('offer_frequency_type') or 'lifetime'})")
     who = (segment or {}).get("description") or om.get("segment_prompt") or "none, every member"
-    return ("Already handled outside the rules (do not build rules for these, do not repeat them as conditions):\n"
-            f"- Offer Main settings: {', '.join(settings) or 'none'}\n- Member segment (who qualifies): {who}")
+    return (
+        "Already handled outside the rules (do not build rules for these, do not repeat them as conditions):\n"
+        f"- Offer Main settings: {', '.join(settings) or 'none'}\n- Member segment (who qualifies): {who}"
+    )
 
+
+def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = INLINE_ACTIVITY_TYPES) -> str:
+    """The tenant catalog as the model reads it.
+
+    Attributes per object (code, label, type, short value lists), activity types, tiers, the loyalty account and the
+    privileges.
+    """
+    out = [
+        f"Tenant: {catalog.tenant}  sponsor: {catalog.sponsor_id}"
+        + (f"  today: {catalog.today}" if catalog.today else "")
+    ]
+    names = {
+        "activity": "ACTIVITY (transaction) attributes, l_* are line-item attributes",
+        "member": "MEMBER attributes",
+        "product": "PRODUCT attributes (use with line_item / collect_all)",
+    }
+    for obj in OBJECTS:
+        out.append(f"\n## {names[obj]}  (code | label | type [| values])")
+        for a in catalog.attributes.get(obj, {}).values():
+            line = f"{a.code} | {a.label} | {a.type}" + (" (payment)" if a.payment_level else "")
+            if a.values and (obj, a.code) != ("activity", ACTIVITY_TYPE):  # activity types are listed once, below
+                if len(a.values) <= INLINE_VALUES:
+                    line += " | " + ", ".join(f"{k}={v}" for k, v in a.values.items())
+                else:
+                    line += f" | {len(a.values)} values, not listed: find codes with lookup_values"
+            out.append(line)
+    if len(catalog.activity_types) <= inline_types:
+        out.append(
+            "\n## Activity types (h_bit_type values)\n"
+            + ", ".join(f"{k}={v}" for k, v in catalog.activity_types.items())
+        )
+    else:
+        out.append(
+            f"\n## Activity types (h_bit_type values): {len(catalog.activity_types)}, not listed: find codes with "
+            "lookup_values (activity, h_bit_type)"
+        )
+    if catalog.tiers:
+        out.append("\n## TIER PROGRAMME (MA_T: tier class | tiers the member can hold)")
+        out += [
+            f"{c} | " + ", ".join(k if k == v else f"{k}={v}" for k, v in t.items()) for c, t in catalog.tiers.items()
+        ]
+    acc = catalog.account(account_id)
+    if acc:
+        out.append(f'\n## Points are awarded to loyalty account {acc["id"]} "{acc["name"]}"')
+    out.append("\n## Privileges (privilege_id | name)")
+    out += [f"{pid} | {p['name']}" for pid, p in catalog.privileges.items()]
+    return "\n".join(out)

@@ -4,6 +4,9 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+/build/
 
 # harness: node dependencies, built engine (Chrome profiles live in the OS temp dir)
 harness/ui/node_modules/
@@ -12,11 +15,8 @@ harness/engine/target/
 # local env and IDE
 .env
 .env.*
-.idea/workspace.xml
-.idea/shelf/
+.idea/
 .DS_Store
-.idea/amazonq.xml
-.idea/awsToolkit.xml
 harness/ui/.claude/
 
 # Tenant catalog dumps live outside the repo (README: "Outside this repo"); a leftover local copy is never tracked

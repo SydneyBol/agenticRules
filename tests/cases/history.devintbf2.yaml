@@ -1,0 +1,93 @@
+# Earlier offers as reference (tools/qa/check_history.py). Run with the history built by tools/qa/build_history.py.
+# Same format as hosted_combinations.devintbf2.yaml (BIT rows [date, amount, store, expect]), plus per case:
+#   kind: contamination | convention | named
+#   xml_has / xml_lacks: strings the rules XML must / must not hold
+# contamination: a near copy of an earlier offer with other values; the earlier offer is shown, its values must not leak.
+# convention: the description leaves a choice open; the tenant's earlier offers settle it (planted counter name).
+# named: the manager names an earlier offer; it is part of the request.
+cases:
+- id: X01_bands_cap_other_values
+  kind: contamination
+  prompt: Gold members spending $200 or more at the Hyderabad store earn 4x points, $100 to $199.99 earns 2x, with a maximum of 3000 bonus points per member.
+  sequences:
+  - member: {tier_class: GLDGLW}
+    bits:
+    - ['2026-10-20T12:00:00', 200, HYD, 800]
+    - ['2026-10-20T12:00:00', 100, HYD, 200]
+    - ['2026-10-20T12:00:00', 200, AUTO5, 0]
+    - ['2026-10-20T12:00:00', 600, HYD, 2000]
+    - ['2026-10-20T12:00:00', 200, HYD, 0]
+  - member: {tier_class: SLVR}
+    bits:
+    - ['2026-10-20T12:00:00', 200, HYD, 0]
+  - member: {tier_class: GLDGLW}
+    bits:
+    - ['2026-10-20T12:00:00', 199.99, HYD, 399.98]
+    - ['2026-10-20T12:00:00', 99.99, HYD, 0]
+- id: X02_tier_rates_other_values
+  kind: contamination
+  prompt: Gold members earn 5 points per $1, Silver members 4 points per $1, everyone else 2 points per $1.
+  sequences:
+  - member: {tier_class: GLDGLW}
+    bits: [['2026-10-20T12:00:00', 10, HYD, 50]]
+  - member: {tier_class: SLVR}
+    bits: [['2026-10-20T12:00:00', 10, HYD, 40]]
+  - member: {tier_class: DIA}
+    bits: [['2026-10-20T12:00:00', 10, HYD, 20]]
+- id: X03_nth_other_tier_and_privilege
+  kind: contamination
+  prompt: Every 2nd spend by Gold members earns a complimentary VOX Cinemas movie ticket.
+  sequences:
+  - member: {tier_class: GLDGLW}
+    bits:
+    - ['2026-10-20T12:00:00', 20, HYD, null]
+    - ['2026-10-21T12:00:00', 20, HYD, '13828']
+    - ['2026-10-22T12:00:00', 20, HYD, null]
+    - ['2026-10-23T12:00:00', 20, HYD, '13828']
+  - member: {tier_class: SLVR}
+    bits:
+    - ['2026-10-20T12:00:00', 20, HYD, null]
+    - ['2026-10-21T12:00:00', 20, HYD, null]
+- id: X04_base_earn_sunday_bonus
+  kind: contamination
+  prompt: 2 points per $1 on all spends, plus 50 bonus points on Sunday spends.
+  sequences:
+  - bits:
+    - ['2026-10-25T12:00:00', 30, HYD, 110]
+    - ['2026-10-24T12:00:00', 30, HYD, 60]
+    - ['2026-10-20T12:00:00', 30, HYD, 60]
+- id: N01_nth_spend_counter_name
+  kind: convention
+  prompt: Every 4th spend by Gold members earns a free Ski Dubai entry pass.
+  xml_has: ['"Visit Tally"']
+  sequences:
+  - member: {tier_class: GLDGLW}
+    bits:
+    - ['2026-10-20T12:00:00', 10, HYD, null]
+    - ['2026-10-21T12:00:00', 10, '3263', null]
+    - ['2026-10-22T12:00:00', 10, HYD, null]
+    - ['2026-10-23T12:00:00', 10, AUTO5, '13829']
+    - ['2026-10-24T12:00:00', 10, HYD, null]
+  - member: {tier_class: SLVR}
+    bits:
+    - ['2026-10-20T12:00:00', 10, HYD, null]
+    - ['2026-10-21T12:00:00', 10, HYD, null]
+    - ['2026-10-22T12:00:00', 10, HYD, null]
+    - ['2026-10-23T12:00:00', 10, HYD, null]
+- id: R01_named_weekend_bonus_changed
+  kind: named
+  prompt: Same as our Weekend Bonus offer, but 200 bonus points on weekend spends instead of 100.
+  sequences:
+  - bits:
+    - ['2026-10-24T12:00:00', 30, HYD, 230]
+    - ['2026-10-25T12:00:00', 30, HYD, 230]
+    - ['2026-10-20T12:00:00', 30, HYD, 30]
+- id: R02_named_store_swapped
+  kind: named
+  prompt: Like the Kolkata or Big Spend offer, but at the Hyderabad store instead of the Kolkata store.
+  sequences:
+  - bits:
+    - ['2026-10-20T12:00:00', 10, HYD, 100]
+    - ['2026-10-20T12:00:00', 501, '3263', 100]
+    - ['2026-10-20T12:00:00', 10, '3263', 0]
+    - ['2026-10-20T12:00:00', 500, AUTO5, 0]

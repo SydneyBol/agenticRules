@@ -1,27 +1,42 @@
 """The runtime settings, read once by an entry point (api/service.py, api/cli.py) and handed down to agent.run.
-Nothing else reads the environment: library code takes Settings() (the code defaults) unless it is given these."""
+
+Nothing else reads the environment: library code takes Settings() (the code defaults) unless it is given these.
+"""
+
+from __future__ import annotations
+
 import os
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, fields
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the repo
 
 
 @dataclass(frozen=True)
 class Settings:
-    max_turns: int = 14  # model turns per run
+    """What a run may be configured with; each field's comment says what it sets."""
+
+    max_turns: int = 20  # model turns per run (14 until 2026-10-29: sub-prompt runs needed 13-14)
     early_tools: bool = True  # start each tool call as soon as it has streamed
-    compile_url: str = "http://127.0.0.1:8078"  # the stock-screen compile service (harness/ui/compile)
-    engine_jar: str = os.path.join(ROOT, "harness", "engine", "target", "harness.jar")
-    engine_warm: bool = True  # one long-lived engine harness (--serve) instead of a JVM per run
     catalogs: str = ""  # tenant catalog dumps (<tenant>/bolapi/*.json), kept outside the repo; "" = none
+    cache_ttl: str = "1h"  # prompt-cache lifetime of the shared prefix (prompt, tenant catalog): "1h" or "5m"
+    similar_offers: int = 2  # earlier offers of the tenant shown as reference, at most 2 (0 = off; needs history)
+    history: str = ""  # earlier offers per tenant (<tenant>/offers.jsonl), kept outside the repo; "" = none
+    embed_model: str = "cohere.embed-multilingual-v3"  # Bedrock embeddings for matching a request to earlier offers
+    value_search: bool = (
+        True  # lookup_values finds values by meaning too (core/tenant/value_search.py); off = by words only
+    )
+    value_embed_model: str = "BAAI/bge-small-en-v1.5"  # sentence-transformers bi-encoder for value search
+    value_rerank_model: str = "BAAI/bge-reranker-v2-m3"  # sentence-transformers cross-encoder for value search
+    trace_inputs: bool = False  # debugging: each tool call's input kept in the run's trace (diagnostics), for the log
+    inline_activity_types: int = (
+        200  # activity types listed in the prompt up to this many; more: found with lookup_values
+    )
 
     @classmethod
-    def from_env(cls, env=None):
-        """OFFER_AUTHOR_TURNS, _EARLY_TOOLS (0 = off), _COMPILE_URL, _ENGINE_JAR, _ENGINE_WARM (0 = off), _CATALOGS."""
-        env, d = os.environ if env is None else env, cls()
-        return cls(max_turns=int(env.get("OFFER_AUTHOR_TURNS", d.max_turns)),
-                   early_tools=env.get("OFFER_AUTHOR_EARLY_TOOLS", "1") != "0",
-                   compile_url=env.get("OFFER_AUTHOR_COMPILE_URL", d.compile_url),
-                   engine_jar=env.get("OFFER_AUTHOR_ENGINE_JAR", d.engine_jar),
-                   engine_warm=env.get("OFFER_AUTHOR_ENGINE_WARM", "1") != "0",
-                   catalogs=env.get("OFFER_AUTHOR_CATALOGS", d.catalogs))
+    def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
+        """OFFER_AUTHOR_<FIELD> for each field (TURNS for max_turns); a bool is off when "0"."""
+        env = os.environ if env is None else env
+        names = {f.name: "OFFER_AUTHOR_" + ("TURNS" if f.name == "max_turns" else f.name.upper()) for f in fields(cls)}
+        cast: dict[type, Callable[[str], object]] = {bool: lambda v: v != "0", int: int, str: str}
+        return cls(**{k: cast[type(getattr(cls, k))](env[n]) for k, n in names.items() if n in env})  # type: ignore[arg-type]

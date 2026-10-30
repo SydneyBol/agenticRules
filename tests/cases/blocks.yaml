@@ -1,0 +1,306 @@
+# Single-block test cases: every block of the reward-offer toolbox (gravty-ui offer-rules.config.ts:30-43), and every
+# option inside the blocks that have modes (action types, condition objects, operator families, date parts).
+# Block specs: newui gravty-blockly/blocks/** and services/block-definition.service.ts (BDS); summary in
+# ~/Documents/Gravty/OfferXmlGenerator-TestPlan.md.
+#
+# A case passes when:
+#   1. the model returns the block (expect.features block:<type>, plus any mode feature listed), with valid nesting;
+#   2. the XML loads in the UNMODIFIED stock upload path with 0 dropped fields and 0 validation errors;
+#   3. where `sequences` are given, the saved DRL behaves as expected in the engine (same keys as logic.yaml).
+# needs_catalog: tenant data the catalog must carry for the case (missing data = the case must come back flagged,
+#   never with made-up codes).
+# Extra feature keys here: mode:<field>=<value>  (a field or mutation value on the block, e.g. mode:action_type=take_points)
+
+cases:
+
+  # ================================================================ Offer Level Block
+  - id: SB01_offer_generic
+    prompt: "Create an empty offer with one activity section and no rules yet."
+    expect: {status: [draft, needs_input], features: [block:offer_generic, block:activity]}
+
+  - id: SB02_activity
+    prompt: "An activity section that gives 10 points on every spend."
+    expect: {status: [draft], features: [block:activity, block:rule]}
+    sequences: [{bits: [{expect: {points: 10}}]}]
+
+  - id: SB03_activity_criteria_filter
+    prompt: "Only hotel stays qualify; give 100 points per qualifying activity."
+    expect: {status: [draft], features: [block:activity_criteria]}
+    sequences: [{bits: [{h_bit_type: STAY, expect: {points: 100}}, {h_bit_type: SPEND, expect: {points: 0}}]}]
+
+  - id: SB04_event
+    prompt: "On every scheduled event run, give each member 10 points."
+    expect: {status: [draft, needs_input], features: [block:event, block:rule]}
+
+  - id: SB05_or
+    prompt: "Give 25 points when the spend is at the Mall store OR the spend is over $300."
+    expect: {status: [draft], features: [block:or]}
+    sequences: [{bits: [{h_location: L2, h_bit_amount: 5, expect: {points: 25}}, {h_bit_amount: 301, expect: {points: 25}}, {h_bit_amount: 5, expect: {points: 0}}]}]
+
+  - id: SB05b_or_as_filter
+    prompt: "Only stays or bookings qualify for this offer, and each qualifying activity earns 40 points."
+    expect: {status: [draft], features: [block:or, block:activity_criteria]}
+
+  # ================================================================ Rule Level Block
+  - id: SB06_rule
+    prompt: "One rule tagged 'Welcome' that gives 50 points on every spend."
+    expect: {status: [draft], features: [block:rule, mode:IDENTIFIER=Welcome]}
+
+  - id: SB06b_rule_nested_in_rule
+    prompt: "A rule for spends over $100 that gives 100 points, with a nested rule inside it giving another 50 points when the store is Downtown."
+    expect: {status: [draft], features: [block:rule]}
+    sequences: [{bits: [{h_location: L1, h_bit_amount: 101, expect: {points: 150}}, {h_location: L2, h_bit_amount: 101, expect: {points: 100}}]}]
+
+  - id: SB07_rule_line
+    prompt: "A per-line rule: every Snacks line earns 2 points per unit."
+    expect: {status: [draft], features: [block:rule_line, obj:products_attrs]}
+    sequences: [{bits: [{lines: [{sku: SNK-1, qty: 4, amount: 8}], expect: {points: 8}}]}]
+
+  - id: SB08_payment_rule
+    prompt: "For each payment made by credit card, give 3 points per $1 of that payment."
+    expect: {status: [draft, needs_input], features: [block:payment_rule, block:if_payment_attribute]}
+    needs_catalog: [payment_method attributes, PAYMENT_MODE lookup]
+
+  - id: SB09_if_generic_adaptive
+    prompt: "If the transaction amount is between $20 and $40, give 15 points."
+    expect: {status: [draft], features: [block:if_generic_adaptive, op:between]}
+    sequences: [{bits: [{h_bit_amount: 19.99, expect: {points: 0}}, {h_bit_amount: 20, expect: {points: 15}}, {h_bit_amount: 40, expect: {points: 15}}, {h_bit_amount: 40.01, expect: {points: 0}}]}]
+
+  - id: SB10_if_payment_attribute
+    prompt: "Inside a payment rule: if the payment amount is over $50, give 20 points."
+    expect: {status: [draft, needs_input], features: [block:if_payment_attribute]}
+    needs_catalog: [payment_method attributes]
+
+  - id: SB11_action
+    prompt: "Give 75 points in the Points account with the BONUS tag on every spend."
+    expect: {status: [draft], features: [block:action, act:give_points]}
+    sequences: [{bits: [{expect: {points: 75}}]}]
+
+  - id: SB12_action_third_party
+    prompt: "When a member spends over $200, give their family head 100 points."
+    expect: {status: [draft, needs_input], features: [block:action_third_party, mode:third_parties_dropdown=FAMILY_HEAD]}
+    needs_catalog: [third party relations]
+
+  # ================================================================ Attributes & Variables
+  - id: SB13_static_value
+    prompt: "Give exactly 42 points on every spend."
+    expect: {status: [draft], features: [block:static_value]}
+    sequences: [{bits: [{expect: {points: 42}}]}]
+
+  - id: SB14_static_string_value
+    prompt: "Set the offer counter 'welcome done' to the text Yes on the first spend, and give 10 points only while it is not Yes."
+    expect: {status: [draft], features: [block:static_string_value, act:update_attribute]}
+
+  - id: SB15_arithmetic_generic
+    prompt: "Points = transaction amount divided by 4."
+    expect: {status: [draft], features: [block:arithmetic_generic, mode:operator=/]}
+    sequences: [{bits: [{h_bit_amount: 100, expect: {points: 25}}]}]
+
+  - id: SB16_arithmetic_date
+    prompt: "Give 30 points when the transaction date is within 10 days after the member's enrolment date."
+    expect: {status: [draft, needs_input], features: [block:arithmetic_date, mode:date_quantity=DAYS]}
+
+  - id: SB17_current_date_block
+    prompt: "Give 20 points when today's day of the month is the 1st."
+    expect: {status: [draft, needs_input], features: [block:current_date_block, mode:current_date_type=DAY_OF_MONTH]}
+
+  # an offer end date ("spends before 2026-12-31") is Offer Main metadata (engine checks it before the rules), so the
+  # static_date block is exercised by a date that is a rule condition: the member's enrolment date
+  - id: SB18_static_date
+    prompt: "Give 100 points on spends by members who enrolled before 2025-01-01."
+    expect: {status: [draft], features: [block:static_date]}
+    sequences:
+      - member_override: {enrollment_date: "2024-06-01"}
+        bits: [{expect: {points: 100}}]
+      - member_override: {enrollment_date: "2025-03-01"}
+        bits: [{expect: {points: 0}}]
+
+  - id: SB19_static_date_time
+    prompt: "Give 100 points on spends made after 2026-11-27 6:00 PM (Black Friday evening launch)."
+    expect: {status: [draft, needs_input], features: [block:static_date_time]}
+
+  - id: SB20_currency_converter
+    prompt: "Points = transaction amount x the Points account's reward rate."
+    expect: {status: [draft, needs_input], features: [block:currency_converter, mode:conversion_type=accrual_conversion]}
+    needs_catalog: [currency conversion rates per loyalty account]
+
+  - id: SB21_activity_attribute
+    prompt: "Points = the line quantity of the transaction x 3."
+    expect: {status: [draft], features: [block:activity_attribute]}
+
+  - id: SB22_member_attribute
+    prompt: "Give 50 points when the member's enrolment date is before 2025-01-01."
+    expect: {status: [draft], features: [block:member_attribute, obj:member]}
+
+  - id: SB23_product_attribute
+    prompt: "Points = 2 x the product's line amount for Bakery items."
+    expect: {status: [draft, needs_input], features: [block:product_attribute]}
+
+  - id: SB24_payment_attribute
+    prompt: "Points = the card payment amount x 2."
+    expect: {status: [draft, needs_input], features: [block:payment_attribute]}
+    needs_catalog: [payment_method attributes]
+
+  - id: SB25_airport_attribute
+    prompt: "Points = the distance flown on the airport pair x 0.5."
+    expect: {status: [draft, needs_input], features: [block:airport_attribute, mode:airportpair_attribute=distance_flown]}
+    needs_catalog: [airport_pair attributes]
+
+  # ================================================================ action: every action type (REWARD offers)
+  - id: SA01_give_points
+    prompt: "Give 10 points on every spend."
+    expect: {status: [draft], features: [act:give_points]}
+  - id: SA02_take_points
+    prompt: "Redeem (take) 50 points from the member on every redemption activity."
+    expect: {status: [draft, needs_input], features: [mode:action_type=take_points]}
+  - id: SA03_return_points
+    prompt: "Return 50 points to the member on every cancelled booking."
+    expect: {status: [draft, needs_input], features: [mode:action_type=return_points]}
+  - id: SA04_reset_points
+    prompt: "Reset the member's Points balance on every redemption activity."
+    expect: {status: [draft, needs_input], features: [mode:action_type=reset_points]}
+  - id: SA05_expire_points
+    prompt: "Expire the member's BONUS-tagged points on every redemption activity."
+    expect: {status: [draft, needs_input], features: [mode:action_type=expire_points]}
+  - id: SA06_give_privilege
+    prompt: "Give a Free Coffee voucher on every spend."
+    expect: {status: [draft], features: [act:give_privilege]}
+  - id: SA07_give_privilege_custom_validity
+    prompt: "Give a Free Coffee voucher valid from 2026-11-01 to 2026-11-30 on every spend."
+    expect: {status: [draft, needs_input], features: [act:give_privilege, mode:validity_type=custom_validity]}
+  - id: SA08_update_attribute_increment
+    prompt: "Increase the offer counter 'spend count' by 1 on every spend."
+    expect: {status: [draft], features: [act:update_attribute, mode:action_operator=INCREMENT_BY]}
+  - id: SA09_update_attribute_set_reset_decrement
+    prompt: "On a spend set the offer flag 'active' to Yes; on a redemption reset the offer counter 'visits'; on a booking decrease 'credits' by 2."
+    expect: {status: [draft, needs_input], features: [mode:action_operator=SET, mode:action_operator=RESET, mode:action_operator=DECREMENT_BY]}
+  - id: SA10_assign_sweepstakes
+    prompt: "Enter the member into the Diwali sweepstakes on every spend over $100."
+    expect: {status: [draft, needs_input], features: [mode:action_type=assign_sweepstakes]}
+    needs_catalog: [sweepstake setups]
+  - id: SA11_assign_play_win
+    prompt: "Give the member a spin-the-wheel game on every spend over $50."
+    expect: {status: [draft, needs_input], features: [mode:action_type=assign_play_win_reward, mode:PLAY_WIN_TYPE=SPIN_THE_WHEEL]}
+    needs_catalog: [play & win setups]
+
+  # ================================================================ if_generic_adaptive: every condition object
+  - id: SO01_obj_activity
+    prompt: "50 points when the activity type is a stay."
+    expect: {status: [draft], features: [obj:activity]}
+  - id: SO02_obj_location
+    prompt: "50 points when the location's city is Chennai."
+    expect: {status: [draft, needs_input], features: [obj:location]}
+    needs_catalog: [location attributes]
+  - id: SO03_obj_sponsor
+    prompt: "50 points when the sponsor's category is Retail."
+    expect: {status: [draft, needs_input], features: [obj:sponsor]}
+    needs_catalog: [sponsor attributes]
+  - id: SO04_obj_member_program_level
+    prompt: "50 points when the member's tier is Silver."
+    expect: {status: [draft], features: [obj:member]}
+  - id: SO05_obj_member_offer_counter
+    prompt: "50 points when the offer counter 'spend count' is at least 3."
+    expect: {status: [draft], features: [obj:member, mode:attribute_level=MA_O]}
+  - id: SO06_obj_member_activity_level
+    prompt: "50 points when the member's activity-level attribute 'visits this month' is over 4."
+    expect: {status: [draft, needs_input], features: [mode:attribute_level=MA_A]}
+  - id: SO07_obj_products_attrs
+    prompt: "Per line, 5 points when the product category is Drinks."
+    expect: {status: [draft], features: [obj:products_attrs]}
+  - id: SO08_obj_third_party
+    prompt: "50 points when the member's family head is in the Gold tier."
+    expect: {status: [draft, needs_input], features: [obj:third_party]}
+    needs_catalog: [third party relations]
+  - id: SO09_obj_airport
+    prompt: "500 points when the flight destination airport is DEL."
+    expect: {status: [draft, needs_input], features: [obj:airport]}
+    needs_catalog: [airport codes]
+  - id: SO10_obj_airport_pair
+    prompt: "500 points when the airport pair distance is over 1000 miles."
+    expect: {status: [draft, needs_input], features: [obj:airport_pair]}
+    needs_catalog: [airport_pair attributes]
+
+  # ================================================================ operator families
+  - id: SP01_ops_numeric
+    prompt: "10 points when the amount is not equal to 0, 20 when it is at most $10, and 30 when it is under $5."
+    expect: {status: [draft], features: ["op:!=", "op:<=", "op:<"]}
+  - id: SP02_op_null_not_null
+    prompt: "25 points when the member has no enrolment date recorded, 10 points when they do."
+    expect: {status: [draft, needs_input], features: [op:null, op:not_null]}
+  - id: SP03_op_not_in
+    prompt: "15 points on spends that are not at the Harbour or Airport T1 store."
+    expect: {status: [draft], features: [op:not_in]}
+  - id: SP04_text_ops
+    prompt: "10 points when the transaction reference starts with PROMO, 20 when it contains VIP, 30 when it ends with X."
+    expect: {status: [draft, needs_input], features: [op:starts_with, op:contains, op:ends_with]}
+    needs_catalog: [a TEXT activity attribute such as a reference]
+  - id: SP05_match
+    prompt: "10 points when the transaction reference matches the pattern ^GIFT-[0-9]+$."
+    expect: {status: [draft, needs_input], features: [op:match]}
+    needs_catalog: [a TEXT activity attribute such as a reference]
+
+  # ================================================================ date parts (date_operator / datetime_operator)
+  - id: SD01_day_of_week
+    prompt: "2x points on Wednesdays."
+    expect: {status: [draft], features: [mode:datetime_operator=DAY_OF_WEEK]}
+  - id: SD02_hour_of_day
+    prompt: "2x points between 6am and 9am."
+    expect: {status: [draft], features: [mode:datetime_operator=HOUR_OF_DAY]}
+  - id: SD03_month
+    prompt: "2x points every March."
+    expect: {status: [draft], features: [mode:datetime_operator=MONTH]}
+  - id: SD04_day_of_month
+    prompt: "2x points on the 15th of every month."
+    expect: {status: [draft], features: [mode:datetime_operator=DAY_OF_MONTH]}
+  - id: SD05_year
+    prompt: "2x points on spends during 2027."
+    expect: {status: [draft], features: [mode:datetime_operator=YEAR]}
+  - id: SD06_week_of_year
+    prompt: "2x points in week 52 of the year."
+    expect: {status: [draft, needs_input], features: [mode:datetime_operator=WEEK_OF_YEAR]}
+  - id: SD07_day_of_year
+    prompt: "2x points on day 100 of the year."
+    expect: {status: [draft, needs_input], features: [mode:datetime_operator=DAY_OF_YEAR]}
+  - id: SD08_minute_of_hour
+    prompt: "2x points in the first 10 minutes of every hour."
+    expect: {status: [draft, needs_input], features: [mode:datetime_operator=MINUTE_OF_HOUR]}
+
+  # ================================================================ arithmetic operators and date arithmetic
+  - id: SX01_arith_ops
+    prompt: "Points = (amount + 10) x 2, minus 5, and a separate 1 point for every full $7 (amount mod 7 removed)."
+    expect: {status: [draft, needs_input], features: [mode:operator=+, mode:operator=*, mode:operator=-, mode:operator=%]}
+  - id: SX02_date_minus_months
+    prompt: "50 points when the spend is within 3 months before the member's enrolment anniversary."
+    expect: {status: [draft, needs_input], features: [block:arithmetic_date, mode:date_quantity=MONTHS]}
+  - id: SX03_date_snap_to
+    prompt: "50 points on spends in the same calendar month as the member's enrolment date (snap both to month)."
+    expect: {status: [draft, needs_input], features: [block:arithmetic_date, mode:opt=snapTO]}
+
+# ================================================================ slot matrix (no model: grammar + serializer + UI load)
+# Every container input with every child block type its setCheck allows. Each pair is built directly (no prompt),
+# serialised to XML, and loaded through the stock upload path; it must load with 0 dropped fields.
+slots:
+  offer_generic.activities: [activity]
+  offer_generic.events: [event]
+  activity.ACTIVITY_CRITERIA: [activity_criteria, or]
+  activity.RULES: [rule, rule_line, payment_rule]
+  event.RULES: [rule, rule_line, payment_rule]
+  or.OPERAND1: [if_generic_adaptive, activity_criteria, or]
+  or.OPERAND2: [if_generic_adaptive, activity_criteria, or]
+  rule.CONDITION: [if_generic_adaptive, or]
+  rule.ACTION: [action, action_third_party, rule, rule_line]
+  rule_line.CONDITION: [if_generic_adaptive, or]
+  rule_line.ACTION: [action, action_third_party]
+  payment_rule.CONDITION: [if_payment_attribute]
+  payment_rule.ACTION: [action, action_third_party]
+  if_generic_adaptive.RHS_INPUT(NUMBER): [static_value, activity_attribute, product_attribute, currency_converter, arithmetic_generic, payment_attribute, member_attribute]
+  if_generic_adaptive.RHS_INPUT(DATE): [static_date, arithmetic_date, activity_attribute, current_date_block, product_attribute, payment_attribute, member_attribute]
+  if_generic_adaptive.RHS_INPUT(DATETIME): [static_date_time]
+  if_generic_adaptive.RHS_INPUT+RHS_VALUE(between): [static_value]
+  if_payment_attribute.RHS_INPUT: [static_value, arithmetic_generic, payment_attribute]
+  action.FORMULA(give_points): [static_value, activity_attribute, product_attribute, currency_converter, arithmetic_generic, payment_attribute, member_attribute]
+  action.RHS_INPUT(update_attribute): [static_value, static_string_value, arithmetic_generic, member_attribute]
+  action.VALIDITY_START_DATE(give_privilege custom): [static_date, static_date_time, activity_attribute, arithmetic_date, current_date_block]
+  arithmetic_generic.LHS: [static_value, activity_attribute, product_attribute, payment_attribute, member_attribute, currency_converter, arithmetic_generic, current_date_block]
+  arithmetic_generic.RHS: [static_value, activity_attribute, product_attribute, payment_attribute, member_attribute, currency_converter, arithmetic_generic, current_date_block]
+  arithmetic_date.LHS: [activity_attribute, current_date_block, product_attribute, payment_attribute, member_attribute, static_date, static_date_time, static_string_value, arithmetic_date]

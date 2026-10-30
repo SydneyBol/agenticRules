@@ -1,0 +1,243 @@
+# Logic test cases: English -> rules whose BEHAVIOUR is checked in the real Gravty engine.
+#
+# Tenant: tests/fixtures/catalog.json (the engine harness fixture)
+#   sponsor 10, loyalty account "1" (Points), privilege 501 "Free Coffee voucher" (policy 9)
+#   locations L1 Downtown, L2 Mall, L3 Harbour, AP1 Airport T1; activity types SPEND STAY BOOKING REDEMPTION
+#   product category on SKUs: SNK-1/SNK-2 = SNACKS, DRK-1 = DRINKS, BAK-1 = BAKERY
+#   member M1: tier GOLD, date_of_birth 1990-06-15 (override per sequence)
+# BIT defaults: SPEND at L1, amount 10, dated 2026-10-20 10:00 (a Tuesday) + i days for the i-th BIT unless given.
+# 2026-10-23 Fri, 24 Sat, 25 Sun.
+# Sequences run in order against ONE member, so counters carry over. expect.points = points from THIS offer on that
+# BIT ("Nx points" = amount x N in total); expect.privilege = privilege id issued, or null.
+#
+# Per case:  expect.status (allowed statuses), expect.features (must appear in the XML / counters):
+#   block:<type>  obj:<activity|member|products_attrs>  act:<give_points|give_privilege|update_attribute>
+#   op:<operator>  counter:<REGULAR|VECTOR>
+# The 16 spike scenarios S01-S16 (tests/fixtures/scenarios.yaml) are part of this suite as well.
+
+cases:
+
+  # ---------------------------------------------------------------- earning
+  - id: L01_rate_per_dollar
+    prompt: "2 points for every $1 spent."
+    expect: {status: [draft], features: [act:give_points, block:arithmetic_generic, block:activity_attribute]}
+    sequences:
+      - bits: [{h_bit_amount: 12.5, expect: {points: 25}}, {h_bit_amount: 0, expect: {points: 0}}]
+
+  - id: L02_multiplier_at_stores
+    prompt: "Double points on spends at the Downtown or Mall store."
+    expect: {status: [draft], features: [obj:activity, op:in]}
+    sequences:
+      - bits:
+          - {h_location: L1, h_bit_amount: 10, expect: {points: 20}}
+          - {h_location: L2, h_bit_amount: 10, expect: {points: 20}}
+          - {h_location: L3, h_bit_amount: 10, expect: {points: 0}}
+
+  - id: L03_exclusive_bands_inclusive_bounds
+    prompt: "Spends of $100 or more earn 300 points; spends from $50 up to $99.99 earn 100 points."
+    expect: {status: [draft], features: ["op:>=", block:if_generic_adaptive]}
+    sequences:
+      - bits:
+          - {h_bit_amount: 49.99, expect: {points: 0}}
+          - {h_bit_amount: 50,    expect: {points: 100}}
+          - {h_bit_amount: 99.99, expect: {points: 100}}
+          - {h_bit_amount: 100,   expect: {points: 300}}     # not 400
+
+  - id: L04_member_tier
+    prompt: "Gold tier members earn 50 bonus points on every spend."
+    expect: {status: [draft], features: [obj:member]}
+    sequences:
+      - bits: [{expect: {points: 50}}]
+      - member_override: {tier: SILVER}
+        bits: [{expect: {points: 0}}]
+
+  - id: L05_or_once_not_twice
+    prompt: "100 bonus points on any spend at the Airport T1 store, or on any spend over $500 anywhere."
+    expect: {status: [draft], features: [block:or]}
+    sequences:
+      - bits:
+          - {h_location: AP1, h_bit_amount: 10,  expect: {points: 100}}
+          - {h_location: L1,  h_bit_amount: 501, expect: {points: 100}}
+          - {h_location: AP1, h_bit_amount: 600, expect: {points: 100}}   # both match: once
+          - {h_location: L1,  h_bit_amount: 500, expect: {points: 0}}     # "over" is strict
+
+  - id: L06_privilege_threshold
+    prompt: "Spend over $30 and get a Free Coffee voucher."
+    expect: {status: [draft], features: [act:give_privilege]}
+    sequences:
+      - bits: [{h_bit_amount: 30, expect: {privilege: null}}, {h_bit_amount: 30.01, expect: {privilege: 501}}]
+
+  - id: L07_activity_type_rates
+    prompt: "Hotel stays earn 5 points per dollar and bookings earn 2 points per dollar."
+    expect: {status: [draft], features: [act:give_points]}
+    sequences:
+      - bits:
+          - {h_bit_type: STAY,    h_bit_amount: 100, expect: {points: 500}}
+          - {h_bit_type: BOOKING, h_bit_amount: 100, expect: {points: 200}}
+          - {h_bit_type: SPEND,   h_bit_amount: 100, expect: {points: 0}}
+
+  - id: L08_except_store
+    prompt: "2x points on spends everywhere except the Airport T1 store."
+    expect: {status: [draft], features: [obj:activity]}
+    sequences:
+      - bits:
+          - {h_location: L3,  h_bit_amount: 10, expect: {points: 20}}
+          - {h_location: AP1, h_bit_amount: 10, expect: {points: 0}}
+
+  - id: L09_strict_and_inclusive_stack
+    prompt: "50 bonus points on spends of at least $100, plus another 50 bonus points when the spend is over $200."
+    expect: {status: [draft]}
+    sequences:
+      - bits:
+          - {h_bit_amount: 99,  expect: {points: 0}}
+          - {h_bit_amount: 100, expect: {points: 50}}
+          - {h_bit_amount: 200, expect: {points: 50}}
+          - {h_bit_amount: 201, expect: {points: 100}}
+
+  # ---------------------------------------------------------------- time
+  - id: L10_weekend
+    prompt: "Double points on weekend spends."
+    expect: {status: [draft]}
+    sequences:
+      - bits:
+          - {h_bit_date: "2026-10-24T12:00:00", h_bit_amount: 10, expect: {points: 20}}
+          - {h_bit_date: "2026-10-25T12:00:00", h_bit_amount: 10, expect: {points: 20}}
+          - {h_bit_date: "2026-10-20T12:00:00", h_bit_amount: 10, expect: {points: 0}}
+
+  - id: L11_happy_hour
+    prompt: "3x points on spends between 5pm and 7pm."
+    expect: {status: [draft]}
+    sequences:
+      - bits:
+          - {h_bit_date: "2026-10-20T17:00:00", h_bit_amount: 10, expect: {points: 30}}
+          - {h_bit_date: "2026-10-20T18:59:00", h_bit_amount: 10, expect: {points: 30}}
+          - {h_bit_date: "2026-10-20T19:00:00", h_bit_amount: 10, expect: {points: 0}}
+          - {h_bit_date: "2026-10-20T16:59:00", h_bit_amount: 10, expect: {points: 0}}
+
+  - id: L12_day_and_hour
+    prompt: "Double points on Mondays before 10am."
+    expect: {status: [draft]}
+    sequences:
+      - bits:
+          - {h_bit_date: "2026-10-19T09:30:00", h_bit_amount: 10, expect: {points: 20}}
+          - {h_bit_date: "2026-10-19T10:00:00", h_bit_amount: 10, expect: {points: 0}}
+          - {h_bit_date: "2026-10-20T09:30:00", h_bit_amount: 10, expect: {points: 0}}
+
+  - id: L13_every_december
+    prompt: "Every year, spends over $100 made in December earn 500 bonus points."
+    expect: {status: [draft]}
+    sequences:
+      - bits:
+          - {h_bit_date: "2026-12-05T12:00:00", h_bit_amount: 101, expect: {points: 500}}
+          - {h_bit_date: "2026-11-30T12:00:00", h_bit_amount: 101, expect: {points: 0}}
+          - {h_bit_date: "2027-12-31T12:00:00", h_bit_amount: 150, expect: {points: 500}}
+
+  # ---------------------------------------------------------------- products / line items
+  - id: L14_points_per_item
+    prompt: "5 points for every Snacks item bought."
+    expect: {status: [draft], features: [block:rule_line, obj:products_attrs]}
+    sequences:
+      - bits:
+          - {lines: [{sku: SNK-1, qty: 3, amount: 6}, {sku: BAK-1, qty: 1, amount: 5}], expect: {points: 15}}
+          - {lines: [{sku: BAK-1, qty: 2, amount: 10}], expect: {points: 0}}
+
+  - id: L15_multiplier_on_category_amount
+    prompt: "3x points on the amount spent on Drinks items."
+    expect: {status: [draft], features: [block:rule_line]}
+    sequences:
+      - bits: [{lines: [{sku: DRK-1, qty: 2, amount: 8}, {sku: SNK-1, qty: 1, amount: 2}], expect: {points: 24}}]
+
+  # ---------------------------------------------------------------- counters / state
+  - id: L16_every_3rd_stay
+    prompt: "Every 3rd stay earns 200 points."
+    expect: {status: [draft], features: [counter:REGULAR, act:update_attribute]}
+    sequences:
+      - bits:
+          - {h_bit_type: STAY,  expect: {points: 0}}
+          - {h_bit_type: SPEND, expect: {points: 0}}     # does not count
+          - {h_bit_type: STAY,  expect: {points: 0}}
+          - {h_bit_type: STAY,  expect: {points: 200}}
+          - {h_bit_type: STAY,  expect: {points: 0}}
+
+  - id: L17_5th_visit_only_once
+    prompt: "The 5th spend earns 500 bonus points, one time only."
+    expect: {status: [draft]}
+    sequences:
+      - bits: [{expect: {points: 0}}, {expect: {points: 0}}, {expect: {points: 0}}, {expect: {points: 0}}, {expect: {points: 500}},
+               {expect: {points: 0}}, {expect: {points: 0}}, {expect: {points: 0}}, {expect: {points: 0}}, {expect: {points: 0}}]
+
+  - id: L18_first_spend
+    prompt: "500 bonus points on a member's first spend."
+    expect: {status: [draft]}
+    sequences:
+      - bits: [{expect: {points: 500}}, {expect: {points: 0}}]
+
+  - id: L19_milestone_2000
+    prompt: "Earn 1000 bonus points once, when the member's total spend in the offer reaches $2000."
+    expect: {status: [draft], features: [block:static_string_value]}
+    sequences:
+      - bits:
+          - {h_bit_amount: 1500, expect: {points: 0}}
+          - {h_bit_amount: 500,  expect: {points: 1000}}
+          - {h_bit_amount: 2000, expect: {points: 0}}
+
+  - id: L20_unique_stores
+    prompt: "Spend at 3 different stores to earn 300 points, once."
+    expect: {status: [draft], features: [counter:VECTOR]}
+    sequences:
+      - bits:
+          - {h_location: L1, expect: {points: 0}}
+          - {h_location: L1, expect: {points: 0}}
+          - {h_location: L2, expect: {points: 0}}
+          - {h_location: L3, expect: {points: 300}}
+          - {h_location: AP1, expect: {points: 0}}
+
+  - id: L21_unlock
+    prompt: "After any booking, the member gets 2x points on all later spends."
+    expect: {status: [draft]}
+    sequences:
+      - bits:
+          - {h_bit_type: SPEND,   h_bit_amount: 100, expect: {points: 0}}
+          - {h_bit_type: BOOKING, h_bit_amount: 50,  expect: {points: 0}}
+          - {h_bit_type: SPEND,   h_bit_amount: 100, expect: {points: 200}}
+
+  - id: L22_cap
+    prompt: "3x points on all spends, capped at 1500 bonus points per member."
+    expect: {status: [draft]}
+    sequences:
+      - bits:
+          - {h_bit_amount: 300, expect: {points: 900}}
+          - {h_bit_amount: 300, expect: {points: 600}}    # remainder up to the cap
+          - {h_bit_amount: 100, expect: {points: 0}}
+
+  - id: L23_collect_all_points
+    prompt: "Buy from Snacks, Drinks and Bakery during the offer to earn 500 points, once."
+    expect: {status: [draft], features: [block:rule_line]}
+    sequences:
+      - bits:
+          - {lines: [{sku: SNK-1, qty: 1, amount: 2}], expect: {points: 0}}
+          - {lines: [{sku: DRK-1, qty: 1, amount: 2}], expect: {points: 0}}
+          - {lines: [{sku: BAK-1, qty: 1, amount: 2}], expect: {points: 500}}
+          - {lines: [{sku: BAK-1, qty: 1, amount: 2}], expect: {points: 0}}
+
+  # ---------------------------------------------------------------- recurring dates
+  - id: L24_birthday_5_days
+    prompt: "200 points on a spend within 5 days of the member's birthday, once a year."
+    expect: {status: [draft, needs_input], features: [block:arithmetic_date, block:member_attribute]}
+    sequences:
+      - member_override: {date_of_birth: "1990-06-15"}
+        bits:
+          - {h_bit_date: "2026-06-09T10:00:00", expect: {points: 0}}
+          - {h_bit_date: "2026-06-10T10:00:00", expect: {points: 200}}
+          - {h_bit_date: "2026-06-20T10:00:00", expect: {points: 0}}
+          - {h_bit_date: "2027-06-15T10:00:00", expect: {points: 200}}
+
+  - id: L25_birthday_month
+    prompt: "Members get 2x points on every spend during their birthday month."
+    expect: {status: [draft, needs_input]}
+    sequences:
+      - member_override: {date_of_birth: "1990-06-15"}
+        bits:
+          - {h_bit_date: "2026-06-01T10:00:00", h_bit_amount: 10, expect: {points: 20}}
+          - {h_bit_date: "2026-06-30T10:00:00", h_bit_amount: 10, expect: {points: 20}}
+          - {h_bit_date: "2026-07-01T10:00:00", h_bit_amount: 10, expect: {points: 0}}

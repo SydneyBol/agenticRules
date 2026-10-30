@@ -32,6 +32,7 @@
      "category": "Offer Level Block",
      "cls": "OfferGenericBlock",
      "source": "offer-level/offer-generic.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "<statement:activities>": [
@@ -91,6 +92,7 @@
      "category": "Offer Level Block",
      "cls": "OfferActivityBlock",
      "source": "offer-level/offer-activity.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "<statement:ACTIVITY_CRITERIA>": [
@@ -457,6 +459,7 @@
      "category": "Offer Level Block",
      "cls": "FilterBlock",
      "source": "offer-level/filter.block.ts",
+     "picks_by_operator": true,
      "live": {
       "base": {
        "OBJECT": [
@@ -672,6 +675,7 @@
      "category": "Offer Level Block",
      "cls": "EventBlock",
      "source": "offer-level/event.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "<statement:RULES>": [
@@ -735,6 +739,7 @@
      "category": "Offer Level Block",
      "cls": "OrBlock",
      "source": "offer-level/or.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "<statement:OPERAND1>": [
@@ -810,6 +815,7 @@
      "category": "Rule Level Block",
      "cls": "RuleBlock",
      "source": "rule-level/rule.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "IDENTIFIER": "<string>",
@@ -889,6 +895,7 @@
      "category": "Rule Level Block",
      "cls": "LineRuleBlock",
      "source": "rule-level/line-rule.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "IDENTIFIER": "<string>",
@@ -962,6 +969,7 @@
      "category": "Rule Level Block",
      "cls": "PaymentRuleBlock",
      "source": "rule-level/payment-rule.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "IDENTIFIER": "<string>",
@@ -1358,6 +1366,7 @@
      "category": "Rule Level Block",
      "cls": "IfGenericBlock",
      "source": "rule-level/if-generic.block.ts",
+     "picks_by_operator": true,
      "live": {
       "base": {
        "OBJECT": [
@@ -1758,6 +1767,7 @@
      "category": "Rule Level Block",
      "cls": "IfPaymentBlock",
      "source": "rule-level/if-payment.block.ts",
+     "picks_by_operator": true,
      "live": {
       "base": {
        "payment_attribute": []
@@ -2108,6 +2118,7 @@
      "category": "Rule Level Block",
      "cls": "ActionBlock",
      "source": "rule-level/actionblock.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "action_type": [
@@ -2700,6 +2711,7 @@
      "category": "Rule Level Block",
      "cls": "ThirdPartyActionBlock",
      "source": "rule-level/thirdparty-action.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "third_parties_dropdown": [
@@ -2917,6 +2929,7 @@
      "category": "Attributes & Variables",
      "cls": "StaticValueBlock",
      "source": "attributes-variables/static-value.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "value": "<string>"
@@ -2968,6 +2981,7 @@
      "category": "Attributes & Variables",
      "cls": "StaticStringValueBlock",
      "source": "attributes-variables/static-string-value.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "value": "<string>"
@@ -3041,6 +3055,7 @@
      "category": "Attributes & Variables",
      "cls": "ArithmeticGenericBlock",
      "source": "attributes-variables/arithmetic-generic.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "<value:LHS>": [
@@ -3309,6 +3324,7 @@
      "category": "Attributes & Variables",
      "cls": "ArithmeticDateBlock",
      "source": "attributes-variables/arithmetic-date.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "<value:LHS>": [
@@ -3518,6 +3534,7 @@
      "category": "Attributes & Variables",
      "cls": "CurrentDateBlock",
      "source": "attributes-variables/current-date.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "current_date_type": [
@@ -3704,6 +3721,7 @@
      "category": "Attributes & Variables",
      "cls": "StaticDateBlock",
      "source": "attributes-variables/static-date.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "value": "<string>"
@@ -3737,6 +3755,7 @@
      "category": "Attributes & Variables",
      "cls": "StaticDateTimeBlock",
      "source": "attributes-variables/static-date-time.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "value": "<string>"
@@ -3783,6 +3802,7 @@
      "category": "Attributes & Variables",
      "cls": "CurrencyConvertorRateBlock",
      "source": "attributes-variables/currency-convertor-rate.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "conversion_type": [
@@ -3976,6 +3996,7 @@
      "category": "Attributes & Variables",
      "cls": "BitAttributesBlock",
      "source": "attributes-variables/bit-attributes.block.ts",
+     "picks_by_operator": true,
      "live": {
       "base": {
        "ATTRIBUTE": [
@@ -4310,6 +4331,7 @@
      "category": "Attributes & Variables",
      "cls": "MemberAttributesBlock",
      "source": "attributes-variables/member-attributes.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "ATTRIBUTE_TYPE": [
@@ -4557,6 +4579,7 @@
      "category": "Attributes & Variables",
      "cls": "ProductAttributesBlock",
      "source": "attributes-variables/product-attributes.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "ATTRIBUTE_PRODUCTS": [
@@ -4690,6 +4713,7 @@
      "category": "Attributes & Variables",
      "cls": "PaymentAttributeBlock",
      "source": "attributes-variables/payment-attributes.block.ts",
+     "picks_by_operator": true,
      "live": {
       "base": {
        "payment_attribute": []
@@ -4736,6 +4760,7 @@
      "category": "Attributes & Variables",
      "cls": "AirportPairAttributeBlock",
      "source": "attributes-variables/airport-pair-attributes.block.ts",
+     "picks_by_operator": false,
      "live": {
       "base": {
        "airportpair_attribute": [
@@ -4823,6 +4848,7 @@
      "category": "Select",
      "cls": "TargetingHolderSegmentBlock",
      "source": "segment-level/targeting-holder-segment.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": {
@@ -4878,6 +4904,7 @@
      "category": "Select",
      "cls": "OrBlock",
      "source": "offer-level/or.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": {
@@ -5320,6 +5347,7 @@
      "category": "Select",
      "cls": "TargetingConditionSegmentBlock",
      "source": "segment-level/targeting-condition-segment.block.ts",
+     "picks_by_operator": true,
      "live": null,
      "tenant_fields": [],
      "evidence": {
@@ -5620,6 +5648,7 @@
      "category": "Select",
      "cls": "TargetingMemberAttributeSegmentBlock",
      "source": "segment-level/member-attribute-segment.block.ts",
+     "picks_by_operator": true,
      "live": null,
      "tenant_fields": [],
      "evidence": {
@@ -5696,6 +5725,7 @@
      "category": "Select",
      "cls": "StaticValueBlock",
      "source": "attributes-variables/static-value.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": {
@@ -5741,6 +5771,7 @@
      "category": "Select",
      "cls": "StaticStringValueBlock",
      "source": "attributes-variables/static-string-value.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": null,
@@ -5770,6 +5801,7 @@
      "category": "Select",
      "cls": "StaticDateBlock",
      "source": "attributes-variables/static-date.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": {
@@ -5816,6 +5848,7 @@
      "category": "Select",
      "cls": "CurrentDateBlock",
      "source": "attributes-variables/current-date.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": null,
@@ -5858,6 +5891,7 @@
      "category": "Select",
      "cls": "CurrencyConvertorRateBlock",
      "source": "attributes-variables/currency-convertor-rate.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": null,
@@ -5918,6 +5952,7 @@
      "category": "Select",
      "cls": "ArithmeticGenericBlock",
      "source": "attributes-variables/arithmetic-generic.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": null,
@@ -5980,6 +6015,7 @@
      "category": "Select",
      "cls": "ArithmeticDateBlock",
      "source": "attributes-variables/arithmetic-date.block.ts",
+     "picks_by_operator": false,
      "live": null,
      "tenant_fields": [],
      "evidence": null,

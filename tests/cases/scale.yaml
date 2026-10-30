@@ -1,0 +1,92 @@
+# Attribute and value picking at scale: the scaled catalog (tests/support/scaled_catalog.py: 1000 attributes, 507 stores,
+# 5000 SKUs, 250 activity types, look-alike attributes). Run live: tools/qa/scale_accuracy.py.
+#   picks:  "object.attribute": [codes]  the draft must use exactly these codes on that attribute
+#   forbid: attributes the draft must not use (look-alikes)
+#   question: true = the draft must ask (ambiguous or missing value); false = no blocking question
+cases:
+  - id: SC01_store_exact
+    prompt: "100 bonus points on spends at the Chennai Airport store."
+    picks: {activity.h_location: [CHE-AIR]}
+    question: false
+  - id: SC02_store_longer_name
+    prompt: "Double points on spends at Chennai Airport Terminal 2."
+    picks: {activity.h_location: [CHE-AIR-T2]}
+    question: false
+  - id: SC03_twin_stores
+    prompt: "50 bonus points on spends at Pune Central."
+    question: true
+  - id: SC04_three_stores
+    prompt: "Spend at Goa Beach Road, Kochi Airport or Mysuru Mall and earn 200 bonus points."
+    picks: {activity.h_location: [GOA-BCH, KOC-AIR, MYS-MAL]}
+    question: false
+  - id: SC05_store_not_in_catalog
+    prompt: "100 bonus points on spends at the Chennai Marina store."
+    question: true
+  - id: SC06_sku_exact
+    prompt: "10 points per unit on Maggi Noodles 1kg."
+    picks: {product.sku: [SKU-02557]}
+    question: false
+  - id: SC07_sku_family
+    prompt: "5 points per unit on every Tata Masala Tea product, whatever the pack size."
+    picks: {product.sku: [SKU-02878, SKU-02985, SKU-03128, SKU-03775, SKU-04492]}
+    question: false
+  - id: SC08_sku_not_in_catalog
+    prompt: "20 points per unit on Nescafe Classic Coffee 200g."
+    question: true
+  - id: SC09_brand_not_sku
+    prompt: "Triple points on the line amount of every Cadbury product."
+    picks: {product.brand: [CADBURY]}
+    forbid: [product.sku]
+    question: false
+  - id: SC10_amount_not_net
+    prompt: "Any spend over $500 earns 100 bonus points."
+    picks: {activity.h_bit_amount: []}
+    forbid: [activity.h_net_amount, activity.h_gross_amount]
+    question: false
+  - id: SC11_net_amount_named
+    prompt: "100 bonus points when the net amount after discount is over $500."
+    picks: {activity.h_net_amount: []}
+    forbid: [activity.h_bit_amount]
+    question: false
+  - id: SC12_tier_not_lookalike
+    prompt: "Gold tier members earn 2x points on every spend."
+    picks: {member.tier: [GOLD]}
+    forbid: [member.previous_tier, member.partner_tier]
+    question: false
+  - id: SC13_previous_tier_named
+    prompt: "Members whose previous tier was Silver get 100 bonus points on their next spend."
+    picks: {member.previous_tier: [SILVER]}
+    forbid: [member.tier]
+    question: false
+  - id: SC14_birthday_not_spouse
+    prompt: "Members get a Free Coffee voucher on a spend in the 5 days around their birthday."
+    picks: {member.date_of_birth: []}
+    forbid: [member.spouse_date_of_birth, member.child_date_of_birth]
+    question: false
+  - id: SC15_home_store_not_location
+    prompt: "Members whose home store is Chennai Mall earn 50 bonus points on every spend, at any store."
+    picks: {member.home_store: [CHE-MAL]}
+    forbid: [activity.h_location]
+    question: false
+  - id: SC16_unlisted_activity_type
+    prompt: "Every Partner Event 237 activity earns 100 points."
+    picks: {activity.h_bit_type: [EVT_237]}
+    question: false
+  - id: SC17_spend_default
+    prompt: "1 point per $1 on all spends."
+    picks: {activity.h_bit_type: [SPEND]}
+    question: false
+  - id: SC18_combined
+    prompt: "Gold tier members spending over $100 at Bengaluru Tech Park earn 3x points."
+    picks: {member.tier: [GOLD], activity.h_location: [BEN-TEC], activity.h_bit_amount: []}
+    question: false
+  - id: SC19_enrolment_store
+    prompt: "Members who enrolled at Delhi Central earn 2x points at any store."
+    picks: {member.enrolling_store: [DEL-CEN]}
+    forbid: [activity.h_location]
+    question: false
+  - id: SC20_category_not_sku
+    prompt: "2 points per unit on Snacks products."
+    picks: {product.category: [SNACKS]}
+    forbid: [product.sku]
+    question: false
