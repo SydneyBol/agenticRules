@@ -73,6 +73,7 @@ def job_summary(res: dict[str, Any]) -> str:
         f"model_s={tm.get('model_s')} tools_s={js(tm.get('tools_s'))} input_chars={js(tm.get('input_chars'))} "
         f"per_turn={json.dumps(tm.get('turns') or [], separators=(',', ':'))}"
         + (f" earlier={js(d['earlier'])}" if d.get("earlier") else "")
+        + (f" verify={js(d['verify'])}" if d.get("verify") else "")
     )
 
 

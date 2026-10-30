@@ -32,6 +32,8 @@ class Settings:
     inline_activity_types: int = (
         200  # activity types listed in the prompt up to this many; more: found with lookup_values
     )
+    verifier_url: str = ""  # the verifier service (compile + engine, a separate deployable); "" = no engine check
+    verify_repair_turns: int = 4  # model turns the one repair after a failed engine check may take
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:

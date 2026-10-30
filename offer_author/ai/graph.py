@@ -22,15 +22,18 @@ from collections.abc import Sequence
 from typing import Annotated, Any, TypedDict
 
 from langchain_core.messages import AIMessage, AnyMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.runtime import Runtime
+from langgraph.types import Send
 
+from ..core import verifier
 from ..core.run import Run, error_result, finish_blockers
 from ..domain import Problem, Result, ToolInput
-from . import render
+from . import cases, render
 from .tools import SCHEMAS, TOOLS, Done, RunContext, content, done, schema_error, started_or_run
 
 NUDGE = "Use the tools: compose, then finish."
@@ -192,3 +195,96 @@ def build() -> CompiledStateGraph[AgentState, RunContext, Any, Any]:
 def recursion_limit(max_turns: int) -> int:
     """Graph steps a run of max_turns turns may take: model, tools and judge per turn, and a margin."""
     return 3 * max_turns + 4
+
+
+# ---------------------------------------------------------------- the engine-checked run (TwoBranchVerify.md)
+r"""The whole-offer run with an engine check: the offer and its test cases in parallel, then the engine.
+
+    START -Send-> build  (the agent graph above: Offer Main, segment, rules) -> verify -> END
+          -Send-> cases  (one turn: write_cases, from the description)       -/    |
+                                                       mismatch, first time:  build (repair turn) -> verify -> END
+
+Both branches read the same knowledge (the run's system blocks). verify sends the canvases, Offer Main and the cases to
+the verifier service (compile + engine, mocked members). On a mismatch the build run gets one repair: it fixes the
+blocks; the cases are never rewritten. A second mismatch, an unreachable verifier or no cases: the run ends with the
+verdict recorded.
+"""
+
+
+class VerifiedState(AgentState, total=False):
+    """The engine-checked run's state: the agent's, the cases, the verifier's verdict, and whether it repaired."""
+
+    cases: list[dict[str, Any]] | None
+    cases_info: dict[str, Any]
+    verdict: dict[str, Any] | None
+    repaired: bool
+
+
+def fan_out(state: VerifiedState) -> list[Send]:
+    """START: the build run and the test-case branch at once."""
+    return [Send("build", state), Send("cases", state)]
+
+
+def build_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str, Any]:
+    """The agent graph, run to its end (or, after a failed check, on from where it ended)."""
+    agent_state = {k: state[k] for k in ("messages", "turns", "max_turns", "usage", "fin", "result") if k in state}  # type: ignore[literal-required]
+    config: RunnableConfig = {"recursion_limit": recursion_limit(state["max_turns"]), "max_concurrency": 1}
+    out = build().invoke(agent_state, config, context=runtime.context)
+    return {k: out[k] for k in ("messages", "turns", "usage", "fin", "result") if k in out}
+
+
+def cases_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str, Any]:
+    """The test-case branch: one turn writing the cases."""
+    scenarios, info = cases.write(runtime.context)
+    return {"cases": scenarios, "cases_info": {"s": info["s"], "scenarios": len(scenarios or []), **info["usage"]}}
+
+
+def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str, Any]:
+    """The engine check; on the first mismatch, the repair message for the build run."""
+    ctx = runtime.context
+    if state.get("result") or state.get("fin") is None or not state.get("cases"):
+        why = "the run did not finish" if state.get("fin") is None or state.get("result") else "no test cases"
+        return {"verdict": {"skipped": why}}
+    body = verifier.request(ctx.run, state["cases"] or [])
+    if body is None:
+        return {"verdict": {"skipped": "no rules"}}
+    t0 = time.time()
+    try:
+        report = verifier.verify(ctx.settings.verifier_url, body)
+    except verifier.VerifierUnavailableError as e:
+        return {"verdict": {"error": str(e)[:300]}}
+    ctx.timing.tools_s["verify"] = round(ctx.timing.tools_s.get("verify", 0) + time.time() - t0, 2)
+    repaired = bool(state.get("repaired"))
+    verdict = verifier.verdict(report, repaired)
+    if report.get("ok") or repaired:
+        return {"verdict": verdict}
+    return {
+        "verdict": verdict,
+        "repaired": True,
+        "fin": None,
+        "max_turns": state["turns"] + ctx.settings.verify_repair_turns,
+        "messages": [HumanMessage(content=cases.mismatch_message(report))],
+    }
+
+
+def _after_verify(state: VerifiedState) -> str:
+    return "build" if state.get("fin") is None and state.get("repaired") and not _verified(state) else END
+
+
+def _verified(state: VerifiedState) -> bool:
+    """The check has its final word: it passed, or it already sent the build run its one repair and checked again."""
+    v = state.get("verdict") or {}
+    return bool(v.get("ok") or v.get("repaired") or "skipped" in v or "error" in v)
+
+
+def build_verified() -> CompiledStateGraph[VerifiedState, RunContext, Any, Any]:
+    """The engine-checked run's graph."""
+    g = StateGraph(VerifiedState, context_schema=RunContext)
+    g.add_node("build", build_node)
+    g.add_node("cases", cases_node)
+    g.add_node("verify", verify_node)
+    g.add_conditional_edges(START, fan_out, ["build", "cases"])
+    g.add_edge("build", "verify")
+    g.add_edge("cases", "verify")
+    g.add_conditional_edges("verify", _after_verify, ["build", END])
+    return g.compile()

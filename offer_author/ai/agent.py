@@ -48,8 +48,12 @@ def run(
     on_offer_main: Callable[[dict[str, Any]], None] | None = None,
     settings: Settings | None = None,
     history: History | None = None,
+    cases_llm: Any = None,
 ) -> dict[str, Any]:
     """One agent run for the given parts of an offer.
+
+    A whole-offer run (Offer Main and rules) with a verifier configured is engine-checked: its test cases are written
+    in parallel and its canvases are run against them (graph.build_verified, TwoBranchVerify.md).
 
     Args:
         prompt: The manager's English.
@@ -65,6 +69,7 @@ def run(
         settings: The run's settings (default: the code defaults).
         history: The tenant's earlier offers (default: from settings.history when settings.similar_offers is on,
             else none).
+        cases_llm: The chat model of the test-case branch (default: llm).
 
     Returns:
         core.run.outcome, with the model's usage and the run's timing in diagnostics.
@@ -74,7 +79,8 @@ def run(
     parts = tuple(p for p in PARTS if p in parts)
     tools = Run(catalog, offer_id, existing, on_offer_main, search=searcher(settings))
     earlier, earlier_s = _earlier(prompt, catalog, settings, offer_id, history, parts)
-    ctx = RunContext(llm, tools, _system(catalog, account_id, settings), parts, settings)
+    ctx = RunContext(llm, tools, _system(catalog, account_id, settings), parts, settings, prompt, cases_llm)
+    checked = bool(settings.verifier_url) and "offer_main" in parts and "rules" in parts
     current = tools.current() if "rules" in parts else None
     start: dict[str, Any] = {
         "messages": [HumanMessage(content=intro(prompt, parts, context, existing, current, earlier))],
@@ -92,6 +98,8 @@ def run(
             usage=last.get("usage") or {},
             timing=ctx.timing.as_dict(),
         )
+        if last.get("verdict"):
+            _verdict(res, last["verdict"], last.get("cases_info"))
         if earlier:  # which earlier offers the model was shown
             res["diagnostics"]["earlier"] = {
                 "named": [e.name for e in earlier["named"]],
@@ -101,8 +109,12 @@ def run(
         return res
 
     config: RunnableConfig = {"recursion_limit": graph.recursion_limit(settings.max_turns), "max_concurrency": 1}
+    run_graph: Any = graph.build()
+    if checked:  # the build run and the test cases at once; the build run's own steps stay one at a time
+        config = {"recursion_limit": 12, "max_concurrency": 2}
+        run_graph = graph.build_verified()
     try:
-        for state in graph.build().stream(start, config, context=ctx, stream_mode="values"):
+        for state in run_graph.stream(start, config, context=ctx, stream_mode="values"):
             last = state
     except LLMError as e:
         return done(error_result(Problem.of("generator_unavailable", error=str(e))))
@@ -111,6 +123,15 @@ def run(
     if last.get("result"):
         return done(last["result"])
     return done(outcome(tools, last.get("fin"), parts, offer_id))
+
+
+def _verdict(res: dict[str, Any], verdict: dict[str, Any], cases_info: dict[str, Any] | None) -> None:
+    """The engine check in the result: in the diagnostics, and for the manager when transactions still disagree."""
+    res.setdefault("diagnostics", {})["verify"] = {**verdict, **({"cases": cases_info} if cases_info else {})}
+    if verdict.get("mismatches") and res.get("rules"):
+        note = Problem.of("verify_mismatch", count=verdict["mismatches"], bits=verdict.get("bits"))
+        res["assumptions"] = [*res.get("assumptions", []), note]
+        res.setdefault("by_part", {}).setdefault("rules", {}).setdefault("assumptions", []).append(note)
 
 
 def warm(llm: Any, catalog: Catalog, account_id: Any = None, settings: Settings | None = None) -> dict[str, int] | None:

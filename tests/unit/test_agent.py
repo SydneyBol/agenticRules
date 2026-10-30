@@ -727,6 +727,15 @@ def test_the_block_reference_states_which_operators_take_picked_codes():
     assert "operators in, not_in take them in `picked`" in prompt.static_prompt()
 
 
+def test_the_knowledge_says_a_transaction_date_is_the_bit_date_not_the_current_date():
+    """C02 full flow (2026-10-31): the birthday month was compared with the current date block (the engine's
+    processing time), so test BITs dated ahead never matched."""
+    text = prompt.static_prompt()
+    assert "The current date block is the moment the engine processes the BIT" in text
+    assert "compares a part of `h_bit_date`" in text
+    assert "the BIT date (`h_bit_date`), never the current date block" in text
+
+
 def test_a_finish_is_judged_after_the_turns_other_calls(fixture_catalog, flagged):
     """A finish written before a compose in the same turn used to be accepted on the earlier clean compose."""
 
@@ -809,3 +818,10 @@ def test_a_rule_with_no_action_is_reported(fixture_catalog):
     ]
     s07 = tree.expand(tree.inline(S07["blocks"], S07.get("defs")))
     assert not any("has no action" in p for p in said(screen_fields.unfilled(s07, fixture_catalog, {})))
+
+
+def test_the_conventions_read_an_offer_as_its_own_reward_and_reaches_as_at_least():
+    """TwoBranchVerify measurement (2026-10-31): H05 and H10 test cases misread these two."""
+    text = prompt.static_prompt()
+    assert "a transaction that does not qualify earns nothing from this offer" in text
+    assert '"reaches X", "hits X", "once the total is X": greater or equal (>=)' in text

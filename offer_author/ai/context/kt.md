@@ -158,6 +158,11 @@ codes from the value popup. Payment Amount is an old list attribute: it takes on
 
 **Dates and times.** Date conditions read dates in the program timezone. A BIT date sent without a timezone offset is
 read as UTC; one with an offset keeps it. DAY_OF_WEEK runs Monday = 1 to Sunday = 7; HOUR_OF_DAY 0-23.
+When the transaction happened is the BIT's date, `h_bit_date` (an activity attribute block, or the condition's own
+attribute). The current date block is the moment the engine processes the BIT, not when the transaction happened: a
+BIT sent late, replayed or tested with another date has a different current date. So a condition about the
+transaction ("in the birthday month", "on Sundays", "in December") compares a part of `h_bit_date`; the current date
+is only for what is meant as "today" at processing time.
 
 **Value blocks:** a number (digits, optional decimals), a text, a date, a date-time, the current date, arithmetic
 (operator `+` `-` `*` `/`, and `%` for the remainder), date arithmetic (`+` / `-` DAYS, MONTHS or YEARS, and snap to the start of

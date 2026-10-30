@@ -242,6 +242,8 @@ class RunContext:
         invalid: Ids of the tool calls whose input was not valid JSON.
         worker: Runs the calls started while the model streams, one at a time, in the order they were written.
         lookups: Runs a turn's lookups together (they only read the catalog).
+        prompt: The manager's description (the test-case branch writes its cases from it).
+        cases_llm: The chat model of the test-case branch (default: llm).
     """
 
     llm: Any
@@ -249,6 +251,8 @@ class RunContext:
     system: list[dict[str, Any]]
     parts: tuple[str, ...]
     settings: Settings
+    prompt: str = ""
+    cases_llm: Any = None
     timing: Timing = field(default_factory=Timing)
     started: dict[str, Future[ToolMessage]] = field(default_factory=dict)
     invalid: set[str] = field(default_factory=set)
@@ -368,9 +372,9 @@ def _schema(model: type[BaseModel]) -> dict[str, Any]:
             shared = {k: v for k, v in defs[s["$ref"].split("/")[-1]].items() if k != "description"}  # a docstring
             s = {**shared, **{k: v for k, v in s.items() if k != "$ref"}}
         branches = [b for b in s.get("anyOf", []) if b != {"type": "null"}]
-        if "anyOf" in s and len(branches) == 1:
-            s = {**{k: v for k, v in s.items() if k != "anyOf"}, **branches[0]}
-        elif "anyOf" in s:
+        if "anyOf" in s and len(branches) == 1:  # an optional field: its one type, a model's ref inlined too
+            return clean({**{k: v for k, v in s.items() if k != "anyOf"}, **branches[0]})
+        if "anyOf" in s:
             s = dict(s, anyOf=branches)
         return {k: v if k == "required" else clean(v) for k, v in s.items() if not dropped(s, k, v)}
 

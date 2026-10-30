@@ -30,6 +30,10 @@ FOR_THE_MANAGER: dict[str, Callable[[Facts], str]] = {
         f"Who qualifies is the member segment '{f['name']}': create and select it on Select Members, otherwise every "
         "member qualifies."
     ),
+    "verify_mismatch": lambda f: (
+        f"The offer's test cases were run in the engine with mocked members: {f['count']} of {f['bits']} test "
+        "transactions did not give what the description implies. Check the rules in Offer Testing before launch."
+    ),
     "model_declined": lambda f: "The model declined this request. Please rephrase the offer description.",
     "generator_unavailable": lambda f: f"The rule generator is unavailable right now ({f['error']}). Please try again.",
     # a saved offer the history does not trust (core.tenant.harvest.vet)
