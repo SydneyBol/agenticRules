@@ -15,6 +15,7 @@ from tests.support import finish, golden, offer_main
 S07 = golden("S07_every_5th_visit")
 FIN = finish(readback="every 5th visit earns a coffee")
 CASE = {
+    "aim": "positive",
     "what": "the 5th visit earns the privilege",
     "member": {"MA_P": {"tier_class": "GOLD"}},
     "bits": [{"header": {"h_bit_date": "2026-11-02T10:00:00", "h_bit_amount": 10, "h_location": "HQ"}, "expect": None}],
@@ -71,8 +72,10 @@ def test_cases_are_written_alongside_the_build_and_the_canvases_checked_once(fix
     (body,) = sent
     assert body["rules_xml"] == res["rules"]["xml"] and body["scenarios"][0]["member"] == CASE["member"]
     assert body["offer_main"]["frequency"] and "segment_xml" in body and body["tenant"] == fixture_catalog.tenant
+    assert body["locations"] == sorted(fixture_catalog.attributes["activity"]["h_location"].values)  # unknown → 406
     v = res["diagnostics"]["verify"]
     assert v["ok"] and not v["repaired"] and v["cases"]["scenarios"] == 1
+    assert (v["cases"]["positive"], v["cases"]["negative"], v["cases"]["bits"]) == (1, 0, 1)
     # the cases branch reads the same knowledge (system blocks) and never the canvases
     assert "Do not build the offer" in json.dumps(cases_llm.calls[0]) and "compose" not in json.dumps(cases_llm.calls)
 
@@ -140,4 +143,57 @@ def test_the_cases_schema_shows_what_a_transaction_gives_and_refuses_other_keys(
     assert "$ref" not in shown and '"privileges"' in shown and '"points"' in shown
     bit = {"header": {"h_bit_date": "2026-11-02T10:00:00"}, "expect": {"privilege": "13829", "quantity": 1}}
     with pytest.raises(ValidationError):
-        Cases.model_validate({"scenarios": [{"what": "x", "member": {}, "bits": [bit]}]})
+        Cases.model_validate({"scenarios": [{"aim": "positive", "what": "x", "member": {}, "bits": [bit]}]})
+
+
+def test_each_case_is_positive_or_negative_and_none_is_written_for_its_own_sake():
+    """User (2026-10-31): the cases aim at positive and negative outcomes, without unnecessary ones."""
+    from pydantic import ValidationError
+
+    from offer_author.ai.cases import TASK, WRITE_CASES, Cases
+
+    assert '"positive"' in json.dumps(WRITE_CASES["input_schema"]) and '"negative"' in json.dumps(
+        WRITE_CASES["input_schema"]
+    )
+    task = " ".join(TASK.split())
+    assert "Give each clause one positive and one negative scenario" in task
+    assert "Leave out any scenario that shows only what another one already shows" in task
+    with pytest.raises(ValidationError):
+        Cases.model_validate({"scenarios": [{"aim": "boundary", "what": "x", "member": {}, "bits": []}]})
+
+
+def test_a_case_member_has_no_offer_counters_so_counters_come_from_its_transactions():
+    """Regenerated cases (2026-10-31): the only two that seeded counters guessed names the builder never chose
+    ("points_earned" for "Bonus Points Earned"), so the engine started from zero and both disagreed."""
+    from pydantic import ValidationError
+
+    from offer_author.ai.cases import TASK, WRITE_CASES, Cases
+
+    assert "MA_O" not in json.dumps(WRITE_CASES["input_schema"])
+    seeded = {"aim": "positive", "what": "x", "member": {"MA_P": {}, "MA_O": {"points_earned": 1990}}, "bits": []}
+    with pytest.raises(ValidationError):
+        Cases.model_validate({"scenarios": [seeded]})
+    assert "the scenario makes those earlier transactions first" in " ".join(TASK.split())
+
+
+def test_the_repair_message_shows_the_offer_counters_before_and_after_the_transaction():
+    from offer_author.ai.cases import mismatch_message
+
+    bits = [{"counters_after": {"Cumulative Spend": 1999}}, {"counters_after": {"Cumulative Spend": 2000}}]
+    report = {
+        "scenarios": [{"scenario": 0, "what": "reaching 2000", "bits": bits}],
+        "mismatches": [
+            {
+                "scenario": 0,
+                "what": "reaching 2000",
+                "bit": 1,
+                "header": {"h_bit_amount": 1},
+                "expect": {"points": 1000, "privileges": []},
+                "got": {"points": 0, "privileges": []},
+                "counters_after": {"Cumulative Spend": 2000},
+            }
+        ],
+    }
+    row = json.loads(mismatch_message(report).split("expect:\n", 1)[1].split("\n\n")[0])[0]
+    assert row["offer_counters_before"] == {"Cumulative Spend": 1999}
+    assert row["offer_counters_after"] == {"Cumulative Spend": 2000}

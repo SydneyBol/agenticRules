@@ -40,8 +40,19 @@ def request(run: Run, scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
             "max_usage_per_user": om.get("max_usage_per_user") or 0,
             "frequency": om.get("frequency") or "total",
         },
+        "locations": stores(run),
         "scenarios": scenarios,
     }
+
+
+def stores(run: Run) -> list[str]:
+    """The tenant's active store codes: the values of the activity's h_location.
+
+    The engine then refuses an unknown store, as the stock request validation does; none when the catalog has none
+    (every store is then known).
+    """
+    loc = ((run.catalog.attributes or {}).get("activity") or {}).get("h_location")
+    return sorted(str(code) for code in (loc.values if loc is not None and loc.values else {}))
 
 
 def verify(url: str, body: dict[str, Any], timeout: float = 120) -> dict[str, Any]:

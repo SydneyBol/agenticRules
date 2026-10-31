@@ -236,7 +236,10 @@ def build_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str, 
 def cases_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str, Any]:
     """The test-case branch: one turn writing the cases."""
     scenarios, info = cases.write(runtime.context)
-    return {"cases": scenarios, "cases_info": {"s": info["s"], "scenarios": len(scenarios or []), **info["usage"]}}
+    sc = scenarios or []
+    aims = {a: sum(s.get("aim") == a for s in sc) for a in ("positive", "negative")}
+    size = {"scenarios": len(sc), **aims, "bits": sum(len(s.get("bits") or []) for s in sc)}
+    return {"cases": scenarios, "cases_info": {"s": info["s"], **size, **info["usage"]}}
 
 
 def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str, Any]:

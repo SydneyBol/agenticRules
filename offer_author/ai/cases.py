@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import Any, Literal
 
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -37,14 +37,28 @@ class CaseBit(BaseModel):
     expect: Expect | None = Field(description="what this transaction gives under the description; null = nothing")
 
 
+class Member(BaseModel):
+    """The mocked member: profile attributes only.
+
+    Offer counters start empty and change only through the scenario's transactions, as the engine counts them.
+    """
+
+    model_config = ConfigDict(extra="forbid")  # no offer counters: their names belong to the offer being built
+
+    MA_P: dict[str, Any] = Field(
+        default_factory=dict, description="profile attributes by code (e.g. tier_class, date_of_birth)"
+    )
+
+
 class Scenario(BaseModel):
     """One mocked member and its transactions, in order."""
 
-    what: str = Field(description="the clause or boundary this scenario tests")
-    member: dict[str, Any] = Field(
-        description='{"MA_P": profile attributes by code (e.g. tier_class, date_of_birth), "MA_O": offer counters by '
-        "name, only when the scenario starts with some (counters otherwise start empty)}"
+    aim: Literal["positive", "negative"] = Field(
+        description="positive: the member meets the clause and earns its reward; negative: one thing changed so the "
+        "clause fails"
     )
+    what: str = Field(description="the clause this scenario tests")
+    member: Member
     bits: list[CaseBit] = Field(description="the member's transactions, in order")
 
 
@@ -63,10 +77,16 @@ WRITE_CASES = {
 
 TASK = (
     "\n\nDo not build the offer: another run builds it. Write the test cases a loyalty manager would run for it in "
-    "Offer Testing, with write_cases: each scenario a member and its transactions in order, and what each "
-    "transaction should give under this description. Test every clause and the boundaries (just under, at and over "
-    "a threshold; the transaction that crosses a cap; the Nth and the next; outside a window; a member the offer "
-    "excludes). Use the tenant catalog's codes. Call write_cases once."
+    "Offer Testing, with write_cases. Each scenario is positive or negative. A positive scenario is a member whose "
+    "transactions meet a clause, and expects the reward the description gives for it. A negative scenario changes one "
+    "thing so that a clause fails (the amount just under the threshold, a store or day outside the offer, the "
+    "transaction after a cap or limit is reached, a member the offer excludes), and expects what the offer still "
+    "gives without that clause, often nothing. Give each clause one positive and one negative scenario; where the "
+    "description names a threshold or an Nth transaction, the positive meets it exactly and the negative falls one "
+    "short. Leave out any scenario that shows only what another one already shows. A member starts with no offer "
+    "history: when a clause depends on what came before (after 4 visits, near a cap, a reward already given), the "
+    "scenario makes those earlier transactions first, each with what it gives, and then the one under test. Use the "
+    "tenant catalog's codes. Call write_cases once."
 )
 
 
@@ -89,10 +109,17 @@ def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]
     return [s.model_dump() for s in cases.scenarios], info
 
 
+def _counters_before(scenario: dict[str, Any], bit: int) -> dict[str, Any]:
+    """The member's offer counters before a transaction: those after the one before it (none before the first)."""
+    bits = scenario.get("bits") or []
+    return (bits[bit - 1].get("counters_after") or {}) if 0 < bit <= len(bits) else {}
+
+
 def mismatch_message(report: dict[str, Any]) -> str:
     """The failed engine check, as the build run reads it: per transaction, the case, what it expects, what it got.
 
-    Never the compiled rules: the scenario, the member, the transaction's header and the two results.
+    Never the compiled rules: the scenario, the member, the transaction's header, the two results, and the offer
+    counters (the canvas's own names) before and after the transaction.
     """
     rows = []
     by_scenario = {s["scenario"]: s for s in report.get("scenarios") or []}
@@ -108,6 +135,8 @@ def mismatch_message(report: dict[str, Any]) -> str:
                 },
                 "expected": m["expect"],
                 "engine_gave": m["got"],
+                "offer_counters_before": _counters_before(s, m["bit"]),
+                "offer_counters_after": m.get("counters_after") or {},
                 **({"refused_before_the_rules": m["skipped"]} if m.get("skipped") else {}),
                 **({"engine_error": s["error"]} if s.get("error") else {}),
             }
