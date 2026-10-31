@@ -267,15 +267,19 @@ def intro(
 
 
 SUBPROMPT_FORM = """Earlier offers show the manager's prompt and the offer's blocks in Pulsar's sub-prompt form,
-one line per block in canvas order: a label, then the block. "Filter_N, offer_criteria <object> <attribute> <operator>
-<value>" is a condition of the On Activity filter (activity_criteria). Lines labelled rule_N,
-rule_line_N or payment_rule_N belong to that rule: an "if" line is one of its conditions (if_generic_adaptive;
-"if_payment" is if_payment_attribute), the other lines are its actions: "give_points <loyalty account> <reward tag>
-<formula>", "give_privilege <privilege id> ... previlege_Validity <validity> <quantity>", "update_attribute <level>
-<attribute> <operator> <value>". A member attribute is "member <level> <attribute>": program_level_tracker is MA_P,
-offer_level_tracker an offer counter (MA_O), activity_level_tracker an activity counter (MA_A); a counter is quoted as
-"<data type> <name>". "activity_attribute->x" is the activity's attribute x; brackets are a formula. Rule names are not
-shown."""
+one line per block in canvas order: a label, then the block. The label says where the block sits. "Filter" lines are
+conditions of the On Activity filter (activity_criteria, written "offer_criteria <object> <attribute> <operator>
+<value>"). "rule_N" lines belong to rule N (rule_line_N: a Line Rule, payment_rule_N: a Payment Rule); "rule_N inside
+rule_M" is a rule placed among rule M's actions, checked only when rule M's conditions held. When the offer has more
+than one On Activity or On Event, the label starts with it ("activity_2", "event_1"). A condition line is an "if"
+(if_generic_adaptive; "if_payment" is if_payment_attribute). The conditions of one rule or filter must all hold,
+except those labelled with an OR: "OR_K branch 1" and "OR_K branch 2" are the two sides of one OR block, which holds
+when every condition of either side holds (a further "OR_J branch ..." after it is an OR inside that side). The other
+lines are actions: "give_points <loyalty account> <reward tag> <formula>", "give_privilege <privilege id> ...
+previlege_Validity <validity> <quantity>", "update_attribute <level> <attribute> <operator> <value>". A member
+attribute is "member <level> <attribute>": program_level_tracker is MA_P, offer_level_tracker an offer counter (MA_O),
+activity_level_tracker an activity counter (MA_A); a counter is quoted as "<data type> <name>".
+"activity_attribute->x" is the activity's attribute x; brackets are a formula. Rule names are not shown."""
 
 
 def earlier_offers(earlier: dict[str, Any]) -> str:

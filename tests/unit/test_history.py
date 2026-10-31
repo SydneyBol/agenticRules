@@ -95,6 +95,12 @@ def test_earlier_offers_show_the_prompt_and_subprompt_after_the_form_note():
     )
 
 
+def test_the_form_note_explains_the_labels_of_an_or_a_nested_rule_and_several_activities():
+    note = " ".join(prompt.SUBPROMPT_FORM.split())
+    assert '"OR_K branch 1" and "OR_K branch 2" are the two sides of one OR block' in note
+    assert "checked only when rule M's conditions held" in note and '"activity_2", "event_1"' in note
+
+
 def test_histories_reload_when_the_file_changes(tmp_path, monkeypatch):
     monkeypatch.setattr("offer_author.core.tenant.history.from_record", lambda r, own=True: offer(r["id"], r["prompt"]))
     monkeypatch.setattr("offer_author.core.tenant.history.vet", lambda xml, catalog: [])

@@ -4,6 +4,7 @@ So the reference offers the agent is shown grow with what managers save and laun
 
   offer-harvest --tenant devintbf2 --pulsar <copy of S3 <program>/gpt/data_store>
   offer-harvest --tenant devintbf2 --saved saved.jsonl     # [{id, name, description, xml, updated, status}]
+  offer-harvest --tenant devintbf2 --rerender              # stored offers' sub-prompts in the current form
 
 Sources: Pulsar's collected offers (data_store/offer/<id>/data.csv: offers_offer columns, offerXML base64 from bolapi
 offers/<id>/drl/, offer_Prompt) or a JSONL of saved offers. Each version is vetted against the tenant's catalog
@@ -27,6 +28,7 @@ from typing import Any
 
 from ..core.settings import ROOT, Settings
 from ..core.tenant.harvest import PromptLog, harvest, read
+from ..core.tenant.structure import relabel
 from .cli import load_catalog
 from .text import word
 
@@ -47,10 +49,12 @@ def last_prompt(text: str | None) -> str:
 
 
 def pulsar_subprompt() -> Callable[[str], str]:
-    """subprompt(xml): Pulsar's lines for a saved XML (xml_to_subprompt).
+    """subprompt(xml): Pulsar's lines for a saved XML (xml_to_subprompt), each labelled with its place on the canvas.
 
     Joined as prompt_validator.rag_data_fetch joins them. Unlike Pulsar the XML is not templatized first: a stored
-    offer is vetted against this tenant's catalog, so its codes are the tenant's. "" when Pulsar cannot read the XML.
+    offer is vetted against this tenant's catalog, so its codes are the tenant's. Pulsar's labels do not show an OR's
+    branches, a rule inside a rule or the activity a rule runs under; core.tenant.structure.relabel gives each line the
+    label of its place (Pulsar's own labels when a block cannot be placed). "" when Pulsar cannot read the XML.
     """
     sys.path.insert(0, PULSAR)
     log = types.ModuleType("general.loggerutils")  # Pulsar's logging setup is not part of the reviewed files
@@ -60,7 +64,8 @@ def pulsar_subprompt() -> Callable[[str], str]:
 
     def subprompt(xml: str) -> str:
         with contextlib.chdir(PULSAR):  # Pulsar reads its block schema relative to its root
-            return "\n".join(line.replace(",,,", ",").strip() for line, _ in xml_to_subprompt(xml) or [])
+            pairs = [(line.replace(",,,", ",").strip(), block) for line, block in xml_to_subprompt(xml) or []]
+        return relabel(xml, pairs) or "\n".join(line for line, _ in pairs)
 
     return subprompt
 
@@ -94,6 +99,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pulsar", help="a copy of Pulsar's <program>/gpt/data_store folder")
     ap.add_argument("--saved", help="JSONL of saved offers: {id, name, description, xml, updated, status}")
     ap.add_argument("--history", help="history folder (default: $OFFER_AUTHOR_HISTORY)")
+    ap.add_argument(
+        "--rerender", action="store_true", help="only write the stored offers' sub-prompts again in the current form"
+    )
     ap.add_argument("--catalog", help="catalog JSON instead of saved bolapi responses")
     ap.add_argument("--catalog-dir", help="saved bolapi responses (default: $OFFER_AUTHOR_CATALOGS/<tenant>/bolapi)")
     ap.add_argument("--no-catalog", action="store_true", help="vet structure only (a program with no catalog here)")
@@ -103,12 +111,12 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     settings = Settings.from_env()
     root = a.history or settings.history
-    if not root or not (a.pulsar or a.saved):
-        ap.error("give --pulsar or --saved, and --history (or OFFER_AUTHOR_HISTORY)")
+    if not root or not (a.pulsar or a.saved or a.rerender):
+        ap.error("give --pulsar, --saved or --rerender, and --history (or OFFER_AUTHOR_HISTORY)")
     saved = list(pulsar_saved(a.pulsar)) if a.pulsar else []
     if a.saved:
         saved += [r for r in read(a.saved) if r.get("status", "launched") in LIVE]
-    catalog = None if a.no_catalog else load_catalog(a, settings)
+    catalog = None if a.no_catalog or a.rerender else load_catalog(a, settings)
     try:
         subprompt = pulsar_subprompt()
     except ImportError as e:

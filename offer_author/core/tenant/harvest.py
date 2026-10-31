@@ -29,6 +29,7 @@ from ...domain import Problem
 from ..canvas.checks.grammar import NS, _tag, check, disabled
 from ..canvas.fields import counter_ref
 from ..vocabulary import ATTRIBUTE_LEVELS, CATALOG_OBJECT, COUNTER_LEVELS
+from .structure import FORM
 
 if TYPE_CHECKING:
     from .catalog import Attribute, Catalog
@@ -163,8 +164,8 @@ def harvest(
         store: The history file.
         catalog: The tenant catalog the offers are vetted against.
         prompts: {offer_id: prompt} (PromptLog.last), used when a version has none.
-        subprompt: xml -> Pulsar's sub-prompt lines (api/harvest.py), stored with every offer that has none yet: the
-            agent is shown an earlier offer only with them (history.py).
+        subprompt: xml -> Pulsar's sub-prompt lines (api/harvest.py), stored with every offer that has none yet or has
+            them in an earlier form (structure.FORM): the agent is shown an earlier offer only with them (history.py).
 
     Returns:
         {added, replaced, kept, rejected: {id: [Problem]}, removed: [id]}.
@@ -190,7 +191,8 @@ def harvest(
             }
     if subprompt:
         for r in stored.values():
-            r["subprompt"] = r.get("subprompt") or subprompt(r["xml"])
+            if not r.get("subprompt") or r.get("subprompt_form") != FORM:
+                r["subprompt"], r["subprompt_form"] = subprompt(r["xml"]), FORM
     _write(store, stored.values())
     return report
 
