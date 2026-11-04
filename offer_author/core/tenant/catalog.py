@@ -29,6 +29,9 @@ from ..vocabulary import ACTIVITY_TYPE
 log = logging.getLogger("offer_author.catalog")
 
 OBJECTS = ("activity", "member", "product")
+# the airline objects: a BIT's origin and destination airports (module AIRPORT) and their pair (AIRPORT_DISTANCE);
+# a program without them lists none
+AIRLINE_OBJECTS = {"airport": "AIRPORT", "airport_pair": "AIRPORT_DISTANCE"}
 POOL, SHOWN = 25, 15  # lookup with a search: BM25's best 25 and the embeddings' best 25, the cross-encoder's best 15
 TIE_ODDS = 0.5  # cross-encoder scores tie when their log-odds are this close (odds within ~1.6x), at any confidence
 # value lists longer than this are not written into the prompt; the model finds codes with lookup_values instead
@@ -87,12 +90,18 @@ class Catalog:
         sponsor_id: Its sponsor.
         attributes: object -> {code: Attribute}.
         activity_types: code -> label.
-        loyalty_accounts: [{id, name, tags: [{code, name}]}].
-        privileges: id -> {id, name, usage_policy}.
-        tiers: The MA_T tier programme: tier_class_code -> {tier_code: name}.
-        default_account: The loyalty account points go to.
+        loyalty_accounts: The reward accounts the sponsor's offers can use: [{id, name (the loyalty currency),
+            currency_type, sponsor_specific, tags: [{code, name}]}]; tags are known when their GET was made.
+        privileges: id -> {id, name, usage_policy (the first active one), usage_policies: [{id, name}]}.
+        tiers: The MA_T tier programme: tier_class_code -> {tier_code: name}, each class's tiers by rank, lowest first.
+        default_account: The program's configured loyalty account (the backend's --account).
         default_tag: The reward tag points go to, when configured.
         today: The tenant's date (fixtures pin it).
+        timezone: The program's time zone (dates are read in it), when known.
+        point_decimal_scale: The decimals points are kept at, when known.
+        reference: The program data a transaction reads in the engine, for the engine check's mocked runs (never shown
+            to the model): airports {code: attributes}, airport_pairs {"ORIG-DEST": {distance, ...}},
+            conversion_rates {"<account>_<currency>_AWARD": rate}, features {toggle: on}.
     """
 
     tenant: str
@@ -105,6 +114,9 @@ class Catalog:
     default_account: str | None = None
     default_tag: str | None = None
     today: str | None = None
+    timezone: str | None = None
+    point_decimal_scale: int | None = None
+    reference: dict[str, Any] = field(default_factory=dict)
 
     def link_activity_types(self) -> Catalog:
         """Makes the activity types the values of the activity attribute h_bit_type (lookup BIT_TYPE).
@@ -122,19 +134,31 @@ class Catalog:
         """One attribute of an object (activity, member, product), or None."""
         return self.attributes.get(obj, {}).get(code)
 
+    @property
+    def offer_account(self) -> str | None:
+        """The account an action that names none credits.
+
+        The sponsor's own account when it has exactly one (the screen lists it for this sponsor only), else the
+        program's configured account.
+        """
+        own = [str(a["id"]) for a in self.loyalty_accounts if a.get("sponsor_specific")]
+        return own[0] if len(own) == 1 else self.default_account
+
     def account(self, account_id: Any = None) -> dict[str, Any] | None:
-        """A loyalty account (default: the tenant's), or None."""
-        aid = str(account_id or self.default_account)
+        """A loyalty account (default: offer_account), or None."""
+        aid = str(account_id or self.offer_account)
         return next((a for a in self.loyalty_accounts if str(a["id"]) == aid), None)
 
     def reward_tag(self, account_id: Any = None) -> str | None:
-        """The reward tag points go to when there is nothing to choose.
+        """The reward tag points go to in an account when there is nothing to choose.
 
-        The tenant's configured tag, else the account's only tag; None when the account has several and none is
-        configured (the model picks one).
+        The tenant's configured tag when the account has it (or its tags are not known), else the account's only tag;
+        None when there is nothing to pick from (the model picks one).
         """
         tags = [t["code"] for t in (self.account(account_id) or {}).get("tags") or []]
-        return self.default_tag or (tags[0] if len(tags) == 1 else None)
+        if self.default_tag and (not tags or self.default_tag in tags):
+            return self.default_tag
+        return tags[0] if len(tags) == 1 else None
 
     def values_of(self, obj: str, code: str) -> dict[str, str]:
         """Code -> label for a LOOKUP/LOV attribute."""
@@ -252,6 +276,8 @@ class Catalog:
             default_tag=d.get("default_tag"),
             today=d.get("today"),
             tiers=d.get("tiers", {}),
+            timezone=d.get("timezone"),
+            point_decimal_scale=d.get("point_decimal_scale"),
         )
         for obj, attrs in d["attributes"].items():
             cat.attributes[obj] = {a["code"]: Attribute(**a) for a in attrs}
@@ -277,8 +303,13 @@ class Catalog:
         lookups, locations, lovs = _value_lists(responses)
         for obj in OBJECTS:
             cat.attributes[obj] = _attributes(responses[f"{obj}_attributes"], lookups, locations, lovs)
+        for obj in AIRLINE_OBJECTS:
+            if responses.get(f"{obj}_attributes"):
+                cat.attributes[obj] = _attributes(responses[f"{obj}_attributes"], lookups, locations, lovs)
         cat.activity_types = lookups.get("BIT_TYPE", {})
-        for t in _rows(responses.get("tiers")):
+        program = next(iter(_rows(responses.get("programs"))), {})
+        cat.timezone, cat.point_decimal_scale = program.get("timezone"), program.get("point_decimal_scale")
+        for t in sorted(_rows(responses.get("tiers")), key=lambda t: t.get("tier_rank") or 0):
             if t.get("active", True) and t.get("tier_class_code"):
                 # the dropdown stores tier_code
                 cat.tiers.setdefault(t["tier_class_code"], {})[t.get("tier_code") or t["name"]] = t["name"]
@@ -290,14 +321,29 @@ class Catalog:
         las = responses["sponsor_loyalty_accounts"]
         las = las.get("loyalty_accounts", []) if isinstance(las, dict) else las
         cat.loyalty_accounts = [
-            {"id": str(a["id"]), "name": a["loyalty_currency"], "tags": tags.get(str(a["id"]), [])}
+            {
+                "id": str(a["id"]),
+                "name": a["loyalty_currency"],
+                "currency_type": a.get("currency_type"),
+                "sponsor_specific": bool(a.get("is_sponsor_specific")),
+                "tags": tags.get(str(a["id"]), []),
+            }
             for a in las
             if a.get("status", "Active") == "Active"
         ]
         for p in _rows(responses["privilege_products"]):
-            pol = next((u for u in p.get("usage_policy") or [] if u.get("active", True)), None)
-            if pol and p.get("privilege_type") in ("Fixed-Product", "Fixed-Discount"):
-                cat.privileges[str(p["id"])] = {"id": str(p["id"]), "name": p["name"], "usage_policy": str(pol["id"])}
+            # the screen's default policy first
+            pols = sorted(
+                (u for u in p.get("usage_policy") or [] if u.get("active", True)), key=lambda u: not u.get("default")
+            )
+            if pols and p.get("privilege_type") in ("Fixed-Product", "Fixed-Discount"):
+                cat.privileges[str(p["id"])] = {
+                    "id": str(p["id"]),
+                    "name": p["name"],
+                    "usage_policy": str(pols[0]["id"]),
+                    "usage_policies": [{"id": str(u["id"]), "name": _policy_name(u)} for u in pols],
+                }
+        cat.reference = _reference(responses)
         return cat.link_activity_types()
 
     @classmethod
@@ -326,12 +372,21 @@ class Catalog:
             "lookup:TIER_CLASS": "extra_tierclass",
             "lovs": "lovs",
             "tiers": "extra_tiers",
+            "programs": "programs",
             "locations": f"extra_locations{sponsor_id}",
+            **{f"{obj}_attributes": f"custom_{module}" for obj, module in AIRLINE_OBJECTS.items()},
         }
         resp.update({k: body(f) for k, f in optional.items() if os.path.exists(os.path.join(directory, f + ".json"))})
         for f in os.listdir(directory):
             if f.startswith("extra_tags"):
                 resp["tags:" + f[len("extra_tags") : -5]] = body(f[:-5])
+            elif f.startswith("lov_"):
+                resp["lov:" + f[4:-5]] = body(f[:-5])
+            elif f.startswith("award_conversion"):
+                resp["award_conversion:" + f[len("award_conversion") : -5]] = body(f[:-5])
+        for name in ("airports", "airport_pairs", "feature_toggles"):
+            if os.path.exists(os.path.join(directory, name + ".json")):
+                resp[name] = body(name)
         return cls.from_bolapi(tenant, sponsor_id, account_id, resp, default_tag)
 
 
@@ -359,13 +414,17 @@ class BolapiCatalogSource:
             "activity_attributes": "attributelibrary/activity/",
             "member_attributes": "attributelibrary/member/?all=True",
             "product_attributes": "attributelibrary/custom/?module_type=PRODUCT",
+            **{f"{o}_attributes": f"attributelibrary/custom/?module_type={m}" for o, m in AIRLINE_OBJECTS.items()},
+            "airports": "airlines/airports/?page_size=1000",  # the engine check's reference data (optional)
+            "airport_pairs": "airlines/airports-distance/?page_size=1000",
             "sponsor_loyalty_accounts": f"sponsors/loyaltyaccounts/?sponsor_id={sponsor_id}&offer_type=reward",
             "privilege_products": (
                 f"product/?sponsor_in={sponsor_id}&as_privilege=true&page_size=500&bundle_type=static"
             ),
             "locations": f"sponsors/{sponsor_id}/locations/?active=True&page_size=1000",
-            f"tags:{account_id}": f"loyaltyaccounts/{account_id}/tags/?active=true&page_size=1000",
+            f"tags:{account_id}": TAGS.format(account_id),
             "tiers": "tier-list/?page_size=500",  # blockly-lov-registry.ts (segment tier dropdowns)
+            "programs": "programs/",  # time zone and point decimal scale
             "lovs": "lovs/",  # LOV definitions; BIT_CATEGORY carries its values (model)
             "lookup:BIT_TYPE": "lookups/?type=BIT_TYPE&active=True&page_size=1000",
             "lookup:PRODUCT_CATEGORY": "lookups/?type=PRODUCT_CATEGORY&active=True&page_size=1000",
@@ -387,17 +446,100 @@ class BolapiCatalogSource:
         """The tenant's catalog read again with the caller's JWT, cached in place of the one before."""
         key = (tenant, sponsor_id, str(account_id))
 
-        def fetch(rel: str) -> Any:
+        def fetch(name: str, rel: str) -> Any:
             r = self.http.get(self.base + rel, headers={"Authorization": authorization or ""})
-            r.raise_for_status()
+            try:
+                r.raise_for_status()
+            except Exception:
+                if (
+                    name in OPTIONAL
+                    or name.startswith("lov:")
+                    or (name.startswith("tags:") and name != f"tags:{account_id}")
+                ):
+                    # the catalog is complete without it (another account's tags: that account lists none)
+                    return None
+                raise
             return r.json()
 
         reqs = self.requests(sponsor_id, account_id)
-        with ThreadPoolExecutor(6) as pool:  # 12 GETs at once instead of one after another (a miss is user-visible)
-            resp = dict(zip(reqs, pool.map(fetch, reqs.values()), strict=True))
+        with ThreadPoolExecutor(6) as pool:  # 17 GETs at once instead of one after another (a miss is user-visible)
+            resp = dict(zip(reqs, pool.map(fetch, reqs, reqs.values()), strict=True))
+            # every other reward account's tags: an offer may award to any of them (the give_points dropdown)
+            las = resp.get("sponsor_loyalty_accounts")
+            las = las.get("loyalty_accounts", []) if isinstance(las, dict) else las or []
+            more = {f"tags:{a['id']}": TAGS.format(a["id"]) for a in las if f"tags:{a['id']}" not in resp}
+            more.update(lov_requests(resp))  # the table-backed LOVs' rows (optional)
+            resp.update(zip(more, pool.map(fetch, more, more.values()), strict=True))
         cat = Catalog.from_bolapi(tenant, sponsor_id, account_id, resp, default_tag)
         self._cache[key] = (time.time(), cat)
         return cat
+
+
+OPTIONAL = frozenset(
+    {"programs", "airports", "airport_pairs", *(f"{o}_attributes" for o in AIRLINE_OBJECTS)}
+)  # catalog GETs whose failure leaves their facts unknown instead of failing it
+TAGS = "loyaltyaccounts/{}/tags/?active=true&page_size=1000"  # an account's reward tags
+
+
+def _policy_name(u: dict[str, Any]) -> str:
+    """A usage policy as the privilege screen names it: its name, and how often it can be used."""
+    name = u.get("policy_name") or u.get("name") or str(u["id"])
+    use = u.get("usage_type") or ""
+    if u.get("usage_count") and u.get("usage_frequency"):
+        use += f" {u['usage_count']} per {u['usage_frequency'].lower()}"
+    if u.get("lifetime_usage_limit"):
+        use += f", {u['lifetime_usage_limit']} in all"
+    return f"{name} ({use.strip(', ')})" if use else name
+
+
+def _reference(responses: dict[str, Any]) -> dict[str, Any]:
+    """The program data a transaction reads in the engine, as bolapi hands it over.
+
+    An airport's attributes are those of bolapi's Airport.get_data_for_engine (codes, ids of its city, country, ...,
+    extra_data merged in); a pair's are its distance and extra_data; a loyalty account's award conversion rate per
+    currency; each feature toggle on or off.
+    """
+    out: dict[str, Any] = {}
+    airports = {}
+    for a in _rows(responses.get("airports")):
+        if a.get("active") and a.get("code"):
+            attrs = {
+                "airport_code": a["code"],
+                "airport_name": a["code"],
+                "airport_name_text": a.get("name"),
+                "description": a.get("description"),
+                "zone": a.get("zone"),
+                "latitude": a.get("latitude"),
+                "longitude": a.get("longitude"),
+                "address": a.get("address"),
+            }
+            attrs.update({k: str(a[k]) for k in ("city", "country", "continent", "region", "area") if a.get(k)})
+            attrs.update(a.get("extra_data") or {})
+            airports[a["code"]] = {k: v for k, v in attrs.items() if v not in (None, "")}
+    pairs = {}
+    for p in _rows(responses.get("airport_pairs")):
+        src, dst = p.get("source_airport") or {}, p.get("destination_airport") or {}
+        if src.get("code") and dst.get("code"):
+            pairs[f"{src['code']}-{dst['code']}"] = {
+                "distance": float(p.get("distance") or 0),
+                **(p.get("extra_data") or {}),
+            }
+    rates = {
+        f"{name.split(':', 1)[1]}_{r['currency_code']}_AWARD": r["conversion_rate"]
+        for name, body in responses.items()
+        if name.startswith("award_conversion:")
+        for r in _rows(body)
+        if r.get("currency_code") and r.get("conversion_rate") is not None
+    }
+    toggles = responses.get("feature_toggles") or {}
+    features = {
+        k: bool(v.get("active", v.get("enabled", False))) if isinstance(v, dict) else bool(v)
+        for k, v in toggles.items()
+    }
+    for k, v in (("airports", airports), ("airport_pairs", pairs), ("conversion_rates", rates), ("features", features)):
+        if v:
+            out[k] = v
+    return out
 
 
 def _rows(body: Any) -> list[dict[str, Any]]:
@@ -497,7 +639,41 @@ def _value_lists(
         for x in _rows(responses.get("lovs"))
         if x.get("name") and isinstance(x.get("model"), list)
     }  # e.g. BIT_CATEGORY
+    for x in _rows(responses.get("lovs")):  # a LOV backed by a table: its rows, read from its api_url (lov_requests)
+        rows = _rows(responses.get("lov:" + str(x.get("name"))))
+        if rows and x["name"] not in lovs:
+            lovs[x["name"]] = {
+                str(r[x["code"]]): r.get(x.get("display") or "name") or str(r[x["code"]])
+                for r in rows
+                if r.get(x["code"]) not in (None, "")
+            }
     return lookups, locations, lovs
+
+
+PERSONAL_LOVS = ("MEMBER", "USER")  # LOVs listing people: not codes a rule names, and personal data
+
+
+def lov_requests(responses: dict[str, Any]) -> dict[str, str]:
+    """The GETs for the table-backed LOVs the attributes use: {"lov:<NAME>": path under /bolapi/v1/}.
+
+    Only LOVs whose api_url needs no parameter (a sponsor's stores and an account's tags are read already), and none
+    that lists people.
+    """
+    used = {
+        a.get("lookup_type")
+        for name, body in responses.items()
+        if name.endswith("_attributes")
+        for a in _rows(body)
+        if a.get("data_type") == "LOV"
+    }
+    out = {}
+    for x in _rows(responses.get("lovs")):
+        url, name = x.get("api_url") or "", str(x.get("name"))
+        table = not isinstance(x.get("model"), list) and url.startswith("/api/v1/") and "{" not in url
+        if name in used and table and not any(p in name for p in PERSONAL_LOVS):
+            rel = url[len("/api/v1/") :]
+            out["lov:" + name] = rel + ("&" if "?" in rel else "?") + "page_size=1000"
+    return out
 
 
 def _attributes(

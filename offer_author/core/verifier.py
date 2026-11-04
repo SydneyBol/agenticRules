@@ -42,6 +42,9 @@ def request(run: Run, scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
         },
         "locations": stores(run),
         "scenarios": scenarios,
+        # the program data a transaction reads (airports, airport pairs, conversion rates) and its switches
+        "reference": {k: v for k, v in cat.reference.items() if k != "features"},
+        "program": {k: v for k, v in (("features", cat.reference.get("features")), ("timezone", cat.timezone)) if v},
     }
 
 

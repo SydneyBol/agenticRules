@@ -1,0 +1,241 @@
+# Test plan part 2 (TestCoverage-2026-11-04.md): the remaining blocks and operators, combinations, date windows and
+# the segment canvas, in devintam1 codes, for tools/qa/check_offer_flow.py (OFFER_FLOW_CASES=tests/cases/gaps2.yaml).
+# Expectations written by hand from the prompt, never from a generation.
+#
+# devintam1: stores HQ (Chennai HQ), WEB (online store), Chennai, VJD (Vijayawada); tier_class GOLD, Silver, Basic;
+# privileges 37 (2 hours of yoga session), 64 (complimentary voucher); product categories ALCOHOL, TCK (Tickets),
+# VCH (Voucher). Member profile: date_of_birth, date_of_joining (DATE), email, mobile, company (TEXT).
+# BIT row: [date, amount, store, expect, {type?, header?, lines?, payments?}]. Each sequence is one member (default
+# tier_class GOLD; `member` adds or overrides profile attributes) whose counters carry from BIT to BIT. "Today" in
+# the engine is the run date, 2026-11-04.
+# Nov 2026: Mon 2, Tue 3, Wed 4, Thu 5, Fri 6, Sat 7, Sun 8, Mon 9, Tue 10, Sat 14, Sun 15, Sat 21, Sun 22.
+
+cases:
+  # ---------------- blocks not generated before ----------------
+  - id: H_EV1_event_activity_points
+    prompt: "Whenever an Event activity is recorded for a member, the member earns 25 points. Spends earn nothing."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 0, HQ, 25, {type: EVENT}], ["2026-11-03T13:00:00", 100, HQ, null, {type: SPEND}]]
+
+  - id: H_TP1_referrer_rewarded
+    prompt: "When a member spends $100 or more, the member's enrollment referrer earns 200 points. The member who spends earns nothing from this offer."
+    sequences:
+      - note: "the member has no referrer: nothing is credited to the member"
+        bits: [["2026-11-03T12:00:00", 150, HQ, null], ["2026-11-03T13:00:00", 50, HQ, null]]
+
+  - id: H_AP1_route_bonus
+    prompt: "Flights from origin airport MAA to destination airport DEL earn 500 bonus points. Any other route earns nothing."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 200, WEB, 500, {header: {h_origin_airport: MAA, h_destination_airport: DEL}}],
+               ["2026-11-03T13:00:00", 200, WEB, null, {header: {h_origin_airport: MAA, h_destination_airport: BOM}}],
+               ["2026-11-03T14:00:00", 200, WEB, null, {header: {h_origin_airport: DEL, h_destination_airport: MAA}}]]
+
+  - id: H_SD1_rate_before_a_date
+    prompt: "Spends made before 15 November 2026 earn 2 points per $1. Spends from 15 November 2026 onwards earn 1 point per $1."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 10, HQ, 20], ["2026-11-14T23:00:00", 100, HQ, 200], ["2026-11-15T09:00:00", 100, HQ, 100],
+               ["2026-12-01T12:00:00", 50, WEB, 50]]
+
+  - id: H_SDT1_flash_sale_hours
+    prompt: "Flash sale: spends made from 5 November 2026 6:00 PM to 5 November 2026 10:00 PM earn 100 bonus points. No other spend earns anything."
+    sequences:
+      - bits: [["2026-11-05T18:30:00", 20, HQ, 100], ["2026-11-05T21:59:00", 20, WEB, 100], ["2026-11-05T17:59:00", 20, HQ, null],
+               ["2026-11-05T22:30:00", 20, HQ, null], ["2026-11-06T19:00:00", 20, HQ, null]]
+
+  - id: H_CD1_members_over_a_year
+    prompt: "Members who joined more than one year before today earn 50 points on every spend. Members who joined more recently earn nothing."
+    sequences:
+      - member: {date_of_joining: "2025-06-01"}
+        bits: [["2026-11-03T12:00:00", 10, HQ, 50]]
+      - member: {date_of_joining: "2026-03-01"}
+        bits: [["2026-11-03T12:00:00", 10, HQ, null]]
+
+  # ---------------- operators not generated before ----------------
+  - id: H_OP1_receipt_starts_with
+    prompt: "Spends whose receipt ID starts with PROMO earn 100 bonus points. Other spends earn nothing."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 10, HQ, 100, {header: {receipt_id: PROMO123}}], ["2026-11-03T13:00:00", 10, HQ, null, {header: {receipt_id: XPROMO1}}],
+               ["2026-11-03T14:00:00", 10, HQ, null, {header: {receipt_id: ABC}}]]
+
+  - id: H_OP2_email_not_contains
+    prompt: "Members whose email address does not contain the word test earn 1 point per $1 spent. Members whose email contains test earn nothing."
+    sequences:
+      - member: {email: "asha@gravty.com"}
+        bits: [["2026-11-03T12:00:00", 50, HQ, 50]]
+      - member: {email: "test.user@gravty.com"}
+        bits: [["2026-11-03T12:00:00", 50, HQ, null]]
+
+  - id: H_OP3_no_mobile_on_file
+    prompt: "Members who have no mobile number on file earn 20 points on every spend. Members with a mobile number earn nothing."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 10, HQ, 20]]
+      - member: {mobile: "9876543210"}
+        bits: [["2026-11-03T12:00:00", 10, HQ, null]]
+
+  # ---------------- combinations ----------------
+  - id: H_CB1_visa_part_by_tier
+    prompt: "Gold members earn 2 points per $1 of the part of a purchase paid by the payment method VISA; all other members earn 1 point per $1 of the VISA part. Amounts paid any other way earn nothing."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 100, HQ, 80, {payments: [{payment_method: VISA, amount: 40}, {payment_method: CASH, amount: 60}]}]]
+      - member: {tier_class: Silver}
+        bits: [["2026-11-03T12:00:00", 100, HQ, 40, {payments: [{payment_method: VISA, amount: 40}, {payment_method: CASH, amount: 60}]}],
+               ["2026-11-03T13:00:00", 30, HQ, null, {payments: [{payment_method: CASH, amount: 30}]}]]
+
+  - id: H_CB2_or_in_and_in_or
+    prompt: "Bonus 100 points when either: the spend is at the Chennai HQ store and it is on a weekend or is over $500; or the spend is at the online store on a Monday. Nothing else earns points."
+    sequences:
+      - bits: [["2026-11-07T12:00:00", 10, HQ, 100], ["2026-11-03T12:00:00", 600, HQ, 100], ["2026-11-03T13:00:00", 400, HQ, null],
+               ["2026-11-02T12:00:00", 5, WEB, 100], ["2026-11-03T14:00:00", 600, WEB, null], ["2026-11-07T13:00:00", 600, VJD, null]]
+
+  - id: H_CB3_cap_then_voucher
+    prompt: "Every spend earns 1 point per $1, up to 500 points in total per member for this offer. Once a member has reached the 500-point total, each further spend of $100 or more earns a complimentary voucher instead."
+    sequences:
+      - note: "300; 200 (trimmed to the cap, no voucher on the spend that reaches it); then vouchers for $100+"
+        bits: [["2026-11-03T12:00:00", 300, HQ, 300], ["2026-11-04T12:00:00", 300, HQ, 200], ["2026-11-05T12:00:00", 150, HQ, "64"],
+               ["2026-11-06T12:00:00", 50, HQ, null], ["2026-11-07T12:00:00", 100, WEB, "64"]]
+
+  - id: H_CB4_eligible_amount_milestone
+    prompt: "Voucher purchases do not count: members earn 1 point per $1 of a purchase's amount excluding its Voucher lines, and once their total of such amounts reaches $500 they earn a one-time 1,000-point bonus."
+    sequences:
+      - products: {SKU-ALC: {category: ALCOHOL}, SKU-TCK: {category: TCK}, SKU-VCH: {category: VCH}}
+        bits:
+          - ["2026-11-03T12:00:00", 300, HQ, 200, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 1, l_amount: 200}, {l_product_external_id: SKU-VCH, l_product_category: VCH, l_quantity: 1, l_amount: 100}]}]
+          - ["2026-11-04T12:00:00", 750, HQ, 250, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 1, l_amount: 250}, {l_product_external_id: SKU-VCH, l_product_category: VCH, l_quantity: 1, l_amount: 500}]}]
+          - ["2026-11-05T12:00:00", 60, WEB, 1060, {lines: [{l_product_external_id: SKU-ALC, l_product_category: ALCOHOL, l_quantity: 2, l_amount: 60}]}]
+          - ["2026-11-06T12:00:00", 600, HQ, 600, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 3, l_amount: 600}]}]
+
+  - id: H_CB5_nth_spend_by_tier
+    prompt: "Every 3rd spend of a Gold member earns a free 2 hours of yoga session; for all other members every 5th spend earns it."
+    sequences:
+      - bits: [["2026-11-03T10:00:00", 10, HQ, null], ["2026-11-03T11:00:00", 10, HQ, null], ["2026-11-03T12:00:00", 10, HQ, "37"],
+               ["2026-11-03T13:00:00", 10, HQ, null], ["2026-11-03T14:00:00", 10, HQ, null], ["2026-11-03T15:00:00", 10, HQ, "37"]]
+      - member: {tier_class: Silver}
+        bits: [["2026-11-03T10:00:00", 10, HQ, null], ["2026-11-03T11:00:00", 10, HQ, null], ["2026-11-03T12:00:00", 10, HQ, null],
+               ["2026-11-03T13:00:00", 10, HQ, null], ["2026-11-03T14:00:00", 10, HQ, "37"]]
+
+  - id: H_CB6_bands_plus_stacked_bonuses
+    prompt: "Spends under $100 earn 1 point per $1, spends of $100 to $499.99 earn 2 points per $1, and spends of $500 or more earn 3 points per $1. On top of that, weekend spends earn 50 extra points, and spends at the online store earn an extra 10% of their band points."
+    sequences:
+      - bits: [["2026-11-07T12:00:00", 50, HQ, 100], ["2026-11-03T12:00:00", 200, WEB, 440], ["2026-11-07T13:00:00", 500, WEB, 1700],
+               ["2026-11-03T13:00:00", 99.99, HQ, 99.99]]
+
+  - id: H_CB7_ticket_units_bonus
+    prompt: "A purchase with 3 or more ticket units in total (adding up the quantity of all its ticket lines) earns 300 bonus points, once per purchase. Nothing else earns points."
+    sequences:
+      - products: {SKU-TCK: {category: TCK}, SKU-VCH: {category: VCH}}
+        bits:
+          - ["2026-11-03T12:00:00", 60, HQ, 300, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 2, l_amount: 40}, {l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 1, l_amount: 20}]}]
+          - ["2026-11-03T13:00:00", 40, HQ, null, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 2, l_amount: 40}, {l_product_external_id: SKU-VCH, l_product_category: VCH, l_quantity: 4, l_amount: 40}]}]
+          - ["2026-11-03T14:00:00", 100, WEB, 300, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 5, l_amount: 100}]}]
+
+  - id: H_CB8_seniors_double
+    prompt: "Members aged 60 or over on the day of the spend earn 2 points per $1; younger members earn 1 point per $1."
+    sequences:
+      - member: {date_of_birth: "1960-01-01"}
+        bits: [["2026-11-03T12:00:00", 100, HQ, 200]]
+      - note: "turns 60 on 4 November 2026"
+        member: {date_of_birth: "1966-11-04"}
+        bits: [["2026-11-03T12:00:00", 100, HQ, 100], ["2026-11-04T12:00:00", 100, HQ, 200]]
+      - member: {date_of_birth: "1990-05-05"}
+        bits: [["2026-11-03T12:00:00", 100, HQ, 100]]
+
+  # ---------------- date windows and limits ----------------
+  - id: H_DW1_birthday_window_year_end
+    prompt: "Spends within 10 days before or after the member's birthday earn 500 bonus points, once per birthday."
+    sequences:
+      - member: {date_of_birth: "1990-01-03"}
+        bits: [["2026-12-20T12:00:00", 50, HQ, null], ["2026-12-25T12:00:00", 50, HQ, 500], ["2026-12-30T12:00:00", 50, HQ, null],
+               ["2027-01-14T12:00:00", 50, HQ, null], ["2027-12-26T12:00:00", 50, HQ, 500]]
+
+  - id: H_DW2_first_30_days
+    prompt: "During a member's first 30 days after joining, every spend earns 100 bonus points."
+    sequences:
+      - member: {date_of_joining: "2026-10-20"}
+        bits: [["2026-11-03T12:00:00", 10, HQ, 100], ["2026-11-10T12:00:00", 10, HQ, 100], ["2026-11-25T12:00:00", 10, HQ, null]]
+
+  - id: H_DW3_joining_anniversary
+    prompt: "Spends on a member's joining anniversary (the same day and month they joined, in any later year) earn 300 bonus points."
+    sequences:
+      - member: {date_of_joining: "2024-11-05"}
+        bits: [["2026-11-04T12:00:00", 10, HQ, null], ["2026-11-05T12:00:00", 10, HQ, 300], ["2026-11-06T12:00:00", 10, HQ, null]]
+
+  - id: H_DW4_twice_per_year
+    prompt: "A spend of $200 or more earns 500 bonus points, at most twice per calendar year."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 250, HQ, 500], ["2026-11-04T12:00:00", 199, HQ, null], ["2026-11-05T12:00:00", 300, HQ, 500],
+               ["2026-12-01T12:00:00", 400, HQ, null], ["2027-01-02T12:00:00", 250, HQ, 500]]
+
+  - id: H_DW5_weekend_cap_per_month
+    prompt: "Weekend spends earn 3 points per $1, up to 600 weekend points per calendar month. Weekday spends earn nothing."
+    sequences:
+      - bits: [["2026-11-07T12:00:00", 150, HQ, 450], ["2026-11-08T12:00:00", 100, HQ, 150], ["2026-11-14T12:00:00", 50, HQ, null],
+               ["2026-11-09T12:00:00", 100, HQ, null], ["2026-12-05T12:00:00", 10, HQ, 30]]
+
+  - id: H_DW6_late_night_window
+    prompt: "Spends between 10 PM and 2 AM earn 100 bonus points. Other spends earn nothing."
+    sequences:
+      - bits: [["2026-11-03T22:00:00", 10, HQ, 100], ["2026-11-03T23:30:00", 10, HQ, 100], ["2026-11-04T01:30:00", 10, HQ, 100],
+               ["2026-11-04T02:30:00", 10, HQ, null], ["2026-11-03T21:59:00", 10, HQ, null]]
+
+  - id: H_DW7_first_spend_each_quarter
+    prompt: "A member's first spend in each calendar quarter earns 200 bonus points."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 10, HQ, 200], ["2026-11-20T12:00:00", 10, HQ, null], ["2026-12-31T12:00:00", 10, HQ, null],
+               ["2027-01-02T12:00:00", 10, HQ, 200], ["2027-03-31T12:00:00", 10, HQ, null], ["2027-04-01T12:00:00", 10, HQ, 200]]
+
+  - id: H_DW8_offer_dates
+    prompt: "From 10 November to 20 November 2026, every spend earns 50 points."
+    sequences:
+      - bits: [["2026-11-09T12:00:00", 10, HQ, null], ["2026-11-10T12:00:00", 10, HQ, 50], ["2026-11-20T18:00:00", 10, HQ, 50],
+               ["2026-11-21T12:00:00", 10, HQ, null]]
+
+  # ---------------- segment canvas (who the offer is for) ----------------
+  - id: H_SG1_gold_only
+    prompt: "An offer for Gold members only: every spend earns 2 points per $1."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 50, HQ, 100]]
+      - member: {tier_class: Silver}
+        bits: [["2026-11-03T12:00:00", 50, HQ, null]]
+
+  - id: H_SG2_joined_last_90_days
+    prompt: "An offer for members who joined in the last 90 days: every spend earns 100 points."
+    sequences:
+      - member: {date_of_joining: "2026-10-01"}
+        bits: [["2026-11-04T12:00:00", 10, HQ, 100]]
+      - member: {date_of_joining: "2025-01-01"}
+        bits: [["2026-11-04T12:00:00", 10, HQ, null]]
+
+  - id: H_SG3_age_25_to_40
+    prompt: "An offer for members aged 25 to 40: every spend earns 1 point per $1."
+    sequences:
+      - member: {date_of_birth: "1995-06-01"}
+        bits: [["2026-11-04T12:00:00", 50, HQ, 50]]
+      - member: {date_of_birth: "1970-06-01"}
+        bits: [["2026-11-04T12:00:00", 50, HQ, null]]
+      - member: {date_of_birth: "2005-06-01"}
+        bits: [["2026-11-04T12:00:00", 50, HQ, null]]
+
+  - id: H_SG4_company_in_list
+    prompt: "An offer for members whose company is Gravty or Acme: every spend earns 30 points."
+    sequences:
+      - member: {company: Gravty}
+        bits: [["2026-11-04T12:00:00", 10, HQ, 30]]
+      - member: {company: Initech}
+        bits: [["2026-11-04T12:00:00", 10, HQ, null]]
+
+  - id: H_SG5_gold_or_joined_2026
+    prompt: "An offer for Gold members, or members who joined in 2026: every spend earns 40 points."
+    sequences:
+      - member: {date_of_joining: "2020-03-01"}
+        bits: [["2026-11-04T12:00:00", 10, HQ, 40]]
+      - member: {tier_class: Silver, date_of_joining: "2026-02-01"}
+        bits: [["2026-11-04T12:00:00", 10, HQ, 40]]
+      - member: {tier_class: Silver, date_of_joining: "2020-03-01"}
+        bits: [["2026-11-04T12:00:00", 10, HQ, null]]
+
+  - id: H_SG6_no_email_on_file
+    prompt: "An offer for members with no email address on file: every spend earns 10 points."
+    sequences:
+      - bits: [["2026-11-04T12:00:00", 10, HQ, 10]]
+      - member: {email: "asha@gravty.com"}
+        bits: [["2026-11-04T12:00:00", 10, HQ, null]]

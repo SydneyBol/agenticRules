@@ -44,6 +44,17 @@ SEGMENT_CONDITION = "targeting_condition"  # a Select Members condition: a membe
 CHECKED = (*CONDITIONS, SEGMENT_CONDITION)
 VALUE_FIELDS = ("value", "tierlevelnamevalue")  # a condition's compared value, besides RHS_INPUT and picked codes
 TIER_LEVEL = "MA_T"  # the tier programme (tier class, tier name, start date, validity)
+# A TEXT attribute compared with = / != takes a typed text in `value`, and a TEXT counter takes typed text with every
+# operator it has (str_conditional_operators: no match / not_match): the screen builds no RHS_INPUT socket for them
+# (if-generic.block.ts updateShapeByOperator_), so a block there is dropped with every block after it (verticals
+# 2026-11-04: V_RT2 it5 and it7, V_RT3 it6, "BLOCK MISSING"). A text attribute's match / not_match take a value block.
+TYPED_TEXT_OPERATORS = ("==", "!=")
+# The condition operators' codes (block-definition.service.ts operator menus); anything else selects nothing ("If
+# Block --> operator is not selected", verticals it7 V_RT2: "doesn't match").
+OPERATOR_CODES = (
+    "==", "!=", ">", ">=", "<", "<=", "between", "in", "not_in", "null", "not_null",
+    "contains", "not_contains", "starts_with", "ends_with", "match", "not_match",
+)  # fmt: skip
 
 
 def _as_condition(t: str | None, f: dict[str, Any]) -> dict[str, Any]:
@@ -106,6 +117,9 @@ def _date_form(t: str | None, f: dict[str, Any], typ: str | None) -> Form | None
     want = DATE_PART_FIELD.get(typ or "")
     if want and given and given != [want]:
         return "date_part_field", {"type": typ, "want": want, "given": given[0]}
+    if want and not given and t in ("member_attribute", "activity_attribute"):
+        # an empty date part compiles as CALENDAR_DATE (day and month in a fixed year): flow D03, 2026-11-03
+        return "date_value_without_part", {"type": typ, "want": want}
     if typ == "DATE" and want and f.get(want) in ("HOUR_OF_DAY", "MINUTE_OF_HOUR"):
         return "date_has_no_time", {"part": f[want]}
     if (
@@ -119,10 +133,10 @@ def _date_form(t: str | None, f: dict[str, Any], typ: str | None) -> Form | None
 
 
 def _shape(n: Any, f: dict[str, Any], catalog: Catalog | None, block: BlockRef, name: Any) -> list[Problem]:
-    """Conditions and ORs the screen cannot make whole.
+    """Conditions, ORs and attribute values the screen cannot make whole.
 
     A condition with no operator or nothing to compare with, a segment tier the catalog does not have, an OR with an
-    empty side.
+    empty side, a member_attribute naming an attribute its level does not list (_level_form).
     """
     t, out = n.get("type"), []
     if t in CHECKED and (code := _incomplete(n, f)):
@@ -131,7 +145,38 @@ def _shape(n: Any, f: dict[str, Any], catalog: Catalog | None, block: BlockRef, 
         out.append(Problem.of(form[0], block, **form[1]))
     if t == "or" and not all((n.get("inputs") or {}).get(k) for k in ("OPERAND1", "OPERAND2")):
         out.append(Problem.of("or_operand_empty", block))
+    if form := _level_form(t, f, catalog):
+        out.append(Problem.of(form[0], block, name=f.get("ATTRIBUTE"), **form[1]))
     return out
+
+
+def _operator_form(n: Any, f: dict[str, Any], typ: str | None) -> Form | None:
+    """An operator the screen has no code for, or a TEXT comparison given a block where the screen takes typed text."""
+    op = f.get("operators")
+    if op not in (None, "", *OPERATOR_CODES):
+        return "operator_not_a_code", {"given": op, "codes": list(OPERATOR_CODES)}
+    counter = f.get("attribute_level") in COUNTER_LEVELS
+    if typ == "TEXT" and "RHS_INPUT" in (n.get("inputs") or {}) and (op in TYPED_TEXT_OPERATORS or counter):
+        return "text_compared_with_block", {"operator": op}
+    return None
+
+
+VALUE_LEVELS = {"MA_P": "member", "MA_A": "activity"}  # member_attribute ATTRIBUTE_TYPE: the catalog list it offers
+
+
+def _level_form(t: str | None, f: dict[str, Any], catalog: Catalog | None) -> Form | None:
+    """A member_attribute naming an attribute its ATTRIBUTE_TYPE does not list.
+
+    The screen fills ATTRIBUTE from the chosen level's list and drops a code that is not in it, so the value reads
+    nothing (2026-11-04 S12: ATTRIBUTE_TYPE MP_S with date_of_birth, a Program-Level attribute).
+    """
+    level, attr = f.get("ATTRIBUTE_TYPE"), f.get("ATTRIBUTE")
+    if t != "member_attribute" or catalog is None or not attr or level in COUNTER_LEVELS:
+        return None
+    owner = next((lv for lv, obj in VALUE_LEVELS.items() if catalog.attr(obj, attr)), None)
+    if owner is None or owner == level:
+        return None
+    return "attribute_not_of_level", {"given": level, "owner": owner}
 
 
 def unfilled(root: Any, catalog: Catalog | None = None, counters: dict[str, Any] | None = None) -> list[Problem]:
@@ -152,6 +197,8 @@ def unfilled(root: Any, catalog: Catalog | None = None, counters: dict[str, Any]
         if form := _date_form(t, f, _attr_type(t, f, catalog, counters)):
             out.append(Problem.of(form[0], block, name=f.get("attribute") or f.get("ATTRIBUTE"), **form[1]))
         out += _shape(n, f, catalog, block, name)
+        if t in CONDITIONS and (form := _operator_form(n, f, _attr_type(t, f, catalog, counters))):
+            out.append(Problem.of(form[0], block, name=name, **form[1]))
         if t == "rule" and not (n.get("inputs") or {}).get("ACTION"):
             out.append(Problem.of("rule_without_action", block, name=f.get("IDENTIFIER")))
         elif t == SEGMENT_CONDITION and "attr_level" not in f:

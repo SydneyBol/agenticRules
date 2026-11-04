@@ -78,6 +78,10 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     "date_part_field": lambda f: (
         f"{f['block']}: '{f['name']}' is a {f['type']}: its date part goes in {f['want']}, not {f['given']}"
     ),
+    "date_value_without_part": lambda f: (
+        f"{f['block']}: '{f['name']}' is a {f['type']} with no date part: set {f['want']} (DATE for the whole date, "
+        "CALENDAR_DATE for the day and month in any year); left empty the screen reads it as CALENDAR_DATE"
+    ),
     "date_has_no_time": lambda f: (
         f"{f['block']}: '{f['name']}' is a DATE (no time of day): {f['part']} needs a DATETIME attribute"
     ),
@@ -147,6 +151,32 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     "attribute_not_in_catalog": lambda f: f"{f['object']} attribute {f['attribute']!r} is not in the tenant catalog",
     "values_not_codes": _values_not_codes,
     "privilege_not_in_catalog": lambda f: f"privilege {f['id']!r} is not in the catalog",
+    "usage_policy_not_of_privilege": lambda f: (
+        f"usage policy {f['id']!r} is not one of privilege {f['privilege']}'s: {', '.join(f['policies'])}"
+    ),
+    "account_not_in_catalog": lambda f: (
+        f"{f['field']} {f['id']!r} is not one of the sponsor's loyalty accounts in the catalog"
+    ),
+    "text_compared_with_block": lambda f: (
+        f"{f['name']} is TEXT: with {f['operator']} the screen takes the compared text typed in `value` and has no"
+        " RHS_INPUT, so the block there is dropped with every block after it (a TEXT counter is compared only with"
+        " typed text; a text attribute's match / not_match take a value block)"
+    ),
+    "operator_not_a_code": lambda f: (
+        f"{f['name']}: operators {f['given']!r} is not an operator code, so the screen selects none:"
+        f" {' '.join(f['codes'])}"
+    ),
+    "unique_after_reset": lambda f: (
+        f"counter {f['name']} is reset and read as unique: a reset sets its values to 0 and keeps its keys, and unique"
+        " counts the keys whatever their values, so what the condition reads does not go down at the reset"
+    ),
+    "attribute_not_of_object": lambda f: (
+        f"{f['attribute']} is not an attribute of OBJECT {f['object']} (the screen loads the condition empty): it is"
+        f" an attribute of OBJECT {f['owner']}"
+    ),
+    "tag_not_of_account": lambda f: (
+        f"reward tag {f['tag']!r} is not a tag of loyalty account {f['account']}: {', '.join(f['tags'])}"
+    ),
     # counters (core/run/canvases.py, core/counters.py)
     "counter_declared_twice": lambda f: f"counter '{f['name']}' is declared twice",
     "vector_without_namespace": lambda f: f"counter '{f['name']}' is VECTOR: give its namespace",
@@ -158,6 +188,10 @@ WORDING: dict[str, Callable[[Facts], str]] = {
         "a counter has one level, so declare it at the level the blocks use or use it at its declared level"
         if f.get("declared")
         else f"the blocks use counter '{f['name']}' at {f['level']}, which is not declared in counters"
+    ),
+    "counter_declared_by_tools": lambda f: (
+        f"counter '{f['name']}' was not in counters: declared {f['level']} {f['data_type']}, "
+        + ("as declared earlier in this run" if f["source"] == "earlier" else "from how the blocks use it")
     ),
     "counter_on_live_offer": lambda f: (
         f"the offer is in {f['status'] or 'an unknown status'}, so members may already hold values in it"
@@ -189,11 +223,12 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     "not_a_choice": lambda f: f"{f['field']} must be one of {', '.join(map(repr, f['allowed']))}",
     # finishing (core/run/policy.py)
     "offer_main_not_set": lambda f: "Offer Main is not set: call set_offer_main",
-    "counter_declared_by_tools": lambda f: (
-        f"counter '{f['name']}' was not in counters: declared {f['level']} {f['data_type']}, "
-        + ("as declared earlier in this run" if f["source"] == "earlier" else "from how the blocks use it")
-    ),
     "segment_name_empty": lambda f: "segment_name is empty: name the member segment you built",
+    "attribute_not_of_level": lambda f: f"{f['name']} is not an attribute of ATTRIBUTE_TYPE {f['given']}: the catalog "
+    f"lists it under {f['owner']}, and the screen drops an ATTRIBUTE its level does not list",
+    "segment_prompt_without_segment": lambda f: "Offer Main's segment_prompt names who the offer is for, but the "
+    "segment canvas has no conditions: the Select Members screen builds its segment from that prompt and gets none. "
+    "Either the segment holds those members, or segment_prompt is empty (every member)",
     # catalog lookups (core/catalog.py)
     "not_a_catalog_attribute": lambda f: f"{f['attribute']} is not a catalog attribute",
     "no_value_list": lambda f: f"{f['attribute']} has no value list",

@@ -1,0 +1,56 @@
+# The last test-plan gaps on devintbf2 (TestCoverage-2026-11-04.md): a fixed date-time cut-off (static_date_time, never
+# generated so far) and a complex airline combination (tier + route distance in the points + a per-member trip cap).
+# Same reference data as airline.devintbf2.yaml (devintbf2's own, read 2026-11-04). Expectations written by hand.
+tenant: devintbf2
+sponsor: 1
+program: 1
+currency: AED
+timezone: Asia/Dubai
+tier_attribute: tier_class
+default_member:
+  tier_class: GLDGLW
+privileges: ['13829', '13828']
+airports:
+  BLR: {airport_code: BLR, latitude: 13.1989089, longitude: 77.7068131, zone: start, city: '190', country: '6', bags_count: 10}
+  VAR: {airport_code: VAR, latitude: 25.4481477, longitude: 82.8568818, zone: start, city: '191', country: '6', bags_count: 10}
+airport_pairs:
+  BLR-VAR: {distance: 600}
+  VAR-BLR: {distance: 500}
+features: {airport_entity_enabler: true}
+
+x-out: &blr_var {type: Travel, header: {h_origin_airport: BLR, h_destination_airport: VAR, h_origin_airport_code: BLR, h_destination_airport_code: VAR, h_bit_currency: AED}}
+x-back: &var_blr {type: Travel, header: {h_origin_airport: VAR, h_destination_airport: BLR, h_origin_airport_code: VAR, h_destination_airport_code: BLR, h_bit_currency: AED}}
+
+cases:
+  # ---- a cut-off at a date and time of day ----
+  - id: R_SDT1_before_1830_on_20_nov
+    prompt: "Spend activities made before 6:30 PM on 20 November 2026 earn 150 points. Spends from then on earn nothing."
+    sequences:
+      - bits:
+          - ["2026-11-19T12:00:00", 100, HYD, 150]
+          - ["2026-11-20T18:29:00", 100, HYD, 150]
+          - ["2026-11-20T18:31:00", 100, HYD, null]
+          - ["2026-11-21T09:00:00", 100, HYD, null]
+
+  # ---- tier + route distance in the points + a cap on the number of rewarded trips ----
+  - id: R_CB1_gold_long_routes_two_trips
+    prompt: "Gold members earn 1 point for every unit of distance flown on Travel routes of 550 or more, for at most 2 such trips per member. Shorter routes, further trips and other members earn nothing."
+    sequences:
+      - note: "600 -> 600; a 500 route does not count; 600 -> 600 (second trip); 600 -> nothing (cap)"
+        member: {tier_class: GLDGLW}
+        bits:
+          - ["2026-11-05T10:00:00", 100, HYD, 600, *blr_var]
+          - ["2026-11-05T11:00:00", 100, HYD, null, *var_blr]
+          - ["2026-11-06T10:00:00", 100, HYD, 600, *blr_var]
+          - ["2026-11-07T10:00:00", 100, HYD, null, *blr_var]
+      - member: {tier_class: SLVR}
+        bits:
+          - ["2026-11-05T10:00:00", 100, HYD, null, *blr_var]
+
+  # ---- a fixed date-time where the screen takes one: a privilege's custom validity end ----
+  - id: R_SDT2_voucher_valid_until
+    prompt: "Every spend of 200 or more earns privilege 13829, valid until 11:59 PM on 31 December 2026. Smaller spends earn nothing."
+    sequences:
+      - bits:
+          - ["2026-11-10T12:00:00", 250, HYD, '13829']
+          - ["2026-11-10T13:00:00", 199, HYD, null]

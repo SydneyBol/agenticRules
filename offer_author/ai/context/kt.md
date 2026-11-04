@@ -14,8 +14,11 @@ For each BIT the engine, in this order:
    BIT already processed, a member whose membership does not allow it.
 2. Finds the offers that apply: launched offers (test offers only for test members), for the member's segment, at a
    location the offer allows, opted into when the offer needs opt-in, whose dates contain the BIT date (program
-   timezone), whose per-member limit and frequency (per day, week, month or lifetime; there is no yearly frequency)
-   and total limit are not used up. A BIT before the offer's start date is refused for that offer
+   timezone), whose per-member limit and frequency (per day, week, month or lifetime; there is no yearly
+   frequency: a lifetime limit counts the member's rewards over the whole life of the offer and never starts over at a
+   new year)
+   and total limit are not used up. Offer Main holds one per-member limit with its one frequency, and one total
+   limit with its frequency; a per-member limit for a second period is not an Offer Main setting. A BIT before the offer's start date is refused for that offer
    (REWARD_OFFER_DOES_NOT_QUALIFY). These are Offer Main and segment settings: they are checked before any block of
    the rules runs, and a BIT they stop never reaches the rules.
 3. Runs the rules of each offer that applies, as described below. Offers that are not cumulative are exclusive: at
@@ -53,18 +56,16 @@ activity needs is written once, in the Filter; a rule holds only the conditions 
 rules (moving a shared condition into the Filter does not change what the offer does).
 
 **Several On Activity blocks in one offer.** Each takes BITs by its own Filter and runs its own rules. The engine
-promises no order between two On Activity blocks of one offer: logic in which one part must see what another part did
-in the same BIT (a counter update) belongs in one activity.
+promises no order between two On Activity blocks of one offer: one activity may run before or after the other in the
+same BIT, so whether it reads the other's counter updates of that BIT is not defined.
 
 **Rule.** Its conditions (If blocks chained one under another = AND; an OR block = either branch) are checked once per
 BIT, at header level; when they hold, its actions run once, top to bottom. A rule with no condition always runs.
 There is no "else": every rule under the activity is checked, top to bottom, and every rule whose conditions hold
-runs. Two rules that both hold both reward (they stack). To make rules alternatives, give them conditions that exclude
-each other (bands such as `>= 100` and `>= 50 and < 100`, a tier `in` and `not in`) or put one inside the other.
+runs. Two rules that both hold both reward (they stack).
 
 **A rule inside a rule** (a Rule block in another rule's actions). Checked only when the outer rule's conditions held,
-at its place among the outer rule's actions. Use it for a condition that refines the outer one ("Gold members get 100;
-among them, those at the airport store get 50 more") or for a step that must follow the outer rule's actions.
+at its place among the outer rule's actions.
 
 **Line Rule.** Runs once per line item of the BIT: its conditions and actions see that line's attributes (`l_*`) and
 the attributes of the line's product; its actions run for each line whose conditions hold (points per qualifying
@@ -84,9 +85,31 @@ its `attr_level`:
   in `tierlevelnamevalue`; `tier_start_date` or `tier_validity`, compared with a date).
 - `MA_CC`, `MA_SP`, ...: cobranded card, subscription and the other levels of the member attribute table.
 
+A segment condition (`targeting_condition`) holds `attr_level`, `attribute`, `operators` and the right-hand side, a
+value block in `RHS_INPUT`, and for `between` a second one in `RHS_VALUE`:
+- A number (`age`, a balance): a static value block. A coded attribute (`gender`): its code in `value`, or the codes of
+  `in` / `not in` in `picked`.
+- A date (`date_of_joining`, `date_of_birth`): its part in `date_operator` (DATE, CALENDAR_DATE, YEAR, MONTH,
+  DAY_OF_MONTH, ...; a date-time attribute in `datetime_operator`). DATE and CALENDAR_DATE compare with a static date
+  or a date arithmetic block, the other parts with a static value. CALENDAR_DATE is the day and month in any year.
+  The current date block is read in the program timezone when the segment runs, and date arithmetic can move it by
+  DAYS, MONTHS or YEARS. The segment is checked when each transaction is processed:
+  its current date is that moment, and it cannot read the transaction's own date. A program sends a transaction as
+  it happens, so that moment is the transaction's own day; only one sent later (a retro claim, a late file) is
+  processed after its date.
+- The comparison reads the member's value against the right-hand side (`date_of_joining >= 2026-01-01`: joined on or
+  after 1 Jan). In a segment `between` includes both ends (unlike the rules canvas).
+- The tier programme (`attr_level` MA_T): `tierslevel` = the tier class, `tiermainoption` = `name` (the tier code in
+  `tierlevelnamevalue`), `tier_start_date` (`datetime_operator` DATE, compared with a date block) or `tier_validity`
+  ("Tier Validity (in months)", compared with a static value).
+- The block's other fields (`RhsSelectedOption`, `customBlockOption`, `customdateopt1`, `datevalue`,
+  `customdatedropdownopts2`, `rhsdateoptionselected`, `segment_rhs_attribute`, the card, subscription and partner
+  fields) are the screen's other ways of filling the right-hand side or other attribute levels; a segment built with
+  the value blocks above needs none of them.
+
 The tier a member is in can be read both ways: `tier_class` (MA_P) and the tier programme (MA_T) are separate data
-on a tenant. A member without the attribute reads as section 4 and the member dates notes say (a calculated
-attribute 0, a date part -1): `age < 30` also takes members with no date of birth, unless the segment also asks for one.
+on a tenant. A member without the attribute reads as section 4 says (a calculated
+attribute 0, a date part -1).
 
 **Actions.** Run top to bottom, each when it is reached.
 - Reward Points: credits the computed quantity to the loyalty account under the reward tag. The quantity is any value
@@ -106,13 +129,23 @@ only in the field it belongs to:
   catalog attributes and declared counters), `operators`, then the right-hand side. A coded (lookup / list)
   attribute takes one code in `value`, or the codes of `in` / `not in` in `picked`. A number, a date or a date-time
   has no `value` field: what it is compared with is a value block in `RHS_INPUT` (a number block for `h_bit_amount >
-  100`).
+  100`). A TEXT counter is compared only with text typed in `value` (operators `==`, `!=`, `contains`,
+  `not_contains`, `starts_with`, `ends_with`, `in`, `not_in`, `null`, `not_null`): no operator compares it with an
+  attribute or any other block. A text, lookup or list attribute takes typed text or a code in `value` for `==` / `!=`,
+  and a value block in `RHS_INPUT` (an attribute block, ...) for `match` / `not_match`.
+- Update Attribute on a TEXT counter has no operator dropdown: it sets the counter to the value block in
+  `RHS_INPUT`.
 - A date part (the condition's, or an attribute block's): a DATE attribute takes it in `date_operator`, a DATE-TIME
   attribute in `datetime_operator`; HOUR_OF_DAY and MINUTE_OF_HOUR exist for date-times only. The part is then compared
   with a number block in `RHS_INPUT` (Sunday: `datetime_operator` DAY_OF_WEEK, `==`, the number 7); DATE compares with
-  a date block.
-- Reward Points: `action_type` give_points; `FORMULA` = the quantity (a value block); the account and reward tag are
-  filled by the tools.
+  a date block (static date, current date, date attribute or date arithmetic). `h_bit_date` is a DATE-TIME attribute.
+- A date attribute block used as a value (a member or activity attribute block holding a date, alone or inside date
+  arithmetic) also takes its part: `date_operator` DATE (a DATE-TIME: `datetime_operator` DATE) for the whole date.
+  Left empty, the screen reads the block as CALENDAR_DATE, the day and month in a fixed year, which a BIT date never
+  equals or passes the way a dated comparison means.
+- `between`: the first value block in `RHS_INPUT`, the second in `RHS_VALUE`.
+- Reward Points: `action_type` give_points; `FORMULA` = the quantity (a value block); `LOYALTY_ACCOUNT` = the loyalty
+  account credited (an account id from the catalog); `REWARD_TAGS` = one of that account's reward tags.
 - Assign Privilege: `action_type` give_privilege; `SELECTED_PRIVILEGE` (a privilege id from the catalog),
   `PRIVILEGE_USAGEPOLICY` (its usage policy), `PRIVILEGE_QUANTITY` (how many, a value block).
 - Update Attribute: `action_type` update_attribute; `mta_attribute` = the counter's name (declared in counters);
@@ -139,8 +172,8 @@ third parties.
 
 Calculated member attributes are computed when read, from the current date (not the BIT date): `age` (whole years
 since `date_of_birth`), `membership_tenure` (days since `date_of_joining`), `days_since_bit` (days since the last
-activity), `email_domain`. A member without the source attribute reads 0. To test "members over 27", the member needs
-a `date_of_birth`, not an `age`.
+activity), `email_domain`. A member without the source attribute reads 0. A calculated attribute is never stored on
+the member: it comes from its source attribute.
 
 **Operators:**
 
@@ -150,8 +183,14 @@ a `date_of_birth`, not an `age`.
 | text | `=` `!=` `in` `not in` `contains` `does not contain` `starts with` `ends with` `matches` `doesn't match` `is null` `is not-null` |
 | lookup / list values | `=` `!=` `in` `not in` `matches` `doesn't match` `is null` `is not-null` |
 | payment mode, expiry | `in` `not in` only |
-| dates | compare a part of the date: DATE, DAY_OF_MONTH, DAY_OF_WEEK, DAY_OF_YEAR, MONTH, WEEK_OF_YEAR, YEAR; date-times add HOUR_OF_DAY, MINUTE_OF_HOUR |
+| dates, date-times | the number operators, on a part of the date: DATE, DAY_OF_MONTH, DAY_OF_WEEK, DAY_OF_YEAR, MONTH, WEEK_OF_YEAR, YEAR; date-times add HOUR_OF_DAY, MINUTE_OF_HOUR, and DATETIME (date and time) |
 
+`between` holds strictly between its two values: both ends are excluded (`h_bit_amount between 40 and 50` holds for
+45, not for 40 or 50; on dates, between 10 and 12 Nov holds on 11 Nov only). Its first value is the block in
+`RHS_INPUT`, the second the block in `RHS_VALUE`.
+
+`operators` holds the code, not the label: `==` `!=` `>` `>=` `<` `<=` `between` `in` `not_in` `null` (is null)
+`not_null` `contains` `not_contains` `starts_with` `ends_with` `match` (matches) `not_match` (does not match).
 Text: `=` and `matches` are exact and case-sensitive; contains, starts with and ends with test part of the text; on
 an attribute that holds several values, `=` holds when any of them equals the value. `in` / `not in` take the chosen
 codes from the value popup. Payment Amount is an old list attribute: it takes only `in` / `not in`.
@@ -163,17 +202,40 @@ attribute). The current date block is the moment the engine processes the BIT, n
 BIT sent late, replayed or tested with another date has a different current date. So a condition about the
 transaction ("in the birthday month", "on Sundays", "in December") compares a part of `h_bit_date`; the current date
 is only for what is meant as "today" at processing time.
+The DATE part of a date or date-time is its calendar day in the program timezone, compared day by day with the
+right-hand side: a static date, the current date, another date attribute or a date arithmetic block. `h_bit_date`
+DATE `>` 10 Nov holds from 11 Nov; `>=` 10 Nov from 10 Nov; `<=` 10 Nov up to the end of 10 Nov.
+A date part (YEAR, MONTH, DAY_OF_MONTH, DAY_OF_YEAR, WEEK_OF_YEAR, ...) is a whole number; DAY_OF_YEAR runs 1 to 365, or 366 in a
+leap year, where every day after 28 Feb is one higher; it starts again at 1 every 1 Jan.
+A member date that is missing or cannot be parsed reads as -1 in every date part. A member date used inside a date
+arithmetic block, for a member who has none, fails the offer for that transaction (a rules execution error: no rule
+of the offer rewards it); an `is not-null` condition on that date placed earlier in the same rule or filter stops the
+rule before it is reached.
 
 **Value blocks:** a number (digits, optional decimals), a text, a date, a date-time, the current date, arithmetic
-(operator `+` `-` `*` `/`, and `%` for the remainder), date arithmetic (`+` / `-` DAYS, MONTHS or YEARS, and snap to the start of
+(operator `+` `-` `*` `/`, and `%` for the remainder), date arithmetic (`+` / `-` DAYS, MONTHS or YEARS, and snap to the end of
 the MONTH or YEAR), a currency rate (award, exchange, reward rates), and attribute blocks (BIT, member, product,
 payment, airport).
+
+**Arithmetic results.**
+- A number attribute (`h_bit_amount`, a counter, a balance) is a decimal: `h_bit_amount / 10` on 25 is 2.5.
+- Two numbers written without decimals are whole numbers, and their division drops the remainder: `100 / 3` is 33,
+  `7 % 2` is 1. With a decimal point on either side the result keeps its decimals (`100 / 3.0`).
+- Arithmetic blocks nest: the inner block is computed first, whatever its operator (no operator precedence between
+  blocks).
+- Points credited are rounded half up to the program's point decimal scale (the tenant catalog gives it): at scale 2,
+  2.5 points stay 2.5 and 3.333 become 3.33; at scale 0, 2.5 would be 3.
+- A rate per currency unit ("N points per $1", "per AED 1") is the amount times N: a part of a unit earns its share,
+  credited at the point decimal scale (12.50 at 10 per $1 is 125). Only a rate stated per full or whole unit ("per full
+  $10") counts whole units.
+- Date arithmetic: `+` / `-` N MONTHS keeps the day of the month, or the month's last day when it has fewer days
+  (31 Jan + 1 MONTHS is 28 Feb). Snap to MONTH is the month's last day, snap to YEAR 31 Dec.
 
 ## 5. Counters
 
 A counter is a member attribute the offer declares: `MA_O` (offer counter, kept across BITs) or `MA_A` (activity
-counter, one BIT only). Anything that must carry from one BIT to the next (counts, running totals, "once", caps,
-unlocks, the period something last happened in, distinct stores) is an offer counter.
+counter, one BIT only). Only offer counters keep a value from one BIT to the
+next: nothing else of an earlier BIT is visible to the rules.
 
 - **Reading.** A counter never set reads 0 (number) or empty (text). Numbers are kept at the program's decimal scale.
 - **Updating.** Update Attribute: INCREMENT_BY, DECREMENT_BY, SET, RESET (RESET_ALL for a vector counter); a text
@@ -184,15 +246,14 @@ unlocks, the period something last happened in, distinct stores) is an offer cou
   and by the rules below.
 - **Regular and vector.** A regular counter holds one value. A vector counter holds one value per key of its
   namespace (per store, per product category): a condition can read the current key's value, the sum across all keys
-  (Sum Across) or the number of keys with a value (Count of Unique), e.g. "visited 3 different stores". A condition
-  picks which in `vector_counter_name`: the namespace attribute (e.g. `h_location`) reads the current BIT's key,
-  `across` the sum, `unique` the number of keys. So "N different stores" is one vector counter per store, updated on
-  each visit, tested at `unique` >= N; read at the current store it only ever sees that one store's value.
+  (Sum Across) or the number of keys the vector holds (Count of Unique). A
+  condition picks which in `vector_counter_name`: the namespace attribute (e.g. `h_location`) reads the current BIT's
+  key, `across` the sum of the values, `unique` the number of keys whatever their values (a key at 0 counts).
+  RESET and RESET_ALL set values to 0 and keep the keys; no
+  update removes a key, so a member's `unique` never goes down.
 - **Targets.** A counter's target type: NO TARGET (any comparison), SINGLE (compared with its one target value) or
   LADDER (compared with one of the ladder's levels).
-- **Per period.** A counter does not reset by itself at a month or week boundary. A per-period count keeps the period
-  it belongs to (e.g. the month's index from the BIT date) in a second counter, and starts over when the BIT's period
-  differs from it.
+- **Per period.** A counter does not reset by itself at a month or week boundary.
 
 ## 6. What blocks cannot express
 
@@ -200,24 +261,4 @@ unlocks, the period something last happened in, distinct stores) is an offer cou
 - Looking at earlier BITs: anything from the past must have been kept in a counter when it happened.
 - Custom functions: actions are the closed list above; values are the value blocks.
 - Which offer runs first: the program orders offers; the rules of one offer cannot depend on another offer.
-- The number of days between two dates, or a member date moved to the BIT's year (see the member dates notes).
-
-## 7. Example
-
-*"Earn 2x points on spend over $100 at sponsor X during December."*
-
-```
-Offer
-└─ On Activity
-   ├─ Filter [BIT]  h_bit_type == "SPEND"
-   │  Filter [Sponsor]  sponsor_id == X
-   └─ Rule "december-2x"
-      ├─ If [BIT] h_bit_amount > 100
-      │  If [BIT] h_bit_date MONTH == 12
-      └─ Action → Reward Points in <account>, tag BASE
-              Quantity = BIT h_bit_amount * 2
-```
-
-The filter takes Spend BITs at sponsor X; the rule's conditions are checked on the header; when they hold, the amount
-* 2 is credited once for the BIT. The December window is better set as the offer's dates in Offer Main (checked
-before the rules); a month condition in the rule is only needed in addition to them.
+- The number of days between two dates, or a member date moved to the BIT's year.

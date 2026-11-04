@@ -87,3 +87,34 @@ def test_a_rules_condition_without_operator_or_value_is_reported(fixture_catalog
     assert got() == ["if_generic_adaptive#b5: 'h_bit_amount' has no operator: give operators"]
     assert "compares with nothing" in got(operators=">")[0]
     assert got(operators=">", inputs={"RHS_INPUT": {"type": "static_value", "value": "100"}}) == []
+
+
+def test_finish_sent_back_when_offer_main_names_members_without_a_segment():
+    """H_SG2: Offer Main's segment_prompt named members, the segment canvas stayed empty, Select Members got a 422."""
+    from types import SimpleNamespace
+
+    from offer_author.core.run.policy import finish_blockers
+
+    def run(prompt, segment):
+        canvases = SimpleNamespace(pending=list, last={"segment": segment} if segment else {})
+        return SimpleNamespace(canvases=canvases, offer_main=SimpleNamespace(value={"segment_prompt": prompt}))
+
+    parts = ("offer_main", "segment", "rules")
+    codes = lambda r, x=None: [p.code for p in finish_blockers(r, parts, x or {})]
+    assert codes(run("members who joined in the last 90 days", None)) == ["segment_prompt_without_segment"]
+    assert codes(run("", None)) == []  # every member: no segment needed
+    assert codes(run("Gold members", SimpleNamespace(built=True)), {"segment_name": "Gold"}) == []
+    assert codes(run("Gold members", None), {"blocking_questions": ["Which Gold?"]}) == []  # asking instead
+
+
+def test_member_attribute_level_must_list_its_attribute():
+    """S12: member_attribute ATTRIBUTE_TYPE MP_S naming date_of_birth (Program-Level); the screen dropped it."""
+    from offer_author.core.canvas.checks.screen_fields import _level_form
+    from offer_author.core.tenant.catalog import Catalog
+    from tests.paths import FIXTURE
+
+    cat = Catalog.from_json(FIXTURE)
+    form = lambda level: _level_form("member_attribute", {"ATTRIBUTE_TYPE": level, "ATTRIBUTE": "date_of_birth"}, cat)
+    assert form("MP_S") == ("attribute_not_of_level", {"given": "MP_S", "owner": "MA_P"})
+    assert form("MA_P") is None
+    assert form("MA_O") is None  # an offer counter: counters are named by the rules

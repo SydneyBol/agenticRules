@@ -27,8 +27,8 @@ class _Chat:
         return AIMessage(content="")
 
 
-def test_the_limit_is_500_calls():
-    assert MAX_LLM_CALLS == 500
+def test_the_limit_is_1500_calls():
+    assert MAX_LLM_CALLS == 1500
 
 
 def test_every_request_takes_a_call_and_none_is_sent_past_the_limit(tmp_path):
@@ -40,7 +40,7 @@ def test_every_request_takes_a_call_and_none_is_sent_past_the_limit(tmp_path):
     assert ledger.calls() == 2 and chat.sent == 2
     (tmp_path / "calls.json").write_text(json.dumps({"calls": MAX_LLM_CALLS - 1}))
     llm.turn([{"type": "text", "text": "s"}], [HumanMessage(content="hi")])
-    with pytest.raises(LLMError, match="budget spent: 500 of 500"):
+    with pytest.raises(LLMError, match="budget spent: 1500 of 1500"):
         llm.turn([{"type": "text", "text": "s"}], [HumanMessage(content="hi")])
     with pytest.raises(LLMError):
         llm.warm([{"type": "text", "text": "s"}])

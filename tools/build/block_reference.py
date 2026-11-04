@@ -34,7 +34,9 @@ ROOT = os.path.dirname(
 CATALOGS = os.environ.get("OFFER_AUTHOR_CATALOGS") or os.path.expanduser(
     "~/Documents/Gravty/offer-xml-generator-dev/catalogs"
 )  # tenant dumps, outside the repo
-DEV = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # this dev workspace
+DEV = os.environ.get("OFFER_AUTHOR_DEV") or os.path.expanduser(
+    "~/Documents/Gravty/offer-xml-generator-dev"
+)  # dev workspace
 INTROSPECT = os.path.join(DEV, "results", "introspect")  # rules.<source>.json, source = fixture | <tenant>
 DATA = os.path.join(ROOT, "offer_author", "core", "data")  # code: tree.py / check.py read the json
 CONTEXT = os.path.join(ROOT, "offer_author", "ai", "context")  # AI: the md the model reads
@@ -209,7 +211,7 @@ def static_shape(src):
     attrs = unique(re.findall(r"setAttribute\(\s*" + Q, mut or src))
     sources = mutation_sources(mut or "")
     read = unique(re.findall(r"getAttribute\(\s*" + Q, body_of(src, "domToMutation") or src))
-    return {
+    out = {
         "type": btype.group(1) if btype else None,
         "connections": conn,
         "statement_inputs": stmts,
@@ -220,6 +222,30 @@ def static_shape(src):
         "mutation_sources": sources,
         "mutation_attributes_read_only": [a for a in read if a not in attrs],
     }
+    formats = field_formats(src)
+    if formats:
+        out["field_formats"] = formats
+    return out
+
+
+def field_formats(src):
+    """The values the screen accepts in a field, where the block's toDrlCode tests the field against a regex and
+    reports a validation error otherwise: {field: {pattern, error}} (static_value: "<value> is not valid number")."""
+    drl = body_of(src, "toDrlCode")
+    out = {}
+    for var, field in re.findall(r"(\w+)\s*=\s*block\.getFieldValue\(\s*" + Q + r"\s*\)", drl):
+        for rx_var, pattern in re.findall(r"(?:let|const|var)\s+(\w+)\s*=\s*/(.+?)/\w*\s*;", drl):
+            test = re.search(r"!\s*" + rx_var + r"\.test\(\s*" + var + r"\s*\)\s*\)\s*\{([^}]*)\}", drl)
+            msg = re.search(r"blockly_validation_error\s*=\s*" + var + r"\s*\+\s*" + Q, test.group(1)) if test else None
+            if msg:
+                out[field] = {"pattern": pattern, "error": "<value>" + msg.group(1)}
+    # a date picker field: the value is written in the format its default is (static_date "YYYY-MM-DD",
+    # static_date_time "YYYY-MM-DD h:mm A", dayjs tokens)
+    for fmt, field in re.findall(
+        r"appendField\(\s*new \w+\(\s*dayjs\([^;]*?\.format\(\s*\"([^\"]+)\"\s*\).*?,\s*" + Q + r"\s*\)", src, re.S
+    ):
+        out.setdefault(field, {"date_format": fmt})
+    return out
 
 
 def counter_patterns(ui):
@@ -288,7 +314,7 @@ def _dropdowns(entry):
     """{(selector path, field): options} of one block's introspection."""
     out = {("base", k): v for k, v in (entry.get("base") or {}).items() if isinstance(v, list)}
     for sel, per in entry.items():
-        if sel != "base" and isinstance(per, dict):
+        if sel not in ("base", "labels") and isinstance(per, dict):
             for opt, shape in per.items():
                 if isinstance(shape, dict):
                     out.update({(f"{sel}={opt}", k): v for k, v in shape.items() if isinstance(v, list)})
@@ -304,6 +330,22 @@ def tenant_fields(sources):
         keys = set().union(*drops)
         # compared where two or more sources show the field (a tenant's long lists are not expanded per option)
         out[t] = sorted({k[1] for k in keys if len({json.dumps(d[k]) for d in drops if k in d}) > 1})
+    return out
+
+
+def tenant_common(sources):
+    """block type -> {field: options every source offers}: for a short tenant-filled dropdown (12 options or fewer in
+    each source), the screen's own options a program adds to (airportpair_attribute: the stock three, plus a program's
+    airport pair attributes)."""
+    out = {}
+    for t in set().union(*sources.values()) if sources else ():
+        drops = [_dropdowns(s.get(t) or {}) for s in sources.values()]
+        for k in set().union(*drops):
+            lists = [d[k] for d in drops if k in d]
+            if len(lists) == len(drops) and all(len(v) <= 12 for v in lists):
+                common = [o for o in lists[0] if all(o in v for v in lists[1:])]
+                if common and any(v != common for v in lists):
+                    out.setdefault(t, {})[k[1]] = common
     return out
 
 
@@ -333,22 +375,35 @@ def live_sources(name):
 # a condition block whose shape follows its operator (updateShapeByOperator_): for a LOOKUP / LOV attribute, in and not_in
 # open the value popup (picked codes, visible_value), every other operator a value dropdown
 IN_BRANCH = re.compile(r"operator\s*===?\s*'in'\s*\|\|\s*operator\s*===?\s*'not_in'")
+# the between branch adds a second value input after "and" (updateShapeByOperator_)
+BETWEEN_SECOND = re.compile(
+    r"operator\s*===?\s*'between'[^{]*\{[\s\S]{0,2500}?appendValueInput\(\s*[\"']RHS_VALUE[\"']\s*\)"
+)
 
 
 def canvas(ui, srcs, config, evidence_dir, live_name):
     blocks = []
     for cat, cls in toolbox(ui, config):
         f, src = srcs[cls]
-        b = dict(static_shape(src), category=cat, cls=cls, source=f, picks_by_operator=bool(IN_BRANCH.search(src)))
+        b = dict(
+            static_shape(src),
+            category=cat,
+            cls=cls,
+            source=f,
+            picks_by_operator=bool(IN_BRANCH.search(src)),
+            between_second=bool(BETWEEN_SECOND.search(src)),
+        )
         blocks.append(b)
     sources = live_sources(live_name)
     live = next(iter(sources.values()), {})
     tenant = tenant_fields(sources)
+    common = tenant_common(sources)
     ev = evidence(sorted(glob.glob(os.path.join(evidence_dir, "*.xml"))))
     every_tenant_field = set().union(*tenant.values()) | EVIDENCE_TENANT_FIELDS
     for b in blocks:
         b["live"] = live.get(b["type"])
         b["tenant_fields"] = tenant.get(b["type"], [])
+        b["tenant_common"] = common.get(b["type"], {})
         b["evidence"] = ev.get(b["type"])
         if b[
             "evidence"
@@ -380,31 +435,41 @@ def build(ui):
     return ref
 
 
-def _opts(v, n=12):
+def _opts(v, n=12, labels=None):
+    """A field's options; an option whose screen label differs from its code as code="label"."""
     if isinstance(v, list):
-        return "[" + ", ".join(map(str, v[:n])) + (f", ... {len(v) - n} more" if len(v) > n else "") + "]"
+        shown = [f'{o}="{labels[o]}"' if labels and o in labels else str(o) for o in v[:n]]
+        return "[" + ", ".join(shown) + (f", ... {len(v) - n} more" if len(v) > n else "") + "]"
     return str(v)
 
 
 TENANT = "(tenant catalog)"
 
 
-def live_lines(live, tenant=()):
+def live_lines(live, tenant=(), common=None):
     """What the running screen offers: base dropdowns, and per selector option the fields that option adds. A field
     filled from bolapi (tenant) shows no options: its codes are in the tenant catalog block. The options a tenant
     selector reveals (per attribute: date parts, payment operators) are merged into one line."""
     if not live or "base" not in live:
         return []
     base = live["base"]
+    labels = live.get("labels") or {}
     out = []
-    show = lambda k, v: f"{k} {TENANT}" if k in tenant else f"{k} {_opts(v)}"
+    common = common or {}
+
+    def show(k, v):
+        if k in tenant and k in common:  # the screen's own options, and the program's own
+            return f"{k} {_opts(common[k], labels=labels.get(k))} and more {TENANT}"
+        return f"{k} {TENANT}" if k in tenant else f"{k} {_opts(v, labels=labels.get(k))}"
+
     drops = {k: v for k, v in base.items() if not k.startswith("<") and isinstance(v, list)}
     if drops:
         out.append("- live dropdowns: " + "; ".join(show(k, v) for k, v in drops.items()))
     for sel, per in live.items():
-        if sel == "base" or not isinstance(per, dict):
+        if sel in ("base", "labels") or not isinstance(per, dict):
             continue
         merged = {}
+        adds = {}  # the line an option adds -> the options that add it (options adding the same are one line)
         for opt, shape in per.items():
             if not isinstance(shape, dict) or "error" in shape:
                 continue
@@ -412,9 +477,23 @@ def live_lines(live, tenant=()):
             if sel in tenant:
                 merged.update({k: v for k, v in extra.items() if k != sel})
             elif extra:
-                out.append(f"  - {sel}={opt} adds: " + "; ".join(show(k, v) for k, v in extra.items()))
+                adds.setdefault("; ".join(show(k, v) for k, v in extra.items()), []).append(opt)
+        out += [f"  - {sel}={'|'.join(opts)} adds: {line}" for line, opts in adds.items()]
         if merged:
             out.append(f"  - depending on the {sel} chosen, adds: " + "; ".join(show(k, v) for k, v in merged.items()))
+    return out
+
+
+def saved_samples(fields, block):
+    """The saved field values worth showing: trimmed, no blanks, no rule names (free text, often cut off) and no
+    coded values of a condition (the saved offers' tenant codes, not this tenant's)."""
+    out = {}
+    for k, v in fields.items():
+        if k == "IDENTIFIER" or (k == "value" and block.get("picks_by_operator")):
+            continue
+        vals = list(dict.fromkeys(x.strip() for x in v if x and x.strip()))
+        if vals:
+            out[k] = vals
     return out
 
 
@@ -446,20 +525,33 @@ def md(ref, name):
             out.append("- value inputs: " + ", ".join(f"{s['name']} [{c(s['check'])}]" for s in b["value_inputs"]))
         if b["fields"]:
             out.append("- fields: " + ", ".join(b["fields"]))
+        for f, fmt in (b.get("field_formats") or {}).items():
+            if "date_format" in fmt:
+                out.append(
+                    f"- {f}: written in the format `{fmt['date_format']}` (dayjs tokens), as the screen's picker writes it"
+                )
+                continue
+            out.append(
+                f"- {f}: the screen accepts only a value matching `{fmt['pattern']}`; any other value is a screen "
+                f'error ("{fmt["error"]}")'
+            )
+        if b.get("between_second"):
+            out.append('- operator between: its first value in RHS_INPUT, its second in RHS_VALUE (shown after "and")')
         if b.get("picks_by_operator"):
             out.append(
                 "- a LOOKUP / LOV attribute's codes: operators in, not_in take them in `picked` (the value popup); "
                 "any other operator (==, !=) takes one code in the `value` field (a dropdown)"
             )
-        out += live_lines(b.get("live"), set(b.get("tenant_fields") or ()))
+        out += live_lines(b.get("live"), set(b.get("tenant_fields") or ()), b.get("tenant_common"))
         ev = b.get("evidence")
         if ev:
             if ev["inside"]:
                 out.append("- seen inside: " + ", ".join(f"{k} ({v})" for k, v in ev["inside"].items()))
             if ev.get("picked"):
                 out.append("- saved picked codes: " + " / ".join(ev["picked"]))
-            if ev["fields"]:
-                out.append("- saved fields: " + "; ".join(f"{k}={'/'.join(v)}" for k, v in ev["fields"].items()))
+            saved = saved_samples(ev["fields"], b)
+            if saved:
+                out.append("- saved fields: " + "; ".join(f"{k}={'/'.join(v)}" for k, v in saved.items()))
         out.append("")
     return "\n".join(out) + "\n"
 

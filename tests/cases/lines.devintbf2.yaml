@@ -1,0 +1,47 @@
+# Line items and payments on devintbf2, for tools/qa/check_offer_flow.py
+# (OFFER_FLOW_CASES=tests/cases/lines.devintbf2.yaml --tenant=devintbf2). Expectations written by hand from the prompt.
+#
+# devintbf2 (read 2026-11-04): product attribute category (LOOKUP: ALCOHOL "Alcoholic Beverages", FOOD "Food",
+# SNKS "Snacks", ...); line attributes l_product_external_id, l_quantity, l_amount; payment attribute payment_method
+# (CASH, CREDIT "Credit Card", DEBIT "Debit Card", ...), with no payment amount attribute.
+# BIT row: [date, amount, store, expect, {lines?, payments?}]: a line is {l_* attribute: value}, a payment
+# {payment attribute: value}. A line names its product by l_product_external_id; the sequence's products give that
+# product's master attributes (the engine merges them into the line).
+tenant: devintbf2
+sponsor: 1
+program: 1
+currency: AED
+tier_attribute: tier_class
+default_member:
+  tier_class: GLDGLW
+privileges: ['13829', '13828']
+
+cases:
+  # ---- line rule: a product-category condition and points per unit ----
+  - id: L_LN1_alcohol_per_bottle
+    prompt: "Every bottle of Alcoholic Beverages bought earns 5 points: a purchase earns 5 points for each unit of alcoholic beverages in it. Other products earn nothing."
+    sequences:
+      - products: &products {SKU-ALC: {category: ALCOHOL}, SKU-FOOD: {category: FOOD}, SKU-SNK: {category: SNKS}}
+        bits:
+          - ["2026-11-05T12:00:00", 80, HYD, 10, {lines: [{l_product_external_id: SKU-ALC, l_quantity: 2, l_amount: 30}, {l_product_external_id: SKU-FOOD, l_quantity: 1, l_amount: 50}]}]
+          - ["2026-11-05T13:00:00", 50, HYD, null, {lines: [{l_product_external_id: SKU-FOOD, l_quantity: 1, l_amount: 50}]}]
+          - ["2026-11-05T14:00:00", 60, HYD, 20, {lines: [{l_product_external_id: SKU-ALC, l_quantity: 1, l_amount: 15}, {l_product_external_id: SKU-ALC, l_quantity: 3, l_amount: 45}]}]
+
+  # ---- line rule plus a header rule in one offer ----
+  - id: L_LN2_food_lines_plus_basket_bonus
+    prompt: "Food lines earn 2 points per AED 1 of the food line's amount, and any purchase of AED 200 or more earns a 100-point bonus on top."
+    sequences:
+      - products: *products
+        bits:
+          - ["2026-11-05T12:00:00", 210, HYD, 200, {lines: [{l_product_external_id: SKU-FOOD, l_quantity: 1, l_amount: 50}, {l_product_external_id: SKU-SNK, l_quantity: 1, l_amount: 160}]}]
+          - ["2026-11-05T13:00:00", 30, HYD, 60, {lines: [{l_product_external_id: SKU-FOOD, l_quantity: 2, l_amount: 30}]}]
+          - ["2026-11-05T14:00:00", 250, HYD, 100, {lines: [{l_product_external_id: SKU-SNK, l_quantity: 5, l_amount: 250}]}]
+
+  # ---- payment rule: a condition on each payment of the purchase ----
+  - id: L_PY1_credit_card_payment
+    prompt: "Each payment made by Credit Card earns 50 points: a purchase paid partly by credit card and partly in cash earns 50. Purchases with no credit card payment earn nothing."
+    sequences:
+      - bits:
+          - ["2026-11-05T12:00:00", 100, HYD, 50, {payments: [{payment_method: CREDIT}, {payment_method: CASH}]}]
+          - ["2026-11-05T13:00:00", 50, HYD, null, {payments: [{payment_method: CASH}]}]
+          - ["2026-11-05T14:00:00", 70, HYD, null, {payments: [{payment_method: DEBIT}]}]

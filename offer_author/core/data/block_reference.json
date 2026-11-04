@@ -33,6 +33,7 @@
      "cls": "OfferGenericBlock",
      "source": "offer-level/offer-generic.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "<statement:activities>": [
@@ -44,6 +45,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -93,6 +95,7 @@
      "cls": "OfferActivityBlock",
      "source": "offer-level/offer-activity.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "<statement:ACTIVITY_CRITERIA>": [
@@ -105,6 +108,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -460,6 +464,7 @@
      "cls": "FilterBlock",
      "source": "offer-level/filter.block.ts",
      "picks_by_operator": true,
+     "between_second": true,
      "live": {
       "base": {
        "OBJECT": [
@@ -484,7 +489,8 @@
         "airporttypes": [
          "destination",
          "origin"
-        ]
+        ],
+        "attribute": []
        },
        "airport_pair": {
         "OBJECT": [
@@ -558,11 +564,47 @@
         ],
         "attribute": []
        }
+      },
+      "labels": {
+       "OBJECT": {
+        "activity": "BIT"
+       },
+       "airporttypes": {
+        "destination": "BIT Destination Airport",
+        "origin": "BIT Origin Airport"
+       },
+       "attribute": {
+        "h_bit_amount": "BIT Amount",
+        "h_bit_date": "BIT Date",
+        "h_bit_type": "BIT Type",
+        "l_amount": "Line Amount",
+        "l_product_external_id": "Line Product External Id",
+        "l_quantity": "Line Quantity",
+        "h_location": "Location",
+        "amount": "Payment Amount"
+       },
+       "operators": {
+        "null": "is null",
+        "not_null": "is not-null",
+        "match": "matches",
+        "not_match": "does not match",
+        "not_contains": "does not contain"
+       },
+       "attribute_level": {
+        "MA_A": "Activity-Level",
+        "MA_CA": "Bank Account Level",
+        "MA_CC": "Cobranded Card Level",
+        "MP_S": "Individualization Attributes",
+        "MA_O": "Offer-Level",
+        "MA_P": "Program-Level",
+        "MA_SP": "Subscription Level"
+       }
       }
      },
      "tenant_fields": [
       "attribute"
      ],
+     "tenant_common": {},
      "evidence": {
       "signatures": {
        "object attribute operators payoperators iscountertypevector value visible_value type blueprinttypes": 24,
@@ -676,6 +718,7 @@
      "cls": "EventBlock",
      "source": "offer-level/event.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "<statement:RULES>": [
@@ -684,6 +727,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -740,6 +784,7 @@
      "cls": "OrBlock",
      "source": "offer-level/or.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "<statement:OPERAND1>": [
@@ -755,6 +800,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -816,6 +862,7 @@
      "cls": "RuleBlock",
      "source": "rule-level/rule.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "IDENTIFIER": "<string>",
@@ -830,6 +877,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {
@@ -896,6 +944,7 @@
      "cls": "LineRuleBlock",
      "source": "rule-level/line-rule.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "IDENTIFIER": "<string>",
@@ -909,6 +958,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {
@@ -970,6 +1020,7 @@
      "cls": "PaymentRuleBlock",
      "source": "rule-level/payment-rule.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "IDENTIFIER": "<string>",
@@ -982,6 +1033,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -1367,6 +1419,7 @@
      "cls": "IfGenericBlock",
      "source": "rule-level/if-generic.block.ts",
      "picks_by_operator": true,
+     "between_second": true,
      "live": {
       "base": {
        "OBJECT": [
@@ -1426,7 +1479,8 @@
         "airporttypes": [
          "destination",
          "origin"
-        ]
+        ],
+        "attribute": []
        },
        "airport_pair": {
         "OBJECT": [
@@ -1531,11 +1585,55 @@
         ],
         "attribute": []
        }
+      },
+      "labels": {
+       "OBJECT": {
+        "third_party": "3rd Party",
+        "activity": "BIT",
+        "products_attrs": "Product"
+       },
+       "attribute_level": {
+        "MA_A": "Activity-Level",
+        "MA_S": "Analytics Write-back",
+        "MA_CA": "Bank Account Level",
+        "MA_CC": "Cobranded Card Level",
+        "MA_O": "Offer-Level",
+        "MA_P": "Program-Level",
+        "MA_SP": "Subscription Level",
+        "MP_S": "Individualization Attributes"
+       },
+       "airporttypes": {
+        "destination": "BIT Destination Airport",
+        "origin": "BIT Origin Airport"
+       },
+       "attribute": {
+        "h_bit_amount": "BIT Amount",
+        "h_bit_date": "BIT Date",
+        "h_bit_type": "BIT Type",
+        "l_amount": "Line Amount",
+        "l_product_external_id": "Line Product External Id",
+        "l_quantity": "Line Quantity",
+        "h_location": "Location",
+        "amount": "Payment Amount"
+       },
+       "operators": {
+        "null": "is null",
+        "not_null": "is not-null",
+        "match": "matches",
+        "not_match": "does not match",
+        "not_contains": "does not contain"
+       },
+       "ProductOrOfferContext": {
+        "products_attrs": "Attributes",
+        "product_cluster": "Cluster",
+        "product_offer_attributes": "Offer Context"
+       }
       }
      },
      "tenant_fields": [
       "attribute"
      ],
+     "tenant_common": {},
      "evidence": {
       "signatures": {
        "object attribute_level attribute operators payoperators iscountertypevector type target_type": 32,
@@ -1768,6 +1866,7 @@
      "cls": "IfPaymentBlock",
      "source": "rule-level/if-payment.block.ts",
      "picks_by_operator": true,
+     "between_second": true,
      "live": {
       "base": {
        "payment_attribute": []
@@ -1776,6 +1875,7 @@
      "tenant_fields": [
       "payment_attribute"
      ],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [
       "payment_object",
@@ -2119,6 +2219,7 @@
      "cls": "ActionBlock",
      "source": "rule-level/actionblock.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "action_type": [
@@ -2149,7 +2250,8 @@
         "playwintype": [
          "SCRATCH_CARD",
          "SPIN_THE_WHEEL"
-        ]
+        ],
+        "playwinsetup": []
        },
        "give_privilege": {
         "action_type": [
@@ -2327,7 +2429,38 @@
          "MA_A",
          "MA_O",
          "MA_P"
+        ],
+        "mta_attribute": [
+         "new"
         ]
+       }
+      },
+      "labels": {
+       "action_type": {
+        "give_privilege": "Assign Privilege",
+        "take_points": "Redeem Points",
+        "give_points": "Reward Points"
+       },
+       "SELECTED_PRIVILEGE": {
+        "501": "Free Coffee"
+       },
+       "PRIVILEGE_USAGEPOLICY": {
+        "9": "Default policy"
+       },
+       "previlege_Validity": {
+        "product_validity": "Default",
+        "custom_validity": "Custom"
+       },
+       "SELECTED_EXPIRE_LOYALTY_ACC": {
+        "1": "Points"
+       },
+       "LOYALTY_ACCOUNT": {
+        "1": "Points"
+       },
+       "mta_type_value": {
+        "MA_A": "Activity-Level",
+        "MA_O": "Offer-Level",
+        "MA_P": "Program-Level"
        }
       }
      },
@@ -2339,6 +2472,12 @@
       "SELECTED_PRIVILEGE",
       "mta_type_value"
      ],
+     "tenant_common": {
+      "mta_type_value": [
+       "MA_A",
+       "MA_O"
+      ]
+     },
      "evidence": {
       "signatures": {
        "iscountertypevector attribute_type_input mta_type_value mta_attribute type target_type action_operator": 35,
@@ -2712,6 +2851,7 @@
      "cls": "ThirdPartyActionBlock",
      "source": "rule-level/thirdparty-action.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "third_parties_dropdown": [
@@ -2882,9 +3022,37 @@
          "transfer_privilege"
         ]
        }
+      },
+      "labels": {
+       "action_type": {
+        "give_privilege": "Assign Privilege",
+        "give_points": "Reward Points"
+       },
+       "SELECTED_PRIVILEGE": {
+        "501": "Free Coffee"
+       },
+       "PRIVILEGE_USAGEPOLICY": {
+        "9": "Default policy"
+       },
+       "previlege_Validity": {
+        "product_validity": "Default",
+        "custom_validity": "Custom"
+       },
+       "LOYALTY_ACCOUNT": {
+        "1": "Points"
+       },
+       "Transfer_P_L": {
+        "1": "Points"
+       },
+       "mta_type_value": {
+        "MA_A": "Activity-Level",
+        "MA_O": "Offer-Level",
+        "MA_P": "Program-Level"
+       }
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [
       "third_parties_dropdown",
@@ -2926,16 +3094,24 @@
      "mutation_attributes": [],
      "mutation_sources": {},
      "mutation_attributes_read_only": [],
+     "field_formats": {
+      "value": {
+       "pattern": "^[0-9]*\\.?[0-9]+$",
+       "error": "<value> is not valid number"
+      }
+     },
      "category": "Attributes & Variables",
      "cls": "StaticValueBlock",
      "source": "attributes-variables/static-value.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "value": "<string>"
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {
@@ -2982,12 +3158,14 @@
      "cls": "StaticStringValueBlock",
      "source": "attributes-variables/static-string-value.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "value": "<string>"
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {
@@ -3056,6 +3234,7 @@
      "cls": "ArithmeticGenericBlock",
      "source": "attributes-variables/arithmetic-generic.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "<value:LHS>": [
@@ -3244,9 +3423,15 @@
          "Current Date"
         ]
        }
+      },
+      "labels": {
+       "operator": {
+        "*": "X"
+       }
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {
@@ -3325,6 +3510,7 @@
      "cls": "ArithmeticDateBlock",
      "source": "attributes-variables/arithmetic-date.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "<value:LHS>": [
@@ -3505,6 +3691,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [
       "opt"
@@ -3535,6 +3722,7 @@
      "cls": "CurrentDateBlock",
      "source": "attributes-variables/current-date.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "current_date_type": [
@@ -3694,6 +3882,7 @@
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -3718,16 +3907,23 @@
      "mutation_attributes": [],
      "mutation_sources": {},
      "mutation_attributes_read_only": [],
+     "field_formats": {
+      "value": {
+       "date_format": "YYYY-MM-DD"
+      }
+     },
      "category": "Attributes & Variables",
      "cls": "StaticDateBlock",
      "source": "attributes-variables/static-date.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "value": "<string>"
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -3752,16 +3948,23 @@
      "mutation_attributes": [],
      "mutation_sources": {},
      "mutation_attributes_read_only": [],
+     "field_formats": {
+      "value": {
+       "date_format": "YYYY-MM-DD h:mm A"
+      }
+     },
      "category": "Attributes & Variables",
      "cls": "StaticDateTimeBlock",
      "source": "attributes-variables/static-date-time.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "value": "<string>"
       }
      },
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -3803,6 +4006,7 @@
      "cls": "CurrencyConvertorRateBlock",
      "source": "attributes-variables/currency-convertor-rate.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "conversion_type": [
@@ -3874,11 +4078,24 @@
          "1"
         ]
        }
+      },
+      "labels": {
+       "conversion_type": {
+        "redemption_conversion": "Award",
+        "conversion": "Exchange",
+        "accrual_conversion": "Reward",
+        "sponsor_award_rate": "Sponsor Award",
+        "sponsor_base_rate": "Sponsor Reward"
+       },
+       "LOYALTY_ACCOUNT": {
+        "1": "Points"
+       }
       }
      },
      "tenant_fields": [
       "LOYALTY_ACCOUNT"
      ],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [
       "attribute"
@@ -3997,6 +4214,7 @@
      "cls": "BitAttributesBlock",
      "source": "attributes-variables/bit-attributes.block.ts",
      "picks_by_operator": true,
+     "between_second": true,
      "live": {
       "base": {
        "ATTRIBUTE": [
@@ -4124,11 +4342,24 @@
          "not_in"
         ]
        }
+      },
+      "labels": {
+       "ATTRIBUTE": {
+        "h_bit_amount": "BIT Amount",
+        "h_bit_date": "BIT Date",
+        "h_bit_type": "BIT Type",
+        "l_amount": "Line Amount",
+        "l_product_external_id": "Line Product External Id",
+        "l_quantity": "Line Quantity",
+        "h_location": "Location",
+        "amount": "Payment Amount"
+       }
       }
      },
      "tenant_fields": [
       "ATTRIBUTE"
      ],
+     "tenant_common": {},
      "evidence": {
       "signatures": {
        "operators payoperators attribute type": 28
@@ -4332,6 +4563,7 @@
      "cls": "MemberAttributesBlock",
      "source": "attributes-variables/member-attributes.block.ts",
      "picks_by_operator": false,
+     "between_second": true,
      "live": {
       "base": {
        "ATTRIBUTE_TYPE": [
@@ -4475,11 +4707,25 @@
         ],
         "ATTRIBUTE": []
        }
+      },
+      "labels": {
+       "ATTRIBUTE_TYPE": {
+        "MA_A": "Activity-Level",
+        "MA_S": "Analytics Write-back",
+        "MA_CA": "Bank Account Level",
+        "MA_CC": "Cobranded Card Level",
+        "MP_S": "Individualization Attributes",
+        "MA_O": "Offer-Level",
+        "MA_P": "Program-Level",
+        "MA_SP": "Subscription Level",
+        "MA_T": "Tier Level"
+       }
       }
      },
      "tenant_fields": [
       "ATTRIBUTE"
      ],
+     "tenant_common": {},
      "evidence": {
       "signatures": {
        "attribute_type_input attribute iscountertypevector attr_type": 14
@@ -4580,6 +4826,7 @@
      "cls": "ProductAttributesBlock",
      "source": "attributes-variables/product-attributes.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "ATTRIBUTE_PRODUCTS": [
@@ -4610,11 +4857,18 @@
        "product_offer_attributes": {
         "error": "TypeError: FieldDropdown options must not be an empty array."
        }
+      },
+      "labels": {
+       "ATTRIBUTE_PRODUCTS": {
+        "products_attrs": "Product",
+        "product_offer_attributes": "Product Offer Context"
+       }
       }
      },
      "tenant_fields": [
       "ATTRIBUTE"
      ],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [
       "attribute_type_input",
@@ -4714,6 +4968,7 @@
      "cls": "PaymentAttributeBlock",
      "source": "attributes-variables/payment-attributes.block.ts",
      "picks_by_operator": true,
+     "between_second": true,
      "live": {
       "base": {
        "payment_attribute": []
@@ -4722,6 +4977,7 @@
      "tenant_fields": [
       "payment_attribute"
      ],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [
       "PAYMENT_OBJECT",
@@ -4761,6 +5017,7 @@
      "cls": "AirportPairAttributeBlock",
      "source": "attributes-variables/airport-pair-attributes.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": {
       "base": {
        "airportpair_attribute": [
@@ -4791,18 +5048,28 @@
          "reward_price"
         ]
        }
+      },
+      "labels": {
+       "airportpair_attribute": {
+        "reward_price": "Reward Value"
+       }
       }
      },
-     "tenant_fields": [],
+     "tenant_fields": [
+      "airportpair_attribute"
+     ],
+     "tenant_common": {
+      "airportpair_attribute": [
+       "award_price",
+       "distance_flown",
+       "reward_price"
+      ]
+     },
      "evidence": {
       "signatures": {
        "payment_object airportpair_attribute operators type": 1
       },
-      "fields": {
-       "airportpair_attribute": [
-        "distance_flown"
-       ]
-      },
+      "fields": {},
       "inside": {
        "action.RHS_INPUT_VALUE": 1
       },
@@ -4849,8 +5116,10 @@
      "cls": "TargetingHolderSegmentBlock",
      "source": "segment-level/targeting-holder-segment.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -4905,8 +5174,10 @@
      "cls": "OrBlock",
      "source": "offer-level/or.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {},
@@ -5348,8 +5619,10 @@
      "cls": "TargetingConditionSegmentBlock",
      "source": "segment-level/targeting-condition-segment.block.ts",
      "picks_by_operator": true,
+     "between_second": true,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {
        "attr_level attribute operators value visible_value iscountertypevector": 19,
@@ -5649,8 +5922,10 @@
      "cls": "TargetingMemberAttributeSegmentBlock",
      "source": "segment-level/member-attribute-segment.block.ts",
      "picks_by_operator": true,
+     "between_second": true,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {
        "attribute_type_input attribute iscountertypevector attr_type selected_card_attribute_targeted": 1,
@@ -5722,12 +5997,20 @@
      "mutation_attributes": [],
      "mutation_sources": {},
      "mutation_attributes_read_only": [],
+     "field_formats": {
+      "value": {
+       "pattern": "^[0-9]*\\.?[0-9]+$",
+       "error": "<value> is not valid number"
+      }
+     },
      "category": "Select",
      "cls": "StaticValueBlock",
      "source": "attributes-variables/static-value.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {
@@ -5772,8 +6055,10 @@
      "cls": "StaticStringValueBlock",
      "source": "attributes-variables/static-string-value.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -5798,12 +6083,19 @@
      "mutation_attributes": [],
      "mutation_sources": {},
      "mutation_attributes_read_only": [],
+     "field_formats": {
+      "value": {
+       "date_format": "YYYY-MM-DD"
+      }
+     },
      "category": "Select",
      "cls": "StaticDateBlock",
      "source": "attributes-variables/static-date.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": {
       "signatures": {},
       "fields": {
@@ -5849,8 +6141,10 @@
      "cls": "CurrentDateBlock",
      "source": "attributes-variables/current-date.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -5892,8 +6186,10 @@
      "cls": "CurrencyConvertorRateBlock",
      "source": "attributes-variables/currency-convertor-rate.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [
       "attribute"
@@ -5953,8 +6249,10 @@
      "cls": "ArithmeticGenericBlock",
      "source": "attributes-variables/arithmetic-generic.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [],
      "mutation_always": []
@@ -6016,8 +6314,10 @@
      "cls": "ArithmeticDateBlock",
      "source": "attributes-variables/arithmetic-date.block.ts",
      "picks_by_operator": false,
+     "between_second": false,
      "live": null,
      "tenant_fields": [],
+     "tenant_common": {},
      "evidence": null,
      "mutation_order": [
       "opt"

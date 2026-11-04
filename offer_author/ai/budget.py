@@ -1,7 +1,10 @@
 """The hard limit on Bedrock model calls.
 
 User, 2026-11-04: "Do not exceed 200 LLM calls ... hardcode this limit", then "increase 200 limit to 400 max", then
-(to measure the latency changes on the 18 vertical offers) "raise the hard limit to 500".
+(to measure the latency changes on the 18 vertical offers) "raise the hard limit to 500", then (for the end-to-end
+test plan) "Raise the call limit to 900", then (to finish the devintbf2 rerun and the airport and currency
+tests) "Raise to 1100", then (for the 86-offer fixture rerun) "Raise to 1350",
+then (to rerun the cases the per-$1 reading changes) "Raise to 1500".
 
 Every request the chat model sends to Bedrock (each turn, each retry, each cache warm) first takes one call from a
 ledger file shared by every process on the machine (backend, CLI, live tests). The ledger counts up and is never reset
@@ -16,7 +19,7 @@ import os
 import time
 from pathlib import Path
 
-MAX_LLM_CALLS = 500
+MAX_LLM_CALLS = 1500
 DEFAULT_LEDGER = Path.home() / ".offer_author" / "llm_calls.json"
 
 

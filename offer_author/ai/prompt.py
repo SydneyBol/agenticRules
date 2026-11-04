@@ -3,10 +3,11 @@
   context/block_reference*.md  both toolboxes, generated from the gravty-ui source (tools/build/block_reference.py)
   context/kt.md                how offers and blocks run in the engine, as a manager knows it (written by hand: no
                                rule code, backend or UI source; tests/unit/test_agent.py guards it)
-  context/conventions.md       usual readings of loyalty terms (spend, Nx, over / at least, weekdays)
+  context/conventions.md       usual readings of loyalty terms (spend, Nx, per X, period ends, caps)
   the tenant catalog           catalog_text()
   earlier offers of the tenant core.tenant.history, at most two like the request, in the request message as reference
-No example offers: the model works from this knowledge, so a new block or pattern needs no example written for it.
+No example offers and no recipes: the model derives the logic from these facts, so a new pattern needs nothing written
+for it.
 No compiled rules (DRL) exist in this service.
 """
 
@@ -14,11 +15,13 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 from textwrap import indent
 from typing import TYPE_CHECKING, Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from ..core.tenant.catalog import INLINE_ACTIVITY_TYPES, INLINE_VALUES, OBJECTS
+from ..core.tenant.catalog import AIRLINE_OBJECTS, INLINE_ACTIVITY_TYPES, INLINE_VALUES, OBJECTS
 from ..core.tenant.existing_counters import normalize
 from ..core.vocabulary import ACTIVITY_TYPE
 
@@ -49,12 +52,13 @@ the names the block reference lists:
 - a field: the block's field value (dropdown option, typed value, catalog code in a field).
 - picked: codes chosen in the block's lookup popup (the "saved picked codes" lines), comma-separated.
 - an input: a statement input holds a list (blocks chained in order); a value input holds one block.
-- A block or condition you need in several places (a period index, the same counter check in several rules) goes
+- A block or condition you need in several places (the same value or counter check in several rules) goes
   once in `defs` beside the tree, {name: block | [blocks]}, and is used by name: {"use": name}.
 - The tools fill these fields when you leave them out, so leave them out unless you want something else: a
   condition's OBJECT and attribute_level (from its attribute: a declared counter at its level, an activity attribute,
   a member attribute at MA_P); update_attribute's mta_type_value (the counter's level); give_points' LOYALTY_ACCOUNT
-  and REWARD_TAGS (the tenant's account and reward tag below); the levels come from `counters`.
+  and REWARD_TAGS (the account the catalog names as filled when none is named, and its reward tag); the levels come
+  from `counters`.
 - counters: declare once, beside the tree, every counter the blocks refer to, offer (MA_O) and activity (MA_A) alike:
   {"name", "data_type" NUMBER|TEXT|DATE|BOOLEAN, "counter_type" REGULAR|VECTOR, "target_type"?, "namespace"? (VECTOR:
   what it counts per, e.g. h_location), "level" MA_O|MA_A}. The rules screen creates them on upload.
@@ -101,12 +105,13 @@ Saved rules and single blocks:
 Offer semantics:
 - Every restriction the manager states must be built in the part the engine evaluates it in. A rules condition every
   rule needs belongs once in the On Activity filter (activity_criteria), not repeated per rule.
-- Words the description leaves open read as the usual readings say (spend, Nx points, over / at least, days of the
-  week, state across transactions).
+- Words the description leaves open read as the usual readings say; any other open word takes its plain reading,
+  recorded in assumptions.
 - Dates: only dates the manager stated (YYYY-MM-DD; the end date is the last day included); none stated is normal
   (the offer starts when created and has no end). Ask only for relative dates ("this weekend").
 - blueprint_variable blocks are template placeholders: never emit them; put concrete values there.
-- Points go to the loyalty account and reward tag the catalog names.
+- Loyalty accounts (the currency points are in), their reward tags and the privileges' usage policies are dropdowns
+  like any other: their values are the tenant catalog's.
 - When the message says a part is already handled elsewhere, build only what you are asked to build.
 - Every assumption, blocking question and unsupported item names its part (offer_main, segment, rules): the part it
   is about, i.e. the screen where the manager acts on it. Each screen shows only its own part's items.
@@ -136,13 +141,13 @@ def system_text(history: bool = False) -> str:
 
 
 def static_prompt() -> str:
-    """The knowledge every run shares: block reference, how blocks run, member dates, usual readings.
+    """The knowledge every run shares: block reference, how blocks run, usual readings.
 
     Read per run (~5 ms), the same bytes each time, so it stays a prompt-cache hit.
     """
     return "\n\n".join(
         Path(CONTEXT, n).read_text()
-        for n in ("block_reference.md", "block_reference_segment.md", "kt.md", "member_dates.md", "conventions.md")
+        for n in ("block_reference.md", "block_reference_segment.md", "kt.md", "conventions.md")
     )
 
 
@@ -171,26 +176,40 @@ def system_blocks(
         {"type": "text", "text": static_prompt(), "cache_control": mark},
         {
             "type": "text",
-            "text": "Tenant catalog:\n"
-            + catalog_text(catalog, account_id, inline_types)
-            + _account_line(catalog, account_id),
+            "text": "Tenant catalog:\n" + catalog_text(catalog, account_id, inline_types),
             "cache_control": mark,
         },
     ]
 
 
-def _account_line(catalog: Catalog, account_id: Any) -> str:
-    """The account's reward tag for points (or its tags, when none is configured)."""
-    acc = catalog.account(account_id)
-    if not acc:
-        return ""
-    tags, tag = [t["code"] for t in acc.get("tags") or []], catalog.reward_tag(account_id)
-    if tag is None:
-        return (
-            f"\nReward tags on this account: {', '.join(tags) or 'none'} "
-            "(no configured reward tag: give_points needs REWARD_TAGS)"
+MAX_TAGS_SHOWN = 12  # reward tags listed per account; the compose check names the closest when another is used
+
+
+def _accounts_text(catalog: Catalog) -> list[str]:
+    """The loyalty account dropdowns' values (give, take, return, reset and expire points; currency converter)."""
+    if not catalog.loyalty_accounts:
+        return []
+    acc = catalog.account()
+    head = (
+        "\n## LOYALTY ACCOUNTS (the reward accounts this sponsor's offers can use: id | loyalty currency"
+        " | currency type | sponsor-specific | reward tags)"
+    )
+    if acc:
+        own = " (the sponsor's own account)" if acc.get("sponsor_specific") else " (the program's configured account)"
+        head += f'\nThe account the tools fill when an action names none: {acc["id"]} "{acc["name"]}"{own}'
+        tag = catalog.reward_tag(acc["id"])
+        head += f", reward tag {tag}" if tag else ""
+    lines = [head]
+    for a in catalog.loyalty_accounts:
+        tags = [t["code"] for t in a.get("tags") or []]
+        shown = ", ".join(tags[:MAX_TAGS_SHOWN]) + (
+            f" (+{len(tags) - MAX_TAGS_SHOWN} more)" if len(tags) > MAX_TAGS_SHOWN else ""
         )
-    return f"\nReward tag for points: {tag}" + (f" (tags on this account: {', '.join(tags)})" if tags else "")
+        lines.append(
+            f"{a['id']} | {a['name']} | {a.get('currency_type') or ''} | {'yes' if a.get('sponsor_specific') else 'no'}"
+            f" | {shown or 'not read'}"
+        )
+    return lines
 
 
 def intro(
@@ -220,7 +239,11 @@ def intro(
         "rules": "the rules (rules canvas)",
     }
     text = prompt + "\n\nBuild: " + "; ".join(names[p] for p in parts) + "."
-    if tuple(parts) == ("rules",) and not context:
+    if tuple(parts) == ("offer_main",):
+        text += (
+            " The member segment and the rules are built after Offer Main, from its segment_prompt and rules_prompt."
+        )
+    elif tuple(parts) == ("rules",) and not context:
         text += (
             " Nothing else of this offer exists for this job: no Offer Main settings and no member segment. Build"
             ' every restriction the description states in the rules: a member limit ("for Gold members") as a'
@@ -324,18 +347,64 @@ def _json(value: Any) -> str:
     return json.dumps(value, separators=(",", ":"))
 
 
-def rules_context(om: dict[str, Any], segment: dict[str, Any] | None = None) -> str:
-    """Told to a rules-only run whose offer already has Offer Main (and maybe a segment): what is handled there."""
+def _offer_main_settings(om: dict[str, Any]) -> list[str]:
+    """Offer Main's dates and limits, as the run is told them."""
     settings = [f"{k}={om[k]}" for k in ("start_date", "end_date") if om.get(k)]
     if om.get("max_usage_per_user"):
         settings.append(f"max {om['max_usage_per_user']} per member ({om.get('frequency')})")
     if om.get("num_of_clients"):
         settings.append(f"max {om['num_of_clients']} in total ({om.get('offer_frequency_type') or 'lifetime'})")
+    return settings
+
+
+def offer_main_context(om: dict[str, Any]) -> str:
+    """Told to the build run of a whole-offer job: the Offer Main its own run set, and the parts it left to this run."""
+    return (
+        "Offer Main is already set for this offer (not built in a canvas):\n"
+        f"- Settings: {', '.join(_offer_main_settings(om)) or 'none'}\n"
+        f"- Who the offer is for (Offer Main's segment_prompt): {om.get('segment_prompt') or 'every member'}\n"
+        f"- The rules part (Offer Main's rules_prompt): {om.get('rules_prompt') or 'none'}"
+    )
+
+
+def rules_context(om: dict[str, Any], segment: dict[str, Any] | None = None) -> str:
+    """Told to a rules-only run whose offer already has Offer Main (and maybe a segment): what is handled there."""
+    settings = _offer_main_settings(om)
     who = (segment or {}).get("description") or om.get("segment_prompt") or "none, every member"
     return (
         "Already handled outside the rules (do not build rules for these, do not repeat them as conditions):\n"
         f"- Offer Main settings: {', '.join(settings) or 'none'}\n- Member segment (who qualifies): {who}"
     )
+
+
+def _airports_text(catalog: Catalog) -> list[str]:
+    """The program's airports and airport pairs, and the header fields a transaction names its airports by."""
+    airports, pairs = catalog.reference.get("airports") or {}, catalog.reference.get("airport_pairs") or {}
+    if not airports:
+        return []
+    out = [
+        "\n## The program's airports (a transaction names its origin and destination airports by code in the header "
+        "fields h_origin_airport and h_destination_airport; the airport and airport pair attributes are read from "
+        "them)",
+        ", ".join(airports) if len(airports) <= INLINE_VALUES else f"{len(airports)} airports, not listed",
+    ]
+    if pairs:
+        out.append("Airport pairs (origin-destination | distance):")
+        out += [f"{k} | {v.get('distance')}" for k, v in list(pairs.items())[:INLINE_VALUES]]
+        if len(pairs) > INLINE_VALUES:
+            out.append(f"and {len(pairs) - INLINE_VALUES} more pairs")
+    return out
+
+
+def _today(catalog: Catalog) -> str:
+    """The catalog's date (fixtures pin it), else today's date in the program's time zone."""
+    if catalog.today:
+        return catalog.today
+    try:
+        tz = ZoneInfo(catalog.timezone) if catalog.timezone else None
+    except (ZoneInfoNotFoundError, ValueError):
+        tz = None
+    return datetime.now(tz).strftime("%Y-%m-%d")
 
 
 def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = INLINE_ACTIVITY_TYPES) -> str:
@@ -346,14 +415,18 @@ def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = I
     """
     out = [
         f"Tenant: {catalog.tenant}  sponsor: {catalog.sponsor_id}"
-        + (f"  today: {catalog.today}" if catalog.today else "")
+        + f"  today: {_today(catalog)}"
+        + (f"  program time zone: {catalog.timezone}" if catalog.timezone else "")
+        + (f"  point decimal scale: {catalog.point_decimal_scale}" if catalog.point_decimal_scale is not None else "")
     ]
     names = {
         "activity": "ACTIVITY (transaction) attributes, l_* are line-item attributes",
         "member": "MEMBER attributes",
         "product": "PRODUCT attributes (use with line_item / collect_all)",
+        "airport": "AIRPORT attributes (OBJECT airport; airporttypes origin / destination: the BIT's airport)",
+        "airport_pair": "AIRPORT PAIR attributes (OBJECT airport_pair: the BIT's origin to destination pair)",
     }
-    for obj in OBJECTS:
+    for obj in (*OBJECTS, *(o for o in AIRLINE_OBJECTS if catalog.attributes.get(o))):
         out.append(f"\n## {names[obj]}  (code | label | type [| values])")
         for a in catalog.attributes.get(obj, {}).values():
             line = f"{a.code} | {a.label} | {a.type}" + (" (payment)" if a.payment_level else "")
@@ -363,6 +436,7 @@ def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = I
                 else:
                     line += f" | {len(a.values)} values, not listed: find codes with lookup_values"
             out.append(line)
+    out += _airports_text(catalog)
     if len(catalog.activity_types) <= inline_types:
         out.append(
             "\n## Activity types (h_bit_type values)\n"
@@ -374,13 +448,18 @@ def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = I
             "lookup_values (activity, h_bit_type)"
         )
     if catalog.tiers:
-        out.append("\n## TIER PROGRAMME (MA_T: tier class | tiers the member can hold)")
+        out.append("\n## TIER PROGRAMME (MA_T: tier class | tiers the member can hold, by rank, lowest first)")
         out += [
             f"{c} | " + ", ".join(k if k == v else f"{k}={v}" for k, v in t.items()) for c, t in catalog.tiers.items()
         ]
-    acc = catalog.account(account_id)
-    if acc:
-        out.append(f'\n## Points are awarded to loyalty account {acc["id"]} "{acc["name"]}"')
-    out.append("\n## Privileges (privilege_id | name)")
-    out += [f"{pid} | {p['name']}" for pid, p in catalog.privileges.items()]
+    out += _accounts_text(catalog)
+    out.append("\n## Privileges (privilege_id | name | usage policies: id=name, the first is the screen's default)")
+    out += [
+        f"{pid} | {p['name']} | "
+        + ", ".join(
+            f"{u['id']}={u['name']}"
+            for u in p.get("usage_policies") or [{"id": p.get("usage_policy"), "name": "default"}]
+        )
+        for pid, p in catalog.privileges.items()
+    ]
     return "\n".join(out)

@@ -253,8 +253,37 @@ def codes(block: ET.Element, catalog: Catalog | None) -> list[Problem]:
         obj, level = "member", m.get("attr_level")
     cobj = CATALOG_OBJECT.get(obj or "")
     out = _value_codes(catalog, cobj, obj, attr, m) if cobj and attr and level in ATTRIBUTE_LEVELS else []
+    if obj and attr and not cobj and obj != "member":  # location, sponsor: their own attribute lists
+        owner = next((o for o, c in CATALOG_OBJECT.items() if catalog.attr(c, attr)), None)
+        if owner:  # the screen finds no such attribute under this OBJECT and loads the condition empty
+            out.append(Problem.of("attribute_not_of_object", attribute=attr, object=obj, owner=owner))
+    own = {f.get("name"): f.text for f in block if _tag(f) == "field"}  # this block's own dropdowns, not nested ones
     if block.get("type") == "action" and m.get("attribute_type_input") == "give_privilege":
-        pid = next((f.text for f in block.iter(NS + "field") if f.get("name") == "SELECTED_PRIVILEGE"), None)
+        pid = own.get("SELECTED_PRIVILEGE")
         if pid and str(pid) not in catalog.privileges:
             out.append(Problem.of("privilege_not_in_catalog", id=pid))
+        policies = [u["id"] for u in (catalog.privileges.get(str(pid)) or {}).get("usage_policies") or []]
+        pol = own.get("PRIVILEGE_USAGEPOLICY")
+        if pol and policies and str(pol) not in policies:
+            out.append(Problem.of("usage_policy_not_of_privilege", id=pol, privilege=pid, policies=policies))
+    return out + _account_codes(block, own, catalog)
+
+
+ACCOUNT_FIELDS = ("LOYALTY_ACCOUNT", "SELECTED_EXPIRE_LOYALTY_ACC")  # the loyalty account dropdowns
+
+
+def _account_codes(block: ET.Element, own: dict[str | None, str | None], catalog: Catalog) -> list[Problem]:
+    """The loyalty account and reward tag dropdowns (actions, currency converter) against the sponsor's accounts."""
+    if block.get("type") not in ("action", "currency_converter") or not catalog.loyalty_accounts:
+        return []
+    out = []
+    ids = [a["id"] for a in catalog.loyalty_accounts]
+    for name in ACCOUNT_FIELDS:
+        aid = own.get(name)
+        if aid and str(aid) not in ids:
+            out.append(Problem.of("account_not_in_catalog", field=name, id=aid))
+    tag = own.get("REWARD_TAGS")
+    tags = [t["code"] for t in (catalog.account(own.get("LOYALTY_ACCOUNT")) or {}).get("tags") or []]
+    if tag and tags and tag not in tags:
+        out.append(Problem.of("tag_not_of_account", tag=tag, account=own.get("LOYALTY_ACCOUNT"), tags=tags[:12]))
     return out

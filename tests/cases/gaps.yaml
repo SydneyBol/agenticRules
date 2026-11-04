@@ -1,0 +1,64 @@
+# Blocks and logic the current agent had never generated (TestCoverage-2026-11-04.md), in devintam1 codes, for
+# tools/qa/check_offer_flow.py (OFFER_FLOW_CASES=tests/cases/gaps.yaml). Expectations written by hand from the prompt.
+#
+# devintam1: product categories (line attribute l_product_category) ALCOHOL "Alcoholic Beverages", TCK "Tickets",
+# VCH "Voucher"; payment attributes payment_method, amount. Stores HQ, WEB, Chennai, VJD.
+# BIT row: [date, amount, store, expect, {lines?, payments?}]: a line is {l_* attribute: value}, a payment
+# {payment attribute: value}. The header amount is the purchase total. A line names its product by
+# l_product_external_id, and the sequence's products give that product's master attributes (the engine merges them
+# into the line, LineSkuDataLoader), so a rule may read the category from the line (l_product_category) or from the
+# product (category): both carry the same value.
+
+cases:
+  # ---- line rule (rule_line): a condition and points per line item ----
+  - id: G_LN1_alcohol_per_bottle
+    prompt: "Every bottle of Alcoholic Beverages bought earns 5 points: a purchase earns 5 points for each unit of alcoholic beverages in it. Other products earn nothing."
+    sequences:
+      - products: &products {SKU-ALC: {category: ALCOHOL}, SKU-TCK: {category: TCK}, SKU-VCH: {category: VCH}}
+        bits:
+          - ["2026-11-03T12:00:00", 80, HQ, 10, {lines: [{l_product_external_id: SKU-ALC, l_product_category: ALCOHOL, l_quantity: 2, l_amount: 30}, {l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 1, l_amount: 50}]}]
+          - ["2026-11-03T13:00:00", 50, HQ, null, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 1, l_amount: 50}]}]
+          - ["2026-11-03T14:00:00", 60, WEB, 20, {lines: [{l_product_external_id: SKU-ALC, l_product_category: ALCOHOL, l_quantity: 1, l_amount: 15}, {l_product_external_id: SKU-ALC, l_product_category: ALCOHOL, l_quantity: 3, l_amount: 45}]}]
+          - ["2026-11-03T15:00:00", 20, VJD, null, {lines: [{l_product_external_id: SKU-VCH, l_product_category: VCH, l_quantity: 4, l_amount: 20}]}]
+
+  # ---- line rule plus a header rule in one offer ----
+  - id: G_LN2_ticket_lines_plus_basket_bonus
+    prompt: "Ticket lines earn 2 points per $1 of the ticket line's amount, and any purchase of $200 or more earns a 100-point bonus on top."
+    sequences:
+      - products: *products
+        bits:
+          - ["2026-11-03T12:00:00", 210, HQ, 200, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 1, l_amount: 50}, {l_product_external_id: SKU-VCH, l_product_category: VCH, l_quantity: 1, l_amount: 160}]}]
+          - ["2026-11-03T13:00:00", 30, HQ, 60, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 2, l_amount: 30}]}]
+          - ["2026-11-03T14:00:00", 250, WEB, 100, {lines: [{l_product_external_id: SKU-VCH, l_product_category: VCH, l_quantity: 5, l_amount: 250}]}]
+          - ["2026-11-03T15:00:00", 199.99, VJD, 399.98, {lines: [{l_product_external_id: SKU-TCK, l_product_category: TCK, l_quantity: 1, l_amount: 199.99}]}]
+          - ["2026-11-03T16:00:00", 199.99, VJD, null, {lines: [{l_product_external_id: SKU-VCH, l_product_category: VCH, l_quantity: 1, l_amount: 199.99}]}]
+
+  # ---- payment rule (payment_rule): a condition on each payment of the purchase ----
+  - id: G_PY1_visa_paid_part
+    prompt: "The part of a purchase paid by the payment method VISA earns 3 points per $1 of the amount paid by VISA. Amounts paid any other way earn nothing."
+    sequences:
+      - bits:
+          - ["2026-11-03T12:00:00", 100, HQ, 120, {payments: [{payment_method: VISA, amount: 40}, {payment_method: CASH, amount: 60}]}]
+          - ["2026-11-03T13:00:00", 50, HQ, null, {payments: [{payment_method: CASH, amount: 50}]}]
+          - ["2026-11-03T14:00:00", 10.5, WEB, 31.5, {payments: [{payment_method: VISA, amount: 10.5}]}]
+
+  # ---- counter decremented (DECREMENT_BY), whole-$10 arithmetic, a threshold checked after every spend ----
+  - id: G_CT1_credits_spent_for_bonus
+    prompt: "Credits: every spend adds 1 credit for each full $10 of the spend. Whenever a member's credits are 5 or more after a spend, that spend earns 50 bonus points and 5 credits are taken away. Spends earn no other points."
+    sequences:
+      - note: "credits 3; 5 -> bonus, 0; 4; 5 -> bonus, 0; 12 -> one bonus, 7; 7 -> bonus, 2"
+        bits: [["2026-11-03T12:00:00", 30, HQ, null], ["2026-11-03T13:00:00", 25, HQ, 50], ["2026-11-03T14:00:00", 49.99, WEB, null],
+               ["2026-11-03T15:00:00", 10, VJD, 50], ["2026-11-04T12:00:00", 120, HQ, 50], ["2026-11-04T13:00:00", 5, HQ, 50],
+               ["2026-11-04T14:00:00", 9.99, HQ, null]]
+
+  # ---- text operators on member profile text (ends_with, contains) ----
+  - id: G_TX1_email_domain_and_company
+    prompt: "Members whose email address ends with @gravty.com earn 2 points per $1 spent. Members whose company name contains the word Bank earn 50 extra points on every spend. A member can get both."
+    sequences:
+      - member: {email: "asha@gravty.com", company: "First Bank Ltd"}
+        bits: [["2026-11-03T12:00:00", 100, HQ, 250], ["2026-11-03T13:00:00", 10.5, WEB, 71]]
+      - member: {email: "ravi@gmail.com", company: "Gravty"}
+        bits: [["2026-11-03T12:00:00", 100, HQ, null]]
+      - note: "contains gravty.com but does not end with it; the company contains Bank"
+        member: {email: "gravty.com@gmail.com", company: "Bank of India"}
+        bits: [["2026-11-03T12:00:00", 100, HQ, 50]]

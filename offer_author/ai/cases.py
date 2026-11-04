@@ -24,7 +24,9 @@ class Expect(BaseModel):
     model_config = ConfigDict(extra="forbid")  # a key the schema does not have is an error, never dropped
 
     points: float = Field(0, description="points credited for this transaction (0 for none)")
-    privileges: list[str] = Field(default_factory=list, description="privilege ids given (catalog ids)")
+    privileges: list[str] = Field(
+        default_factory=list, description="privilege ids given (catalog ids), an id once per unit given"
+    )
 
 
 class CaseBit(BaseModel):
@@ -32,7 +34,17 @@ class CaseBit(BaseModel):
 
     header: dict[str, Any] = Field(
         description="h_bit_date (ISO date-time, inside the offer's dates), h_bit_amount, h_location (a store code "
-        "from the catalog), h_bit_type when the activity is not Spend, and any other header attribute the offer reads"
+        "from the catalog), h_bit_type when the activity is not Spend, and any other header attribute the offer reads. "
+        "The engine processes these test transactions today (the catalog's today), whatever their h_bit_date: a "
+        "segment's current date is today"
+    )
+    lines: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="the transaction's line items, each {line attribute code (l_*): value}; a line names its "
+        "product by l_product_external_id",
+    )
+    payment_details: list[dict[str, Any]] = Field(
+        default_factory=list, description="the transaction's payments, each {payment attribute code: value}"
     )
     expect: Expect | None = Field(description="what this transaction gives under the description; null = nothing")
 
@@ -59,6 +71,11 @@ class Scenario(BaseModel):
     )
     what: str = Field(description="the clause this scenario tests")
     member: Member
+    products: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="the products the lines name (l_product_external_id -> {product attribute code: value}), mocked "
+        "as the member is",
+    )
     bits: list[CaseBit] = Field(description="the member's transactions, in order")
 
 
@@ -115,11 +132,28 @@ def _counters_before(scenario: dict[str, Any], bit: int) -> dict[str, Any]:
     return (bits[bit - 1].get("counters_after") or {}) if 0 < bit <= len(bits) else {}
 
 
+def _did(step: dict[str, Any]) -> str:
+    """One action of a transaction as the builder reads it: the rule (its canvas IDENTIFIER) and what it did."""
+    rule = step.get("rule") or "?"
+    if "counter" in step:
+        return f"{rule}: {step['counter']} {_num(step.get('old'))} -> {_num(step.get('new'))} ({step.get('operator')})"
+    if "privilege" in step:
+        return f"{rule}: privilege {step['privilege']}"
+    if "points" in step:
+        return f"{rule}: {_num(step['points'])} points"
+    return f"{rule}: {next((f'{k} {v}' for k, v in step.items() if k != 'rule'), '')}".strip()
+
+
+def _num(v: Any) -> Any:
+    return int(v) if isinstance(v, float) and v.is_integer() else ("empty" if v in (None, "") else v)
+
+
 def mismatch_message(report: dict[str, Any]) -> str:
     """The failed engine check, as the build run reads it: per transaction, the case, what it expects, what it got.
 
-    Never the compiled rules: the scenario, the member, the transaction's header, the two results, and the offer
-    counters (the canvas's own names) before and after the transaction.
+    Never the compiled rules: the scenario, the member, the transaction's header, the two results, the offer
+    counters (the canvas's own names) before and after the transaction, and what each rule did on it, in the order
+    the rules ran (their IDENTIFIERs: points, privileges, counter changes).
     """
     rows = []
     by_scenario = {s["scenario"]: s for s in report.get("scenarios") or []}
@@ -137,6 +171,7 @@ def mismatch_message(report: dict[str, Any]) -> str:
                 "engine_gave": m["got"],
                 "offer_counters_before": _counters_before(s, m["bit"]),
                 "offer_counters_after": m.get("counters_after") or {},
+                "what_each_rule_did": [_did(x) for x in m.get("rules_ran") or []],
                 **({"refused_before_the_rules": m["skipped"]} if m.get("skipped") else {}),
                 **({"engine_error": s["error"]} if s.get("error") else {}),
             }

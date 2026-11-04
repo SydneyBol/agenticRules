@@ -11,7 +11,13 @@ with open(os.path.join(os.path.dirname(__file__), "data", "offer_main_form.json"
     OFFER_MAIN_FORM = json.load(_f)
 
 # block mutation `object` -> catalog object (gravty-ui gravty-blockly/blocks/rule-level/if-generic.block.ts)
-CATALOG_OBJECT = {"activity": "activity", "member": "member", "products_attrs": "product"}
+CATALOG_OBJECT = {
+    "activity": "activity",
+    "member": "member",
+    "products_attrs": "product",
+    "airport": "airport",
+    "airport_pair": "airport_pair",
+}
 
 # attribute levels (block-definition.service.ts getAttributesTuple; thirdparty-action.block.ts)
 OFFER_COUNTER = "MA_O"  # an offer counter: persists per member across transactions (the UI's default level)

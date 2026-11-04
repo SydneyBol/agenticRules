@@ -1,0 +1,86 @@
+# Airport, airport pair and currency converter offers on devintbf2, for tools/qa/check_offer_flow.py
+# (OFFER_FLOW_CASES=tests/cases/airline.devintbf2.yaml --tenant=devintbf2). Expectations written by hand from the prompt.
+#
+# devintbf2's own data (read 2026-11-04, nothing created):
+# - airports (active): BLR latitude 13.199, bags_count 10; VAR latitude 25.448, bags_count 10; ZRH latitude 47.462.
+#   The engine holds an airport's attributes as bolapi's Airport.get_data_for_engine writes them (city/country as ids,
+#   extra_data merged in), read by code from the BIT's h_origin_airport / h_destination_airport.
+# - airport pairs: BLR-VAR distance 600, VAR-BLR distance 500 (no base rates).
+# - award conversion (loyaltyaccounts/<id>/award-conversion/): SHARE Points (1) AED 0.1, AirportPoints (39) AED 20.
+# BIT row: [date, amount, store, expect, {type?, header?}]; every BIT is in AED. A travel BIT names its airports as
+# the program sends them: h_origin_airport / h_destination_airport (the engine reads the airport records by them) and
+# h_origin_airport_code / h_destination_airport_code (the activity attributes open to rules on devintbf2).
+tenant: devintbf2
+sponsor: 1
+program: 1
+currency: AED
+tier_attribute: tier_class
+default_member:
+  tier_class: GLDGLW
+privileges: ['13829', '13828']
+airports:
+  BLR: {airport_code: BLR, latitude: 13.1989089, longitude: 77.7068131, zone: start, city: '190', country: '6', bags_count: 10}
+  VAR: {airport_code: VAR, latitude: 25.4481477, longitude: 82.8568818, zone: start, city: '191', country: '6', bags_count: 10}
+  ZRH: {airport_code: ZRH, latitude: 47.4618911, longitude: 8.5505915, city: '254', country: '45'}
+airport_pairs:
+  BLR-VAR: {distance: 600}
+  VAR-BLR: {distance: 500}
+conversion_rates: {1_AED_AWARD: 0.1, 39_AED_AWARD: 20}
+# devintbf2's own switch (its UI's featureTogglesData): the engine reads airport pair values only when it is on
+features: {airport_entity_enabler: true}
+
+x-flights: &blr_var {type: Travel, header: {h_origin_airport: BLR, h_destination_airport: VAR, h_origin_airport_code: BLR, h_destination_airport_code: VAR, h_bit_currency: AED}}
+x-back: &var_blr {type: Travel, header: {h_origin_airport: VAR, h_destination_airport: BLR, h_origin_airport_code: VAR, h_destination_airport_code: BLR, h_bit_currency: AED}}
+x-zrh: &blr_zrh {type: Travel, header: {h_origin_airport: BLR, h_destination_airport: ZRH, h_origin_airport_code: BLR, h_destination_airport_code: ZRH, h_bit_currency: AED}}
+x-zrh-out: &zrh_blr {type: Travel, header: {h_origin_airport: ZRH, h_destination_airport: BLR, h_origin_airport_code: ZRH, h_destination_airport_code: BLR, h_bit_currency: AED}}
+
+cases:
+  # ---- an airport attribute of the destination airport (OBJECT airport, airporttypes destination) ----
+  - id: X_AP1_destination_north_of_20
+    prompt: "Travel activities whose destination airport lies north of latitude 20 earn 400 points. Other trips earn nothing."
+    sequences:
+      - bits:
+          - ["2026-11-05T10:00:00", 100, HYD, 400, *blr_var]
+          - ["2026-11-05T11:00:00", 100, HYD, null, *var_blr]
+          - ["2026-11-05T12:00:00", 100, HYD, 400, *blr_zrh]
+
+  # ---- the origin airport's code ----
+  - id: X_AP2_departing_blr
+    prompt: "Travel activities departing from the airport with code BLR earn 200 points. Trips from any other airport earn nothing."
+    sequences:
+      - bits:
+          - ["2026-11-05T10:00:00", 100, HYD, 200, *blr_var]
+          - ["2026-11-05T11:00:00", 100, HYD, null, *var_blr]
+          - ["2026-11-05T12:00:00", 100, HYD, null, *zrh_blr]
+
+  # ---- an airport pair attribute: the route's distance ----
+  - id: X_PR1_long_routes
+    prompt: "Travel activities on a route whose distance between the origin and destination airports is 550 or more earn 300 points."
+    sequences:
+      - bits:
+          - ["2026-11-05T10:00:00", 100, HYD, 300, *blr_var]
+          - ["2026-11-05T11:00:00", 100, HYD, null, *var_blr]
+
+  # ---- distance flown in the points formula ----
+  - id: X_PR2_points_per_distance
+    prompt: "Travel activities earn 2 points for every unit of distance flown on the route."
+    sequences:
+      - bits:
+          - ["2026-11-05T10:00:00", 100, HYD, 1200, *blr_var]
+          - ["2026-11-05T11:00:00", 100, HYD, 1000, *var_blr]
+
+  # ---- the currency converter: a loyalty account's award rate for the purchase's currency ----
+  - id: X_CC1_award_rate_points
+    prompt: "Spend activities earn points equal to the amount spent multiplied by the SHARE Points account's Award Rate for the purchase's currency."
+    sequences:
+      - bits:
+          - ["2026-11-05T10:00:00", 250, HYD, 25, {header: {h_bit_currency: AED}}]
+          - ["2026-11-05T11:00:00", 40, HYD, 4, {header: {h_bit_currency: AED}}]
+
+  # ---- airport, distance flown and conversion rate in one rule, to another account ----
+  - id: X_CC2_north_distance_at_rate
+    prompt: "Travel activities to a destination airport north of latitude 20 earn AirportPoints equal to the distance flown multiplied by the AirportPoints account's Award Rate for the purchase's currency. Other trips earn nothing."
+    sequences:
+      - bits:
+          - ["2026-11-05T10:00:00", 100, HYD, 12000, *blr_var]
+          - ["2026-11-05T11:00:00", 100, HYD, null, *var_blr]
