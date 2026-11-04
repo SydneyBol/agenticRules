@@ -147,13 +147,7 @@ def warm(llm: Any, catalog: Catalog, account_id: Any = None, settings: Settings 
     settings = settings or Settings()
     if not hasattr(llm, "warm"):
         return None
-    if settings.similar_offers and settings.history:
-        from ..core.tenant.embed import histories
-
-        try:
-            histories(settings.history, settings.embed_model).get(catalog.tenant, catalog)
-        except Exception:  # reference only: the run loads it again, or goes without
-            log.exception("earlier offers not loaded")
+    warm_history(catalog, settings)
     warm_values(catalog, settings)
     return llm.warm(_system(catalog, account_id, settings), SCHEMAS)
 
@@ -248,3 +242,22 @@ def generate(
         settings=settings,
         history=history,
     )
+
+
+def warm_history(catalog: Catalog, settings: Settings | None = None) -> None:
+    """Embeds the tenant's earlier offers and matches one request, ahead of the first run (when they are on).
+
+    The first match after start-up took 8.4-9.2 s (the offers' embeddings and the embeddings client), later ones
+    ~0.4 s (iterations 7-9, 2026-11-04).
+    """
+    settings = settings or Settings()
+    if not (settings.similar_offers and settings.history):
+        return
+    from ..core.tenant.embed import histories
+
+    try:
+        history = histories(settings.history, settings.embed_model).get(catalog.tenant, catalog)
+        if history is not None:
+            history.similar("warm-up", k=1)
+    except Exception:  # reference only: the run loads it again, or goes without
+        log.exception("earlier offers not loaded")

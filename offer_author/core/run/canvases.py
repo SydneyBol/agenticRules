@@ -16,6 +16,7 @@ from ..canvas.build import to_xml
 from ..canvas.checks.counters import counter_problems
 from ..canvas.checks.grammar import ROOTS, check, detach
 from ..canvas.checks.screen_fields import unfilled
+from ..canvas.declare import declare
 from ..canvas.edit import Doc
 from ..canvas.tree import TreeError, apply_edits, compact, expand, inline, number
 from ..tenant.existing_counters import Guard
@@ -103,6 +104,10 @@ class Canvases:
             view = saved.view()
             self.trees["rules"], self.saved_counters = view["tops"], view["counters"]
 
+        self.declared: dict[str, dict[Any, CounterDecl]] = {  # every counter declared so far, per canvas (declare.py)
+            "rules": {c.get("name"): c for c in self.saved_counters}
+        }
+
     def current(self) -> dict[str, Any] | None:
         """The saved rules canvas as the model reads it (compact blocks with ids, counters), or None."""
         if self.doc is None:
@@ -138,14 +143,22 @@ class Canvases:
         if own := [p for t in tops + asked for p in _mutations(t)]:
             return {"ok": False, "problems": [Problem.of("mutation_given", at=p) for p in own]}
         counters = [c for c in counters or [] if isinstance(c, dict)]
-        byname = {c.get("name"): c for c in counters}
+        counters, by_tools = declare(tops + asked, counters, list(self.declared.get(canvas, {}).values()), self.catalog)
+        self.declared.setdefault(canvas, {}).update({c.get("name"): c for c in counters})
+        noted: Result = {"declared_by_tools": by_tools} if by_tools else {}
+        byname: dict[str, Any] = {c["name"]: c for c in counters if c.get("name")}
         try:
             tops = number(tops + asked)
             self.asked_loose.setdefault(canvas, set()).update(t["id"] for t in tops[len(tops) - len(asked) :])
             tops, moved = detach(tops, canvas)
             if missing := unfilled(tops, self.catalog, byname):
                 self.trees[canvas] = tops
-                return {"ok": False, "problems": missing, "fix_with": Problem.of("fix_with_counters", canvas=canvas)}
+                return {
+                    "ok": False,
+                    "problems": missing,
+                    "fix_with": Problem.of("fix_with_counters", canvas=canvas),
+                    **noted,
+                }
             xml, paths, xids = (
                 self.doc.write(tops, self.catalog, byname)
                 if self.edited(canvas) and self.doc is not None
@@ -157,7 +170,7 @@ class Canvases:
             return {"ok": False, "problems": [Problem.of("not_a_block_tree", error=str(e))]}
         self.trees[canvas] = tops
         written = Composed(xml, [], counters, self._loose(canvas, tops, moved))
-        return self._check(canvas, tops, written, paths, xids)
+        return {**self._check(canvas, tops, written, paths, xids), **noted}
 
     def pending(self) -> list[Problem]:
         """Why finish must wait: a canvas whose last compose had problems."""

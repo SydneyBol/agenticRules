@@ -18,7 +18,8 @@ from typing import Any
 
 from flask import Flask
 
-from ..ai.agent import warm_values
+from ..ai.agent import warm_history, warm_values
+from ..ai.budget import MAX_LLM_CALLS
 from ..core.settings import Settings
 from .pulsar import pulsar_blueprint
 from .pulsar.runs import CatalogFor, CountersFor
@@ -48,9 +49,11 @@ def create_app(
 
     @app.get("/ai/offer-author/health")
     def health() -> dict[str, Any]:
-        """The model the service runs and whether earlier offers are on."""
+        """The model the service runs, whether earlier offers are on and the model calls taken of the budget."""
         on = settings or Settings()
+        ledger = getattr(llm, "ledger", None)
         return {
+            "llm_calls": None if ledger is None else f"{ledger.calls()}/{MAX_LLM_CALLS}",
             "ok": True,
             "model": getattr(llm, "model", "?"),
             "effort": getattr(llm, "effort", "?"),
@@ -89,6 +92,7 @@ def main() -> None:
     cat = Catalog.from_bolapi_dumps(folder, a.tenant, a.sponsor, a.account, a.tag)
     counters_for = BolapiCounterSource(a.bolapi_base).get if a.bolapi_base else None
     threading.Thread(target=warm_values, args=(cat, settings), daemon=True).start()  # value-search models and lists
+    threading.Thread(target=warm_history, args=(cat, settings), daemon=True).start()  # the earlier offers' embeddings
     create_app(make_llm(), lambda sponsor, account, auth: cat, counters_for=counters_for, settings=settings).run(
         port=a.port
     )

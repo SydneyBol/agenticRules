@@ -14,6 +14,8 @@ from typing import Any, cast
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
+from .budget import Ledger, LLMBudgetError
+
 DEFAULT_MODEL = "us.anthropic.claude-sonnet-5-5"
 # The feature's model settings, fixed for production and every test run (2026-10-27): Sonnet 5.5, effort low, the
 # model's own (adaptive) thinking. Measured on the same suites: 215/215 BITs, p95 28.7 s, $0.050/run; effort medium
@@ -100,10 +102,13 @@ class ChatLLM:
     thinking, the tenant catalog in a cached system block. Sonnet 5.5 by default (at parity with Opus 5.5 on every
     suite and the hosted QA, 2026-10-25); OFFER_AUTHOR_MODEL=us.anthropic.claude-opus-5-5 switches back.
 
+    Every Bedrock request (turn, retry, warm) takes a call from the ledger first (budget.py: at most MAX_LLM_CALLS).
+
     Attributes:
         model: The Bedrock model id.
         effort: The output effort (reported by /health).
         thinking: The thinking type (reported by /health).
+        ledger: The call ledger; None for a test chat model that sends nothing to Bedrock.
     """
 
     def __init__(
@@ -115,6 +120,7 @@ class ChatLLM:
         max_tokens: int = 16000,
         retries: int = 2,
         chat: Any = None,
+        ledger: Ledger | None = None,
     ) -> None:
         """Sets up the client.
 
@@ -126,10 +132,12 @@ class ChatLLM:
             max_tokens: The output limit of one turn.
             retries: How often a throttled, failed or dropped request is retried before anything started.
             chat: A LangChain chat model to use instead (tests).
+            ledger: The call ledger (default: the shared one when talking to Bedrock, none for a given chat model).
         """
         self.model = model or os.environ.get("OFFER_AUTHOR_MODEL", DEFAULT_MODEL)
         self.effort, self.thinking = effort, (thinking or {}).get("type", "adaptive")
         self.retries = retries
+        self.ledger = ledger if ledger is not None or chat is not None else Ledger()
         if chat is None:
             from langchain_aws import ChatAnthropicBedrock
 
@@ -175,6 +183,7 @@ class ChatLLM:
         acc: Any = None
         for attempt in range(self.retries + 1):
             acc, open_tools = None, cast("dict[int, str]", {})  # block index -> tool call id, for calls not started yet
+            self._take("turn" if attempt == 0 else "retry")
             try:
                 for chunk in chat.stream(request):
                     acc = chunk if acc is None else acc + chunk
@@ -198,8 +207,21 @@ class ChatLLM:
             The call's usage.
         """
         chat = self.chat.bind_tools(tools) if tools else self.chat
+        self._take("warm")
         msg = chat.invoke([_system_message(system), HumanMessage(content="warmup")], max_tokens=0)
         return usage_counts(msg.usage_metadata or {})
+
+    def _take(self, kind: str) -> None:
+        """Takes one call from the ledger before a request is sent.
+
+        Raises:
+            LLMError: The budget is spent (nothing is sent).
+        """
+        if self.ledger is not None:
+            try:
+                self.ledger.take(kind)
+            except LLMBudgetError as e:
+                raise LLMError(str(e)) from e
 
     @staticmethod
     def _start_finished(chunk: Any, acc: Any, open_tools: dict[int, str], started: set[str], on_tool: OnTool) -> None:

@@ -189,6 +189,10 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     "not_a_choice": lambda f: f"{f['field']} must be one of {', '.join(map(repr, f['allowed']))}",
     # finishing (core/run/policy.py)
     "offer_main_not_set": lambda f: "Offer Main is not set: call set_offer_main",
+    "counter_declared_by_tools": lambda f: (
+        f"counter '{f['name']}' was not in counters: declared {f['level']} {f['data_type']}, "
+        + ("as declared earlier in this run" if f["source"] == "earlier" else "from how the blocks use it")
+    ),
     "segment_name_empty": lambda f: "segment_name is empty: name the member segment you built",
     # catalog lookups (core/catalog.py)
     "not_a_catalog_attribute": lambda f: f"{f['attribute']} is not a catalog attribute",

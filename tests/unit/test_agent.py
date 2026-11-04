@@ -75,12 +75,34 @@ def test_counters_are_declared_and_checked_against_the_offer(fixture_catalog):
     llm = ScriptedLLM([[("compose", undeclared), ("compose", S07)], []])  # turn 2: what the model read of turn 1
     agent.run("x", fixture_catalog, llm, parts=("rules",), existing=clash, settings=Settings(max_turns=2))
     a, b = (json.loads(r["content"]) for r in llm.calls[-1][2]["content"])
-    assert any(f"counter '{COUNTER}' at MA_O, which is not declared" in p for p in a["problems"])
-    assert any(f"counter '{COUNTER}' already exists on this offer" in p and "live" in p for p in b["problems"])
+    # left out of counters, it is declared from its use (MA_O on the blocks, incremented) and checked like any other
+    assert a["declared_by_tools"] == [
+        f"counter '{COUNTER}' was not in counters: declared MA_O NUMBER, from how the blocks use it"
+    ]
+    for r in (a, b):
+        assert any(f"counter '{COUNTER}' already exists on this offer" in p and "live" in p for p in r["problems"])
+    unsettled = said(checked(new_run(fixture_catalog, None), _no_level(dict(S07, counters=[]))))
+    assert any(f"'{COUNTER}' is not a declared counter" in p for p in unsettled["problems"])
     vec = dict(S07, counters=[dict(S07["counters"][0], counter_type="VECTOR")])
     assert any(
         "is VECTOR: give its namespace" in p for p in said(checked(new_run(fixture_catalog, None), vec))["problems"]
     )
+
+
+def _no_level(spec):
+    """The tree with no level on the blocks (mta_type_value, attribute_level): its use does not settle a counter."""
+    if isinstance(spec, dict):
+        return {k: _no_level(v) for k, v in spec.items() if k not in ("mta_type_value", "attribute_level")}
+    return [_no_level(v) for v in spec] if isinstance(spec, list) else spec
+
+
+def test_a_whole_tree_sent_again_without_counters_keeps_the_earlier_declaration(fixture_catalog):
+    run_ = new_run(fixture_catalog, None)
+    assert said(checked(run_, S07))["ok"]
+    again = said(checked(run_, _no_level(dict(S07, counters=[]))))
+    assert again["ok"] and again["declared_by_tools"] == [
+        f"counter '{COUNTER}' was not in counters: declared MA_O NUMBER, as declared earlier in this run"
+    ]
 
 
 def test_finish_waits_for_a_clean_compose(fixture_catalog, flagged):
