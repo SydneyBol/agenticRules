@@ -108,6 +108,9 @@ WORDING: dict[str, Callable[[Facts], str]] = {
         f"{f['block']}: tier {f['given']!r} is not in tier class {f['tier_class']!r} ({', '.join(f['known'])})"
     ),
     "or_operand_empty": lambda f: f"{f['block']}: an OR needs a condition in both OPERAND1 and OPERAND2",
+    "rule_without_tag": lambda f: "a rule with no tag (IDENTIFIER): give each rule a short name of what it does; it "
+    "names the rule on the canvas, in the saved offer and in the engine check's report",
+    "rule_tag_repeated": lambda f: f"two rules share the tag {f['name']!r}: give each rule a name of its own",
     "rule_without_action": lambda f: f"rule {f['name']!r} has no action: it never rewards or counts anything",
     "no_reward_tag": lambda f: (
         f"{f['block']}: give REWARD_TAGS, one of the account's tags (the tenant has no configured reward tag)"

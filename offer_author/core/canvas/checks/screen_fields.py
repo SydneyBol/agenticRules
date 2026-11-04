@@ -201,6 +201,30 @@ def _filter_problems(root: Any) -> list[Problem]:
     ]
 
 
+TAGGED = ("rule", "rule_line", "payment_rule")  # rule blocks with an IDENTIFIER: the rule's tag
+DEFAULT_TAG = "tag"  # what the screen writes when the field is left empty (rule.block.ts FieldTextInput)
+
+
+def _tag_problems(root: Any) -> list[Problem]:
+    """Rule blocks whose tag (IDENTIFIER) is empty, the screen's default, or another rule's.
+
+    The tag names the rule on the canvas and in the compiled rules (ruleTag), and names what each rule did in the
+    engine check's report; an empty one is saved as the default "tag".
+    """
+    out, seen = [], set()
+    for n, _, _ in nodes(root):
+        if n.get("type") not in TAGGED:
+            continue
+        tag = str((n.get("fields") or {}).get("IDENTIFIER") or "").strip()
+        block = BlockRef(str(n.get("type")), str(n.get("id")))
+        if tag.lower() in ("", DEFAULT_TAG):
+            out.append(Problem.of("rule_without_tag", block))
+        elif tag.lower() in seen:
+            out.append(Problem.of("rule_tag_repeated", block, name=tag))
+        seen.add(tag.lower())
+    return out
+
+
 def unfilled(root: Any, catalog: Catalog | None = None, counters: dict[str, Any] | None = None) -> list[Problem]:
     """Problems the screen would cause that code can tell before any compile, by block.
 
@@ -208,9 +232,9 @@ def unfilled(root: Any, catalog: Catalog | None = None, counters: dict[str, Any]
     model left out that `fill` cannot work out (a counter that is not declared, an attribute the catalog does not
     have), a coded value given in the form its operator does not take (_value_form), and a date part or a compared
     number in a field the attribute's type does not have (_date_form), a transaction date read as CALENDAR_DATE in the
-    filter (_filter_problems).
+    filter (_filter_problems), a rule without a tag of its own (_tag_problems).
     """
-    out = _filter_problems(root)
+    out = _filter_problems(root) + _tag_problems(root)
     for n, _, _ in nodes(root):
         t, f = n.get("type"), _as_condition(n.get("type"), fill(n, catalog, counters))
         name = f.get("attribute") if t in CHECKED else f.get("mta_attribute")

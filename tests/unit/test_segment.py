@@ -143,3 +143,17 @@ def test_rule_condition_reading_bit_calendar_date_in_the_filter_is_reported():
         "inputs": {"RULES": [{"type": "rule", "id": "r", "inputs": {"CONDITION": [cond]}}]},
     }
     assert _filter_problems(rule) == []  # in a rule it compiles
+
+
+def test_rule_without_a_tag_of_its_own_is_reported():
+    """X30: an empty IDENTIFIER is saved as the screen's default "tag"; two rules sharing a tag are reported too."""
+    from offer_author.core.canvas.checks.screen_fields import _tag_problems
+
+    rule = lambda i, tag=None: {"type": "rule", "id": i, "fields": {"IDENTIFIER": tag} if tag is not None else {}}
+    tree = lambda *rules: {"type": "activity", "id": "a", "inputs": {"RULES": list(rules)}}
+    assert [p.code for p in _tag_problems(tree(rule("r1")))] == ["rule_without_tag"]
+    assert [p.code for p in _tag_problems(tree(rule("r1", "tag")))] == ["rule_without_tag"]
+    assert [p.code for p in _tag_problems(tree(rule("r1", "Birthday 2x"), rule("r2", "birthday 2x")))] == [
+        "rule_tag_repeated"
+    ]
+    assert _tag_problems(tree(rule("r1", "Birthday 2x"), rule("r2", "Once a year"))) == []

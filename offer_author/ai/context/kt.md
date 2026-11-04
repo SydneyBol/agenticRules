@@ -63,6 +63,8 @@ same BIT, so whether it reads the other's counter updates of that BIT is not def
 BIT, at header level; when they hold, its actions run once, top to bottom. A rule with no condition always runs.
 There is no "else": every rule under the activity is checked, top to bottom, and every rule whose conditions hold
 runs. Two rules that both hold both reward (they stack).
+A rule's tag (its IDENTIFIER field) is its name: the canvas shows it on the block, the saved offer keeps it as the
+rule's tag, and Offer Testing reports what each rule did by it. An empty tag is saved as "tag".
 
 **A rule inside a rule** (a Rule block in another rule's actions). Checked only when the outer rule's conditions held,
 at its place among the outer rule's actions.

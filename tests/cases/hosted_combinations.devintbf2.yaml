@@ -1203,6 +1203,69 @@ cases:
       - 100
       - HYD
       - 200
+- id: X30_birthday_15day_2x_once_a_year
+  prompt: Members earn 2x points on spends made within 15 days before or after their birthday, rewarded only once a year.
+  sequences:
+  - member:
+      date_of_birth: '1990-11-20'
+    note: day -15 pays 2x; a second spend in the same window pays nothing
+    bits:
+    - - '2026-11-05T12:00:00'
+      - 100
+      - HYD
+      - 200
+    - - '2026-11-25T12:00:00'
+      - 80
+      - HYD
+      - null
+  - member:
+      date_of_birth: '1991-11-20'
+    note: day +16 nothing, day +15 pays
+    bits:
+    - - '2026-12-06T12:00:00'
+      - 100
+      - HYD
+      - null
+    - - '2026-12-05T12:00:00'
+      - 100
+      - HYD
+      - 200
+  - member:
+      date_of_birth: '1990-01-03'
+    note: '3 Jan birthday: 18 Dec is day -16, 19 Dec is day -15 (window across New Year); next year''s window pays again'
+    bits:
+    - - '2026-12-18T12:00:00'
+      - 100
+      - HYD
+      - null
+    - - '2026-12-19T12:00:00'
+      - 100
+      - HYD
+      - 200
+  - member:
+      date_of_birth: '1990-11-10'
+    note: next year's window pays again (Offer Testing refuses BITs more than 12 months ahead)
+    bits:
+    - - '2026-11-05T12:00:00'
+      - 100
+      - HYD
+      - 200
+    - - '2027-11-01T12:00:00'
+      - 100
+      - HYD
+      - 200
+  - member:
+      date_of_birth: '1992-12-16'
+    note: 16 Dec in a leap year (day 351 of 1992); a June spend is far outside the window
+    bits:
+    - - '2026-12-20T12:00:00'
+      - 100
+      - HYD
+      - 200
+    - - '2027-06-15T12:00:00'
+      - 100
+      - HYD
+      - null
 - id: X01_birthday_10day_window_new_year
   prompt: 500 bonus points on a spend of $50 or more within 10 days before or after the member's birthday, at most once per birthday.
   sequences:
