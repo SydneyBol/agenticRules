@@ -39,7 +39,7 @@ cases:
 
   # ---- payment rule: a condition on each payment of the purchase ----
   - id: L_PY1_credit_card_payment
-    prompt: "Each payment made by Credit Card earns 50 points: a purchase paid partly by credit card and partly in cash earns 50. Purchases with no credit card payment earn nothing."
+    prompt: "Every spend earns 50 points for each Credit Card payment in it: a spend paid partly by credit card and partly in cash earns 50. Spends with no credit card payment earn nothing."
     sequences:
       - bits:
           - ["2026-11-05T12:00:00", 100, HYD, 50, {payments: [{payment_method: CREDIT}, {payment_method: CASH}]}]

@@ -207,6 +207,11 @@ right-hand side: a static date, the current date, another date attribute or a da
 DATE `>` 10 Nov holds from 11 Nov; `>=` 10 Nov from 10 Nov; `<=` 10 Nov up to the end of 10 Nov.
 A date part (YEAR, MONTH, DAY_OF_MONTH, DAY_OF_YEAR, WEEK_OF_YEAR, ...) is a whole number; DAY_OF_YEAR runs 1 to 365, or 366 in a
 leap year, where every day after 28 Feb is one higher; it starts again at 1 every 1 Jan.
+CALENDAR_DATE is a date's day and month in one fixed year (the engine replaces the year with 0000), compared in
+calendar order from 1 Jan to 31 Dec, so the same day and month compare equal in every year. Date arithmetic is applied
+to the whole date before the year is dropped: `date_of_birth` CALENDAR_DATE − 10 DAYS is the day and month ten days
+before the birthday, whatever the year. A range of CALENDAR_DATEs that runs past 31 Dec (28 Dec ± 10 days: 18 Dec to
+7 Jan) is two ranges, from its start to 31 Dec and from 1 Jan to its end.
 A member date that is missing or cannot be parsed reads as -1 in every date part. A member date used inside a date
 arithmetic block, for a member who has none, fails the offer for that transaction (a rules execution error: no rule
 of the offer rewards it); an `is not-null` condition on that date placed earlier in the same rule or filter stops the
@@ -254,6 +259,10 @@ next: nothing else of an earlier BIT is visible to the rules.
 - **Targets.** A counter's target type: NO TARGET (any comparison), SINGLE (compared with its one target value) or
   LADDER (compared with one of the ladder's levels).
 - **Per period.** A counter does not reset by itself at a month or week boundary.
+- **Dates in a counter.** A counter holds numbers or text, not dates; a date is kept as a number built from its parts.
+  YEAR × 366 + DAY_OF_YEAR grows with every day and never repeats, and the difference of two such numbers is the days
+  between them, plus one for each 365-day year end in between. YEAR × 12 + MONTH does the same for months. A span of
+  days that runs past 31 Dec has its days in two YEARs.
 
 ## 6. What blocks cannot express
 

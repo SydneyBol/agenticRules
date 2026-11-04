@@ -96,6 +96,7 @@ class Canvases:
         self.defs: dict[str, Any] = {}  # each canvas's defs by name, kept for later edits and trees
         self.last: dict[str, Composed] = {}
         self.clean: dict[str, Composed] = {}
+        self.refused: dict[str, list[Problem]] = {}  # a canvas whose newest compose was refused before it was written
         self.rebuilt: set[str] = set()  # canvases sent as a whole new tree (the saved canvas no longer applies)
         self.base: dict[str, set[Problem]] = {}
         self.asked_loose: dict[str, set[str]] = {}  # ids of the loose blocks the model asked for, per canvas
@@ -103,7 +104,6 @@ class Canvases:
         if saved is not None:
             view = saved.view()
             self.trees["rules"], self.saved_counters = view["tops"], view["counters"]
-
         self.declared: dict[str, dict[Any, CounterDecl]] = {  # every counter declared so far, per canvas (declare.py)
             "rules": {c.get("name"): c for c in self.saved_counters}
         }
@@ -124,6 +124,22 @@ class Canvases:
         return canvas == "rules" and self.doc is not None and canvas not in self.rebuilt
 
     def compose(self, x: ToolInput) -> Result:
+        """Writes the canvas a compose call describes and checks it (_compose).
+
+        A compose refused before its canvas is written (blocks it cannot read, a counter not declared) leaves the
+        canvas's last compose as it was; it is kept as refused, so finish waits until that canvas is composed again.
+        """
+        canvas = x.get("canvas") or "rules"
+        before = self.last.get(canvas)
+        out = self._compose(x)
+        if canvas in ROOTS:
+            if out.get("ok") is False and self.last.get(canvas) is before:
+                self.refused[canvas] = list(out.get("problems") or [])
+            else:
+                self.refused.pop(canvas, None)
+        return out
+
+    def _compose(self, x: ToolInput) -> Result:
         """Writes the canvas a compose call describes and checks it.
 
         Args:
@@ -173,17 +189,19 @@ class Canvases:
         return {**self._check(canvas, tops, written, paths, xids), **noted}
 
     def pending(self) -> list[Problem]:
-        """Why finish must wait: a canvas whose last compose had problems."""
-        return [
+        """Why finish must wait: a canvas whose last compose had problems, or whose newest compose was refused."""
+        written = [
             Problem.of("canvas_not_clean", canvas=c, problem=q)
             for c, last in self.last.items()
             if last.problems and self.clean.get(c) is not last
             for q in last.problems
         ]
+        refused = [Problem.of("canvas_not_clean", canvas=c, problem=q) for c, ps in self.refused.items() for q in ps]
+        return written + refused
 
     def all_clean(self) -> bool:
-        """Every canvas's last compose is its clean one."""
-        return all(self.clean.get(c) is last for c, last in self.last.items())
+        """Every canvas's last compose is its clean one, and no newer compose was refused."""
+        return not self.refused and all(self.clean.get(c) is last for c, last in self.last.items())
 
     def _checks(self, xml: str, counters: list[CounterDecl], canvas: str) -> list[Problem]:
         """Block grammar and catalog codes, and the counters against the offer's."""

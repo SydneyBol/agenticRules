@@ -73,7 +73,11 @@ def job_summary(res: dict[str, Any]) -> str:
         f"model_s={tm.get('model_s')} tools_s={js(tm.get('tools_s'))} input_chars={js(tm.get('input_chars'))} "
         f"per_turn={json.dumps(tm.get('turns') or [], separators=(',', ':'))}"
         + (f" earlier={js(d['earlier'])}" if d.get("earlier") else "")
-        + (f" verify={js(d['verify'])}" if d.get("verify") else "")
+        + (
+            f" verify={js({k: v for k, v in d['verify'].items() if k not in ('repair', 'evidence')})}"
+            if d.get("verify")
+            else ""
+        )
     )
 
 
@@ -92,6 +96,11 @@ def job_problems(res: dict[str, Any]) -> str:
 
 def _log_finished(key: Key, res: dict[str, Any]) -> None:
     log.info("pulsar job offer=%s %s problems=%s", key[0], job_summary(res), job_problems(res))
+    verify = (res.get("diagnostics") or {}).get("verify") or {}
+    if verify.get("evidence"):  # the agent's test cases and every check's transactions with the engine's answers
+        log.info("pulsar cases offer=%s %s", key[0], json.dumps(verify["evidence"], separators=(",", ":"), default=str))
+    if verify.get("repair"):  # the repair's evidence: both checks' mismatches, the message, the canvases before it
+        log.info("pulsar repair offer=%s %s", key[0], json.dumps(verify["repair"], separators=(",", ":"), default=str))
     trace = (res.get("diagnostics") or {}).get("trace") or []
     if any("input" in t for t in trace):  # Settings.trace_inputs on
         log.info("pulsar job offer=%s trace=%s", key[0], json.dumps(trace, separators=(",", ":")))

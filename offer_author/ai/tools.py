@@ -120,7 +120,10 @@ class SetOfferMain(BaseModel):
     terms: list[str]
     start_date: str = Field(description="YYYY-MM-DD the manager stated, else empty")
     end_date: str = Field(description="YYYY-MM-DD the manager stated (last day included), else empty")
-    max_usage_per_user: int = Field(description="how often ONE member can earn it; 0 = unlimited")
+    max_usage_per_user: int = Field(
+        description="how often ONE member can earn it in one frequency period (Offer Main holds one such limit); "
+        "0 = unlimited"
+    )
     frequency: Literal[("none", *OFFER_MAIN_FORM["frequency"]["choices"])]  # type: ignore[valid-type]
     num_of_clients: int = Field(description="total earnings across all members; 0 = unlimited")
     offer_frequency_type: Literal[("", *OFFER_MAIN_FORM["offer_frequency_type"]["choices"])]  # type: ignore[valid-type]

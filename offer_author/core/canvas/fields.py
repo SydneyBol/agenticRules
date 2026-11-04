@@ -223,7 +223,8 @@ def fill(node: Block, catalog: Catalog | None = None, counters: Counters | None 
     """The block's fields with those the model may leave out, filled as the screen would have them.
 
     - a condition (if_generic_adaptive, activity_criteria): OBJECT and attribute_level (_fill_condition);
-    - give_points: LOYALTY_ACCOUNT and REWARD_TAGS, the tenant's account and reward tag;
+    - give_points: LOYALTY_ACCOUNT, the catalog's offer_account, and REWARD_TAGS, that account's reward tag
+      (the configured one, or its only one), when the model chose none;
     - update_attribute: mta_type_value, the level of the counter it updates.
 
     A field the model gave is never changed.
@@ -233,12 +234,11 @@ def fill(node: Block, catalog: Catalog | None = None, counters: Counters | None 
     if t in CONDITIONS:
         return _fill_condition(f, catalog, counters)
     if t == "action" and f.get("action_type") == "give_points" and catalog is not None:
-        if "LOYALTY_ACCOUNT" not in f and "LOYALTY_ACCOUNT" not in inputs and catalog.default_account:
-            f = _put(f, "LOYALTY_ACCOUNT", str(catalog.default_account), "action_type")
-        if "REWARD_TAGS" not in f and "REWARD_TAGS" not in inputs and catalog.reward_tag():
-            f = _put(
-                f, "REWARD_TAGS", catalog.reward_tag(), "LOYALTY_ACCOUNT" if "LOYALTY_ACCOUNT" in f else "action_type"
-            )
+        if "LOYALTY_ACCOUNT" not in f and "LOYALTY_ACCOUNT" not in inputs and catalog.offer_account:
+            f = _put(f, "LOYALTY_ACCOUNT", str(catalog.offer_account), "action_type")
+        tag = catalog.reward_tag(f.get("LOYALTY_ACCOUNT"))  # the chosen account's
+        if "REWARD_TAGS" not in f and "REWARD_TAGS" not in inputs and tag:
+            f = _put(f, "REWARD_TAGS", tag, "LOYALTY_ACCOUNT" if "LOYALTY_ACCOUNT" in f else "action_type")
     elif t == "action" and f.get("action_type") == "update_attribute" and "mta_type_value" not in f:
         counter = counters.get(f.get("mta_attribute"))  # type: ignore[arg-type]
         if counter:

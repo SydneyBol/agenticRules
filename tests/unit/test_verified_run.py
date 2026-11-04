@@ -76,6 +76,8 @@ def test_cases_are_written_alongside_the_build_and_the_canvases_checked_once(fix
     v = res["diagnostics"]["verify"]
     assert v["ok"] and not v["repaired"] and v["cases"]["scenarios"] == 1
     assert (v["cases"]["positive"], v["cases"]["negative"], v["cases"]["bits"]) == (1, 0, 1)
+    assert v["evidence"]["cases"] == body["scenarios"] and "repair" not in v  # kept without a repair too
+    assert v["evidence"]["checks"] == [[{"scenario": 0, "bit": None, "header": {}}]]
     # the cases branch reads the same knowledge (system blocks) and never the canvases
     assert "Do not build the offer" in json.dumps(cases_llm.calls[0]) and "compose" not in json.dumps(cases_llm.calls)
 
@@ -94,6 +96,27 @@ def test_a_mismatch_sends_one_repair_to_the_blocks_and_the_same_cases_are_checke
     assert "rule " not in told.split("did not give")[1][:50]  # transactions and results, no compiled rules
     v = res["diagnostics"]["verify"]
     assert v["ok"] and v["repaired"] and res["status"] == "draft"
+    # the repair's evidence: the cases, what the first check found, the message sent, the canvas it started from
+    ev = v["repair"]
+    assert v["evidence"]["cases"] == sent[0]["scenarios"] and ev["rules_xml_before"] == sent[0]["rules_xml"]
+    assert len(v["evidence"]["checks"]) == 2  # both checks' transactions with the engine's answers
+    assert ev["first_check"][0]["got"] == {"points": 10, "privileges": []} and json.dumps(ev["message"])[1:-1] in told
+    assert ev["second_check"] == []
+
+
+def test_the_cases_and_repair_evidence_are_logged_on_their_own_lines_and_kept_out_of_the_job_line(caplog):
+    from offer_author.api.pulsar.jobs import _log_finished, job_summary
+
+    ev = {"cases": [CASE], "checks": [[{"scenario": 0, "bit": 0, "got": {"points": 10}, "agree": False}]]}
+    verify = {"ok": False, "repaired": True, "repair": {"message": "x"}, "evidence": ev}
+    res = {"status": "draft", "diagnostics": {"verify": verify}}
+    assert '"repair"' not in job_summary(res) and '"evidence"' not in job_summary(res)
+    assert '"repaired":true' in job_summary(res)
+    with caplog.at_level("INFO"):
+        _log_finished(("1", "rules"), res)
+    lines = [r.getMessage() for r in caplog.records]
+    assert any(m.startswith("pulsar cases offer=1 ") and '"got":{"points":10}' in m for m in lines)
+    assert any(m.startswith("pulsar repair offer=1 ") for m in lines)
 
 
 def test_a_second_mismatch_is_delivered_with_a_note_for_the_manager(fixture_catalog, verifier_calls):
@@ -103,6 +126,7 @@ def test_a_second_mismatch_is_delivered_with_a_note_for_the_manager(fixture_cata
     assert len(sent) == 2 and len(cases_llm.calls) == 1 and res["rules"]
     v = res["diagnostics"]["verify"]
     assert not v["ok"] and v["repaired"] and v["mismatches"] == 1
+    assert len(v["repair"]["first_check"]) == len(v["repair"]["second_check"]) == 1  # both checks kept
     said = public(res)["by_part"]["rules"]["assumptions"]
     assert any("1 of 1 test transactions did not give what the description implies" in a for a in said)
 
@@ -197,3 +221,68 @@ def test_the_repair_message_shows_the_offer_counters_before_and_after_the_transa
     row = json.loads(mismatch_message(report).split("expect:\n", 1)[1].split("\n\n")[0])[0]
     assert row["offer_counters_before"] == {"Cumulative Spend": 1999}
     assert row["offer_counters_after"] == {"Cumulative Spend": 2000}
+
+
+def test_the_repair_message_says_what_each_rule_did_on_the_transaction_in_order():
+    from offer_author.ai.cases import mismatch_message
+
+    ran = [
+        {"rule": "Weekend 2x within cap", "points": 300.0},
+        {
+            "rule": "Weekend 2x within cap",
+            "counter": "Weekend Points",
+            "operator": "INCREMENT_BY",
+            "old": 0.0,
+            "new": 300.0,
+        },
+        {"rule": "Weekend crossing cap", "points": 200.0},
+        {"rule": "Weekend crossing cap", "counter": "Weekend Points", "operator": "SET", "old": 300.0, "new": 400.0},
+        {"rule": "Gift", "privilege": "13829"},
+    ]
+    report = {
+        "scenarios": [{"scenario": 0, "what": "weekend 2x", "bits": [{}]}],
+        "mismatches": [
+            {
+                "scenario": 0,
+                "what": "weekend 2x",
+                "bit": 0,
+                "header": {"h_bit_amount": 150},
+                "expect": {"points": 300, "privileges": []},
+                "got": {"points": 500, "privileges": ["13829"]},
+                "rules_ran": ran,
+            }
+        ],
+    }
+    text = mismatch_message(report)
+    row = json.loads(text.split("expect:\n", 1)[1].split("\n\n")[0])[0]
+    assert row["what_each_rule_did"] == [
+        "Weekend 2x within cap: 300 points",
+        "Weekend 2x within cap: Weekend Points 0 -> 300 (INCREMENT_BY)",
+        "Weekend crossing cap: 200 points",
+        "Weekend crossing cap: Weekend Points 300 -> 400 (SET)",
+        "Gift: privilege 13829",
+    ]
+    assert 'rule "' not in text and "readAttribute" not in text  # rule names from the canvas, never compiled rules
+
+
+def _undeclared(spec):
+    """The tree with its counters left out and no level on the blocks that use them (the tools cannot fill it)."""
+    if isinstance(spec, dict):
+        return {
+            k: _undeclared(v) for k, v in spec.items() if k not in ("counters", "mta_type_value", "attribute_level")
+        }
+    return [_undeclared(v) for v in spec] if isinstance(spec, list) else spec
+
+
+def test_a_refused_compose_in_the_repair_holds_back_the_finish_of_the_same_turn(fixture_catalog, verifier_calls):
+    # live C05 (2026-10-31): the repair rebuilt the tree with an undeclared counter and finished in the same turn;
+    # the refused compose left the canvas's last compose as it was, so the old blocks were delivered unchanged
+    sent, answers = verifier_calls
+    answers += [BAD, OK]
+    other = json.loads(json.dumps(_undeclared(S07)).replace("Visits toward privilege 501", "Visits so far"))
+    turns = [[offer_main()], [("compose", S07)], [FIN], [("compose", other), FIN], [("compose", S07), FIN]]
+    res, llm, _ = run(fixture_catalog, turns)
+    held = json.dumps(llm.calls[4])
+    assert "not finished: fix these and compose again before finish" in held
+    assert len(llm.calls) == 5 and len(sent) == 2  # the builder got its turn back and the blocks were checked again
+    assert res["diagnostics"]["verify"]["ok"] and res["status"] == "draft"

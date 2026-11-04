@@ -1,5 +1,6 @@
 """One test per fixed fault (PulsarRAG-Review.md §4, §5), each on the fixed copy; the original fails where noted."""
 import re
+from collections import Counter
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -298,3 +299,90 @@ def test_farthest_points_cover_every_group():
     picks = farthest_points(d, 50, 10)
     assert len(set(picks)) == 10 and {0, 1, 2} <= {0 if i < 40 else 1 if i < 52 else 2 for i in picks}
     assert len(set(farthest_points(np.zeros((5, 5)), 0, 3))) == 3  # identical rows: still 3 different ones
+
+
+# ---------------------------------------------------------------- generated vs saved feedback (SubpromptFeedback.md)
+GOLDEN = __import__("os").path.abspath(__import__("os").path.join(__import__("os").path.dirname(__file__), "..", "..", "..", "tests", "golden", "compiled"))
+
+
+PULSAR_ROOT = __import__("os").path.join(__import__("os").path.dirname(__file__), "..")
+
+
+def _golden(name):
+    return open(__import__("os").path.join(GOLDEN, name + ".xml")).read()
+
+
+def _original_failed_blocks(model_lines, saved_lines):
+    """ai-develop's comparison: label-free texts, "matched" = occurs twice or more across both lists."""
+    combined = pd.DataFrame({"SubPrompt": model_lines + saved_lines})
+    duplicates = combined[combined.duplicated(keep=False)]
+    return [s for s in saved_lines if s not in set(duplicates["SubPrompt"])]
+
+
+def test_a_line_the_saved_offer_repeats_is_still_a_miss_and_the_wrong_line_an_extra(pv, monkeypatch):
+    """B1, B3: the saved rule 2 reads > 100 like rule 1; the draft wrote > 500 there."""
+    monkeypatch.chdir(PULSAR_ROOT)  # Pulsar reads its block schema relative to its root
+    draft = _golden("S01_tiered_exclusive")
+    saved = draft.replace('id="ai00015"><field name="value">500<', 'id="ai00015"><field name="value">100<')
+    rows = pv.failed_blocks_filter(draft, saved, program="1")
+    got = sorted(zip(rows["Kind"], rows["SubPrompt"]))
+    assert got == [("extra", "if activity h_bit_amount > 500"), ("missing", "if activity h_bit_amount > 100")]
+    assert set(rows["program_id"]) == {"1"} and all(rows["Place"] == "activity 1 rule")  # B5: rows carry their program
+    from pulsar.data_validation.sub_prompts.blockwise_subprompt import xml_to_subprompt
+    text = lambda x: [ln.split(",,,")[1].strip() for ln, _ in xml_to_subprompt(x)]
+    assert "if activity h_bit_amount > 100" not in _original_failed_blocks(text(draft), text(saved))  # the original
+
+
+def test_the_same_offer_gives_no_rows_and_rule_order_does_not_matter():
+    """B1, B10 (in part): units are matched by their lines, whatever the order of the rules."""
+    from pulsar.data_validation.sub_prompts.feedback import compare
+    r1 = Counter({((), "if activity h_bit_amount > 100"): 1, ((), "give_points 1 BONUS 2"): 1})
+    r2 = Counter({((), "if activity h_bit_amount > 500"): 1, ((), "give_points 1 BONUS 3"): 1})
+    saved = {(1, ("rule#1",)): r1, (1, ("rule#2",)): r2}
+    draft = {(1, ("rule#1",)): r2, (1, ("rule#2",)): r1}
+    assert compare(draft, saved) == ([], [])
+
+
+def test_a_condition_on_the_wrong_side_of_an_or_or_in_the_wrong_rule_is_a_miss():
+    """B2: Pulsar dropped the labels, so these drafts counted as right."""
+    from pulsar.data_validation.sub_prompts.feedback import compare
+    saved = {(1, ("rule#1",)): Counter({(((1, 1),), "if a"): 1, (((1, 2),), "if b"): 1, ((), "give 1"): 1}),
+             (1, ("rule#2",)): Counter({((), "if c"): 1, ((), "give 2"): 1})}
+    swapped_or = {(1, ("rule#1",)): Counter({(((1, 1),), "if a"): 1, (((1, 1),), "if b"): 1, ((), "give 1"): 1}),
+                  (1, ("rule#2",)): Counter({((), "if c"): 1, ((), "give 2"): 1})}
+    missing, extra = compare(swapped_or, saved)
+    assert [m[1:] for m in missing] == [(((1, 2),), "if b")] and [e[1:] for e in extra] == [(((1, 1),), "if b")]
+    moved = {(1, ("rule#1",)): Counter({(((1, 1),), "if a"): 1, (((1, 2),), "if b"): 1, ((), "give 1"): 1,
+                                        ((), "if c"): 1}),
+             (1, ("rule#2",)): Counter({((), "give 2"): 1})}
+    missing, extra = compare(moved, saved)
+    assert [m[2] for m in missing] == ["if c"] and [e[2] for e in extra] == ["if c"]
+
+
+def test_the_or_branches_are_read_from_the_xml(pv, monkeypatch):
+    monkeypatch.chdir(PULSAR_ROOT)
+    from pulsar.data_validation.sub_prompts.blockwise_subprompt import xml_to_subprompt
+    from pulsar.data_validation.sub_prompts.feedback import place_label, units
+    x = _golden("S04_happy_hour_or")
+    u = units(x, xml_to_subprompt(x))
+    places = {place_label(unit, br) for unit, lines in u.items() for br, _ in lines}
+    assert places == {"activity 1 Filter", "activity 1 rule", "activity 1 rule, OR 1 branch 1",
+                      "activity 1 rule, OR 1 branch 2"}
+
+
+def test_an_unreadable_draft_teaches_nothing(pv):
+    """B7: the original logged the parse error and turned every saved line into a failure row."""
+    saved = _golden("S01_tiered_exclusive")
+    assert pv.failed_blocks_filter("<xml><block", saved) is None
+    assert pv.failed_blocks_filter("", saved) is None
+
+
+def test_a_suspended_offer_is_neither_an_example_nor_a_fine_tune_row(pv, monkeypatch):
+    """B9: the newest saved row is suspended: the offer is not used, its older launched versions neither."""
+    rows = pd.DataFrame([{"offerXML": "eA==", "status": "launched", "offer_Prompt": "2x at HQ"},
+                         {"offerXML": "eA==", "status": "suspended", "offer_Prompt": "2x at HQ"}]).to_csv(index=False)
+    monkeypatch.setattr(pv, "read_file", lambda *a, **k: rows)
+    pv.OfferPromptValidator.instance = None
+    pv.OfferPromptValidator()
+    pv.OfferPromptValidator.process_prompts(offer_id="9", sponsor_id=["1"])
+    assert pv.OfferPromptValidator.instance.offer_list == []

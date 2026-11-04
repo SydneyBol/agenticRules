@@ -47,3 +47,69 @@ cases:
     prompt: "Members earn 500 points for each friend they recommend to the programme."
     sequences:
       - bits: [["2026-10-20T12:00:00", 10, HQ, 500], ["2026-10-20T12:00:00", 10, HQ, 500], ["2026-10-20T12:00:00", 10, HQ, 0, ENROL]]
+  # 2026-11-03: the complex Winter Festival offer (createRealisticOffers W01), for the live save + Offer Testing run.
+  # Upload mode is a rules-only run: the Gold/Platinum segment becomes a rules member condition, and the festival dates
+  # stay with Offer Main, so the sequence outside the dates is local only.
+  - id: W01_winter_festival
+    prompt: >-
+      Winter Festival, from 1 December 2026 to 31 January 2027, for Gold and Platinum members only.
+      Spends of AED 50 or more at the Hyderabad or Kolkata store earn 2 points per AED 1, and Platinum members earn
+      3 points per AED 1 instead; spends at the Automation Online Location store never earn and never count.
+      Every 4th qualifying spend also earns 250 bonus points.
+      When a member's total qualifying spend during the festival reaches AED 1,000 they get a complimentary VOX Cinemas
+      movie ticket, and when it reaches AED 2,500 a free Ski Dubai entry pass, each once; a spend that passes both
+      marks earns both.
+      A member earns at most 3,000 points per calendar week (Monday to Sunday) from this offer, bonus points included;
+      a spend that would pass the cap earns only the points left under it.
+    sequences:
+      - member: {tier_class: GOLD}
+        note: "Gold: under AED 50 and online do not count; ticket at AED 1,000; weekly cap trims; Ski pass in a new week; 8th spend bonus"
+        bits: [["2026-12-07T12:00:00", 300, HQ, 600], ["2026-12-08T12:00:00", 49.99, HQ, 0], ["2026-12-08T13:00:00", 400, WEB, 0],
+               ["2026-12-09T12:00:00", 400, VJD, 800], ["2026-12-10T12:00:00", 300, HQ, {points: 600, privilege: "64"}],
+               ["2026-12-11T12:00:00", 500, HQ, 1000], ["2026-12-12T12:00:00", 100, HQ, 0],
+               ["2026-12-14T12:00:00", 1000, VJD, {points: 2000, privilege: "37"}], ["2026-12-15T12:00:00", 50, HQ, 100],
+               ["2026-12-16T12:00:00", 50, HQ, 350]]
+      - member: {tier_class: PLTNM}
+        note: "Platinum 3 per AED 1: AED 1,000 fills the week's cap and earns the ticket; the next spend crosses AED 2,500 (Ski pass)"
+        bits: [["2026-12-07T12:00:00", 1000, HQ, {points: 3000, privilege: "64"}], ["2026-12-08T12:00:00", 2000, HQ, "37"]]
+      - member: {tier_class: Silver}
+        note: "Silver is outside the segment"
+        bits: [["2026-12-07T12:00:00", 500, HQ, null]]
+      - member: {tier_class: GOLD}
+        note: "outside the festival dates (Offer Main's dates; not in a rules-only run)"
+        hosted: false
+        bits: [["2027-02-01T12:00:00", 300, HQ, null]]
+  # 2026-11-03: the context fixes (ContextAudit-2026-11-03.md): per whole X with an inclusive amount range, day-of-month
+  # periods (from/to inclusive, "after" excludes the day), the first 30 days after joining, and the weekend.
+  - id: D01_per_whole_x_amount_range
+    prompt: >-
+      Spends between AED 100 and AED 500 earn 1 point for every AED 10 spent; spends above AED 500 earn 2 points for
+      every AED 10 spent.
+    sequences:
+      - note: "both range ends included, whole AED 10 only, above 500 strict"
+        bits: [["2026-11-03T12:00:00", 100, HQ, 10], ["2026-11-03T12:00:00", 255, HQ, 25], ["2026-11-03T12:00:00", 500, HQ, 50],
+               ["2026-11-03T12:00:00", 505, HQ, 100], ["2026-11-03T12:00:00", 99.99, HQ, null]]
+  - id: D02_day_of_month_periods
+    prompt: >-
+      From the 10th to the 20th of every month, spends at the Hyderabad store earn 3x points. After the 25th of the
+      month, spends at any store earn 2x points.
+    sequences:
+      - note: "10th and 20th included, 21st not; the 25th is not after the 25th, the 26th is; other store only after the 25th"
+        bits: [["2026-11-09T12:00:00", 100, HQ, null], ["2026-11-10T12:00:00", 100, HQ, 300], ["2026-11-20T12:00:00", 100, HQ, 300],
+               ["2026-11-21T12:00:00", 100, HQ, null], ["2026-11-10T12:00:00", 100, VJD, null], ["2026-11-25T12:00:00", 100, VJD, null],
+               ["2026-11-26T12:00:00", 100, VJD, 200]]
+  - id: D03_first_30_days_after_joining
+    prompt: "In their first 30 days after joining, members earn 5 bonus points per AED 1 spent."
+    sequences:
+      - member: {date_of_joining: "2026-10-01"}
+        note: "the joining day is day 1, day 30 is the last; before joining and day 31 earn nothing"
+        bits: [["2026-10-01T12:00:00", 20, HQ, 100], ["2026-10-30T12:00:00", 20, HQ, 100], ["2026-10-31T12:00:00", 20, HQ, null],
+               ["2026-09-30T12:00:00", 20, HQ, null]]
+      - note: "a member without a joining date earns nothing (and the offer does not fail)"
+        bits: [["2026-10-05T12:00:00", 20, HQ, null]]
+  - id: D04_weekend
+    prompt: "Weekend spends of AED 50 or more earn 50 bonus points."
+    sequences:
+      - note: "Asia/Dubai program: Saturday and Sunday; Friday is a weekday"
+        bits: [["2026-10-24T12:00:00", 50, HQ, 50], ["2026-10-25T12:00:00", 80, VJD, 50], ["2026-10-23T12:00:00", 80, HQ, null],
+               ["2026-10-24T12:00:00", 49.99, HQ, null]]

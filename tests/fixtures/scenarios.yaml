@@ -149,7 +149,7 @@ scenarios:
   # ---------- recurring date offers ----------
   - id: S12_birthday_window_once_per_year
     pain: recurring
-    prompt: "500 bonus points on a purchase within 20 days before or after the member's birthday, once a year."
+    prompt: "500 bonus points on a purchase within 20 days before or after the member's birthday, once per birthday. The window follows the birthday across New Year, and purchases in December and January around the same birthday share its one reward."
     intent: {primitives: [{occasion: {date_attr: member.date_of_birth, window_days: 20, recurrence: per_occurrence, reward: {points: 500}}}]}
     semantics: >
       Window = nearest occurrence of the birthday to the BIT date, +-20 days inclusive. "Once a year" = once per

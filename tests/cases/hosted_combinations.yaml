@@ -323,3 +323,136 @@ cases:
         bits: [["2026-10-30T12:00:00", 10, HQ, 110], ["2026-10-31T12:00:00", 100, HQ, 200], ["2026-11-02T12:00:00", 10, HQ, 110],
                ["2026-11-07T12:00:00", 200, HQ, 400], ["2026-11-08T12:00:00", 100, HQ, 100], ["2026-12-01T12:00:00", 10, HQ, 110],
                ["2026-12-05T12:00:00", 100, HQ, 200]]
+
+  # Hard scenarios from ~/Documents/Gravty/ai-agent/ScenarioCatalog.md (X = one trap, B = several chained). Reward
+  # offers only, each one a manager can set up end to end in Offer Main, segment and rules.
+  - id: X01_birthday_10day_window_new_year
+    prompt: "500 bonus points on a spend of $50 or more within 10 days before or after the member's birthday, at most once per birthday."
+    sequences:
+      - member: {date_of_birth: "1992-11-15"}
+        note: "day -11, day -10 pays (online counts), day +10 already paid"
+        bits: [["2026-11-04T12:00:00", 60, HQ, 0], ["2026-11-05T09:00:00", 60, WEB, 500], ["2026-11-25T12:00:00", 60, HQ, 0]]
+      - member: {date_of_birth: "1993-11-15"}
+        note: "day +10 late evening, $49.99 first"
+        bits: [["2026-11-25T20:00:00", 49.99, HQ, 0], ["2026-11-25T23:30:00", 50, VJD, 500]]
+      - member: {date_of_birth: "1993-11-15"}
+        note: "day +11"
+        bits: [["2026-11-26T08:00:00", 60, HQ, 0]]
+      - member: {date_of_birth: "1990-01-03"}
+        hosted: false
+        note: "3 Jan birthday: 22 Dec is day -12, 24 Dec day -10; 8 and 14 Jan are the same birthday; 24 Dec 2027 is day -10 of the next"
+        bits: [["2026-12-22T12:00:00", 80, HQ, 0], ["2026-12-24T10:00:00", 49.99, HQ, 0], ["2026-12-24T11:00:00", 80, HQ, 500],
+               ["2027-01-08T12:00:00", 90, VJD, 0], ["2027-01-14T12:00:00", 90, HQ, 0], ["2027-12-24T12:00:00", 60, HQ, 500]]
+
+  - id: X03_threshold_unlocks_higher_rate
+    prompt: "Each spend adds to the member's total spend. When the total reaches $1000, the member earns 500 bonus points once; spends after that earn 2 points per $1 instead of 1 point per $1."
+    sequences:
+      - note: "the spend that crosses $1000 still earns 1 per $1, plus the bonus"
+        bits: [["2026-11-03T10:00:00", 900, HQ, 900], ["2026-11-03T11:00:00", 200, HQ, 700], ["2026-11-03T12:00:00", 100, HQ, 200]]
+      - note: "exactly $1000 on one spend, then 2 per $1"
+        bits: [["2026-11-04T10:00:00", 1000, VJD, 1500], ["2026-11-04T11:00:00", 10, VJD, 20]]
+      - note: "$999.99 then 1 cent reaches it"
+        bits: [["2026-11-05T10:00:00", 999.99, HQ, 999.99], ["2026-11-05T11:00:00", 0.01, HQ, 500.01], ["2026-11-05T12:00:00", 50, HQ, 100]]
+
+  - id: X06_bands_daily_cap_two_spends
+    prompt: "Gold members earn 2 points per $1 on the first $200 of a spend and 3 points per $1 on the part of the spend above $200; other members earn 1 point per $1. A member earns at most 1000 points per calendar day from this offer; a spend that would pass the cap earns only the points left under it."
+    sequences:
+      - note: "550, then 700 trimmed to 450, then 0; the next day starts again"
+        bits: [["2026-11-03T10:00:00", 250, HQ, 550], ["2026-11-03T15:00:00", 300, HQ, 450], ["2026-11-03T18:00:00", 10, HQ, 0],
+               ["2026-11-04T09:00:00", 100, HQ, 200]]
+      - member: {tier_class: Silver}
+        bits: [["2026-11-03T10:00:00", 600, VJD, 600], ["2026-11-03T11:00:00", 500, VJD, 400], ["2026-11-04T11:00:00", 500, VJD, 500]]
+
+  - id: X07_unique_stores_monthly
+    prompt: "Shop at 3 different stores within one calendar month to earn 300 bonus points, at most once per calendar month."
+    probe_expect: same
+    sequences:
+      - note: "a repeat store does not count; the 3rd different store pays; a 4th store in the same month does not"
+        bits: [["2026-11-03T12:00:00", 20, HQ, 0], ["2026-11-10T12:00:00", 20, HQ, 0], ["2026-11-12T12:00:00", 20, VJD, 0],
+               ["2026-11-20T12:00:00", 20, Chennai, 300], ["2026-11-25T12:00:00", 20, WEB, 0]]
+      - hosted: false
+        note: "December starts again from zero"
+        bits: [["2026-11-03T12:00:00", 20, HQ, 0], ["2026-11-04T12:00:00", 20, VJD, 0], ["2026-11-05T12:00:00", 20, Chennai, 300],
+               ["2026-12-01T12:00:00", 20, HQ, 0], ["2026-12-02T12:00:00", 20, VJD, 0], ["2026-12-03T12:00:00", 20, WEB, 300]]
+      - hosted: false
+        note: "two stores in November and one in December are not 3 in one month"
+        bits: [["2026-11-28T12:00:00", 20, HQ, 0], ["2026-11-29T12:00:00", 20, VJD, 0], ["2026-12-01T12:00:00", 20, Chennai, 0]]
+
+  - id: X14_lunch_window_minute_edges
+    prompt: "On weekdays from 11am until 2pm, spends earn 2 points per $1; every other spend earns 1 point per $1."
+    probe_expect: same
+    sequences:
+      - note: "Wednesday 10:59 out, 11:00 in, 13:59 and 13:59:59 in, 14:00 out; Friday in; Saturday and Sunday out"
+        bits: [["2026-11-04T10:59:00", 100, HQ, 100], ["2026-11-04T11:00:00", 100, HQ, 200], ["2026-11-04T13:59:00", 100, HQ, 200],
+               ["2026-11-04T13:59:59", 100, HQ, 200], ["2026-11-04T14:00:00", 100, HQ, 100], ["2026-11-06T13:30:00", 100, VJD, 200],
+               ["2026-11-07T12:00:00", 100, HQ, 100], ["2026-11-08T12:00:00", 100, HQ, 100]]
+
+  - id: X15_weekly_limit_and_rule_cap
+    prompt: "A spend of $50 or more earns 100 bonus points, at most 3 times per member in total. A member can use this offer at most once per week."
+    probe_expect: same
+    sequences:
+      - note: "the weekly limit refuses the second spend of a week; the rule cap stops the 4th reward"
+        bits: [["2026-11-04T12:00:00", 60, HQ, 100], ["2026-11-05T12:00:00", 60, HQ, 0], ["2026-11-11T12:00:00", 60, HQ, 100],
+               ["2026-11-18T12:00:00", 60, HQ, 100], ["2026-11-25T12:00:00", 60, HQ, 0]]
+      - note: "a $49.99 spend earns nothing, so it does not use the week"
+        bits: [["2026-11-04T12:00:00", 49.99, VJD, 0], ["2026-11-05T12:00:00", 60, VJD, 100]]
+
+  - id: X16_voucher_per_100_cap3
+    prompt: "One complimentary voucher for every full $100 of a spend, at most 3 per spend."
+    probe_expect: same
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 99.99, HQ, null], ["2026-11-03T13:00:00", 100, HQ, "64"],
+               ["2026-11-03T14:00:00", 250, HQ, {privileges: ["64", "64"]}], ["2026-11-03T15:00:00", 300, VJD, {privileges: ["64", "64", "64"]}],
+               ["2026-11-03T16:00:00", 720, HQ, {privileges: ["64", "64", "64"]}]]
+
+  - id: X17_twice_per_calendar_year
+    prompt: "500 bonus points on a spend of $1000 or more, at most twice per calendar year."
+    probe_expect: same
+    sequences:
+      - note: "two rewards, then refused; $999.99 never pays"
+        bits: [["2026-11-03T12:00:00", 1000, HQ, 500], ["2026-11-04T12:00:00", 999.99, HQ, 0], ["2026-11-05T12:00:00", 1000, VJD, 500],
+               ["2026-11-06T12:00:00", 5000, HQ, 0]]
+      - hosted: false
+        note: "a new calendar year allows two more"
+        bits: [["2026-03-10T12:00:00", 1200, HQ, 500], ["2026-07-10T12:00:00", 1100, HQ, 500], ["2026-11-10T12:00:00", 1500, HQ, 0],
+               ["2027-01-05T12:00:00", 1000, HQ, 500], ["2027-02-01T12:00:00", 999.99, HQ, 0], ["2027-06-01T12:00:00", 1000, HQ, 500],
+               ["2027-09-01T12:00:00", 2000, HQ, 0]]
+
+  - id: X18_every_1000_online_double
+    prompt: "Every time a member's cumulative spend reaches another $1000 mark ($1000, $2000, $3000 and so on), they earn 500 bonus points for each mark reached. Spends at the online store count double toward the cumulative spend."
+    probe_expect: same
+    sequences:
+      - note: "totals 800, 3000 (online $1100 counts 2200: three marks), 3050, 4000"
+        bits: [["2026-11-03T10:00:00", 800, HQ, 0], ["2026-11-03T11:00:00", 1100, WEB, 1500], ["2026-11-03T12:00:00", 50, HQ, 0],
+               ["2026-11-03T13:00:00", 950, VJD, 500]]
+
+  - id: B1_birthday_season_ladder
+    prompt: "During the 15 days before and after a member's birthday, their spends at any store except the online store add up. When that birthday-window total reaches $200 the member earns a complimentary voucher, and when it reaches $500 they earn 1000 bonus points (Gold members 2000). Each reward at most once per birthday; a spend that reaches both earns both."
+    probe_expect: same
+    sequences:
+      - member: {tier_class: Silver, date_of_birth: "1991-11-15"}
+        note: "online does not add; 1 cent reaches $200; $500 pays Silver 1000; nothing more this birthday"
+        bits: [["2026-11-03T12:00:00", 199.99, HQ, null], ["2026-11-04T12:00:00", 300, WEB, null], ["2026-11-05T12:00:00", 0.01, VJD, "64"],
+               ["2026-11-10T12:00:00", 300, HQ, 1000], ["2026-11-20T12:00:00", 500, HQ, null]]
+      - member: {date_of_birth: "1990-01-05"}
+        hosted: false
+        note: "Gold, 5 Jan birthday: 20 Dec is day -16; both rewards on 2 Jan; 21 Jan is day +16; 22 Dec 2027 starts the next birthday"
+        bits: [["2026-12-20T12:00:00", 150, HQ, null], ["2026-12-22T12:00:00", 150, HQ, null], ["2026-12-31T12:00:00", 400, WEB, null],
+               ["2027-01-02T12:00:00", 400, VJD, {points: 2000, privilege: "64"}], ["2027-01-10T12:00:00", 300, HQ, null],
+               ["2027-01-21T12:00:00", 600, HQ, null], ["2027-12-22T12:00:00", 250, HQ, "64"]]
+
+  - id: B2_monthly_streak_weekend_cap
+    prompt: "The first spend of each calendar month earns 100 bonus points. Weekday spends earn 1 point per $1. Weekend spends earn 2 points per $1 until the member has earned 400 points from weekend spends in that calendar month, then 1 point per $1; a weekend spend that crosses the 400 earns 2 points per $1 only on the part up to it. A member with a spend in each of 3 consecutive calendar months earns a free 2 hours of yoga session, once."
+    sequences:
+      - note: "first-spend bonus plus 300 weekend points; the next weekend spend splits 100 + 50; weekday 1 per $1; next weekend spend 1 per $1"
+        bits: [["2026-11-07T12:00:00", 150, HQ, 400], ["2026-11-08T12:00:00", 100, HQ, 150], ["2026-11-09T12:00:00", 10, HQ, 10],
+               ["2026-11-14T12:00:00", 10, HQ, 10]]
+      - hosted: false
+        note: "September to November: the split, a monthly reset, the yoga session in the 3rd month, then not again"
+        bits: [["2026-09-05T12:00:00", 150, HQ, 400], ["2026-09-06T12:00:00", 100, HQ, 150], ["2026-09-07T12:00:00", 10, HQ, 10],
+               ["2026-10-14T12:00:00", 50, HQ, 150], ["2026-11-01T12:00:00", 100, HQ, {points: 300, privilege: "37"}],
+               ["2026-11-07T12:00:00", 200, HQ, 300], ["2026-12-05T12:00:00", 10, HQ, 120]]
+      - hosted: false
+        note: "October missing breaks the streak: November, December, January earn it"
+        bits: [["2026-09-10T12:00:00", 10, HQ, 110], ["2026-11-10T12:00:00", 10, HQ, 110], ["2026-12-10T12:00:00", 10, HQ, 110],
+               ["2027-01-12T12:00:00", 10, HQ, {points: 110, privilege: "37"}]]

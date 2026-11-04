@@ -52,7 +52,29 @@ def counter_problems(xml: str, counters: list[CounterDecl], guard: Guard | None)
     at = {n: lv for lv, n in declared}
     for level, name in sorted(r for r in _refs(xml) if r[0] in DECLARED_LEVELS and r not in declared):
         out.append(Problem.of("undeclared_counter", name=name, level=level, declared=at.get(name)))
-    return out
+    return out + [Problem.of("unique_after_reset", name=n) for n in _unique_after_reset(xml)]
+
+
+RESETS = ("RESET", "RESET_ALL")
+
+
+def _unique_after_reset(xml: str) -> list[str]:
+    """Vector counters the canvas both resets and reads as `unique`.
+
+    A reset sets the values to 0 and keeps the keys, and `unique` counts keys whatever their values: what such a
+    condition reads does not go down at the reset.
+    """
+    reset: set[str] = set()
+    unique: set[str] = set()
+    for b in ET.fromstring(xml).iter():
+        if b.tag.split("}")[-1] != "block":
+            continue
+        f = {x.get("name"): x.text for x in b if x.tag.split("}")[-1] == "field"}
+        if f.get("action_operator") in RESETS and f.get("mta_attribute"):
+            reset.add(str(f["mta_attribute"]))
+        if f.get("vector_counter_name") == "unique" and f.get("attribute"):
+            unique.add(str(f["attribute"]))
+    return sorted(reset & unique)
 
 
 def used_counters(xml: str, counters: list[CounterDecl]) -> list[CounterDecl]:

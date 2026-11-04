@@ -191,12 +191,18 @@ def test_whole_offer_in_one_run(fixture_catalog, composed):
 
 def test_offer_main_is_checked_and_required(fixture_catalog):
     bad = offer_main(offer_name="x" * 60, start_date="2026-12-01", end_date="2026-11-01")
-    llm = ScriptedLLM([[bad], [("compose", S07)], [FIN], [offer_main()], [FIN]])
+    # the Offer Main run: a form that does not fit, a finish without Offer Main, then the form; then the build run
+    llm = ScriptedLLM([[bad], [FIN], [offer_main()], [("compose", S07)], [FIN]])
     res = agent.run("x", fixture_catalog, llm, parts=("offer_main", "rules"))
-    first = result(llm, 1)["problems"]
+    main_run = llm.calls[2]  # the Offer Main run's last request: its whole conversation
+
+    def answered(k):
+        return json.loads(main_run[2 * k]["content"][0]["content"])
+
+    first = answered(1)["problems"]
     assert any("at most 50" in p for p in first) and any("before start_date" in p for p in first)
-    assert "set_offer_main" in result(llm, 3)["problems"][-1]
-    assert res["status"] == "draft" and res["offer_main"]["offer_name"] == "Test offer"
+    assert "set_offer_main" in answered(2)["problems"][-1]
+    assert res["status"] == "draft" and res["offer_main"]["offer_name"] == "Test offer" and res["rules"]
 
 
 def test_prompt_is_knowledge_and_catalog_without_example_offers(fixture_catalog):
@@ -640,12 +646,14 @@ def test_the_session_keeps_a_canvas_defs_for_later_composes(fixture_catalog, com
             [("compose", {"canvas": "rules", "blocks": shared, "defs": defs, "counters": counters})],
             [("compose", {"canvas": "rules", "blocks": shared, "counters": counters})],  # defs kept
             [("compose", {"canvas": "rules", "blocks": {"type": "offer_generic", "activities": [{"use": "x"}]}})],
-            [FIN],
+            [FIN],  # held back: the newest compose was refused
+            [("compose", {"canvas": "rules", "blocks": shared, "counters": counters}), FIN],
         ]
     )
     agent.generate("x", fixture_catalog, llm)
     assert result(llm, 1)["ok"] and result(llm, 2)["ok"] and composed[0][1] == composed[1][1]
     assert "no def 'x'" in result(llm, 3)["problems"][0]
+    assert "not finished" in json.dumps(result(llm, 4))
 
 
 def test_a_level_the_tools_cannot_fill_is_reported_before_any_xml(fixture_catalog, composed):
@@ -671,10 +679,11 @@ def test_a_level_the_tools_cannot_fill_is_reported_before_any_xml(fixture_catalo
             }
         ],
     }
-    llm = ScriptedLLM([[("compose", {"canvas": "rules", "blocks": rules})], [FIN]])
+    llm = ScriptedLLM([[("compose", {"canvas": "rules", "blocks": rules})], [FIN], [("compose", S07), FIN]])
     agent.generate("x", fixture_catalog, llm)
     out = result(llm, 1)
-    assert not out["ok"] and "'In Window' is not a declared counter" in out["problems"][0] and not composed
+    assert not out["ok"] and "'In Window' is not a declared counter" in out["problems"][0]
+    assert "not finished" in json.dumps(result(llm, 2)) and len(composed) == 1  # no XML until the clean compose
 
 
 def test_segment_needs_a_name_from_the_model(fixture_catalog):
@@ -687,14 +696,16 @@ def test_segment_needs_a_name_from_the_model(fixture_catalog):
         ]
     )
     res = agent.run("x", fixture_catalog, llm)
-    assert "segment_name is empty" in json.dumps(result(llm, 3)) and res["segment"]["name"] == "Members over 27"
+    # turn 2 of the build run (the Offer Main run came first)
+    assert "segment_name is empty" in json.dumps(result(llm, 2)) and res["segment"]["name"] == "Members over 27"
 
 
 def test_reward_tag_is_the_models_choice_when_the_tenant_configured_none(fixture_catalog):
     import dataclasses
 
     cat = dataclasses.replace(fixture_catalog, default_tag=None)  # the account has BASE and BONUS
-    assert cat.reward_tag() is None and "no configured reward tag" in prompt.system_blocks(cat)[2]["text"]
+    text = prompt.system_blocks(cat)[2]["text"]
+    assert cat.reward_tag() is None and "| BASE, BONUS" in text and ", reward tag " not in text
     probs = said(
         screen_fields.unfilled(
             tree.expand(tree.inline(S07["blocks"], S07.get("defs"))),
@@ -755,7 +766,6 @@ def test_the_knowledge_says_a_transaction_date_is_the_bit_date_not_the_current_d
     text = prompt.static_prompt()
     assert "The current date block is the moment the engine processes the BIT" in text
     assert "compares a part of `h_bit_date`" in text
-    assert "the BIT date (`h_bit_date`), never the current date block" in text
 
 
 def test_a_finish_is_judged_after_the_turns_other_calls(fixture_catalog, flagged):
@@ -846,4 +856,178 @@ def test_the_conventions_read_an_offer_as_its_own_reward_and_reaches_as_at_least
     """TwoBranchVerify measurement (2026-10-31): H05 and H10 test cases misread these two."""
     text = prompt.static_prompt()
     assert "a transaction that does not qualify earns nothing from this offer" in text
-    assert '"reaches X", "hits X", "once the total is X": greater or equal (>=)' in text
+    assert '"reaches X", "hits X", "once the total is X": the transaction that brings the total to X or more' in text
+
+
+def test_a_whole_offer_job_answers_offer_main_before_the_rules_are_designed(fixture_catalog):
+    seen = []
+    om = offer_main(max_usage_per_user=1, frequency="week")
+    llm = ScriptedLLM([[om], [("compose", S07)], [FIN]])
+    res = agent.run("x", fixture_catalog, llm, on_offer_main=lambda v: seen.append(len(llm.calls)))
+    assert seen == [1]  # Offer Main was given out during the first request, before any build request
+    first, build_start = json.dumps(llm.calls[0]), json.dumps(llm.calls[1][0])
+    assert "Build: Offer Main (set_offer_main)." in first and "built after Offer Main" in first
+    assert "Offer Main (set_offer_main)" not in build_start and "max 1 per member (week)" in build_start
+    assert "Already handled" not in build_start and "segment_prompt" in build_start  # the segment is this run's
+    assert res["status"] == "draft" and res["offer_main"]["frequency"] == "week" and res["rules"]
+    d = res["diagnostics"]
+    assert d["parts"] == ["offer_main", "segment", "rules"] and d["turns"] == 3 and d["offer_main_run"]["turns"] == 1
+
+
+def test_an_offer_main_run_that_sets_nothing_answers_for_the_whole_job(fixture_catalog):
+    ask = finish(blocking_questions=["Is this a reward offer?"])
+    llm = ScriptedLLM([[ask]])
+    res = agent.run("x", fixture_catalog, llm)
+    assert len(llm.calls) == 1 and res["status"] == "needs_input" and not res["rules"]
+    assert all(res["by_part"][p]["blocking_questions"] == ["Is this a reward offer?"] for p in ("segment", "rules"))
+
+
+def test_offer_main_notes_from_the_build_run_stay_on_offer_main(fixture_catalog):
+    noted = finish(assumptions=[{"part": "offer_main", "text": "No end date was stated."}, "Spend is the activity."])
+    llm = ScriptedLLM([[offer_main()], [("compose", S07)], [noted]])
+    res = agent.run("x", fixture_catalog, llm)
+    assert res["by_part"]["offer_main"]["assumptions"][-2:] == ["No end date was stated.", "Spend is the activity."]
+    assert "No end date was stated." not in res["by_part"]["rules"]["assumptions"]
+
+
+def test_the_knowledge_states_the_engine_facts_the_context_audit_measured():
+    """ContextAudit (2026-11-03), each measured on the local engine: between excludes both ends in the rules canvas and
+    includes them in a segment; whole numbers divide as whole numbers; snap goes to the period's end; a missing member
+    date in date arithmetic fails the offer; and the usual readings of date words and "per X"."""
+    text = prompt.static_prompt()
+    assert "`between` holds strictly between its two values: both ends are excluded" in text
+    assert "In a segment `between` includes both ends" in text
+    assert "`100 / 3` is 33" in text and "snap to the end of" in text and "snap to the start" not in text
+    assert "31 Jan + 1 MONTHS is 28 Feb" in text
+    assert "fails the offer for that transaction" in text
+    assert '"after 10 Dec" starts on 11 Dec' in text and "N for each whole X of the measure" in text
+    assert "DateUtils" not in text
+
+
+def test_the_knowledge_holds_engine_facts_and_readings_but_no_recipes():
+    """ContextHardcoding (2026-11-04): the model derives the logic from the engine facts; a worked solution for one
+    kind of request (a formula, "is one vector counter", "use it for") is not part of the knowledge."""
+    text = prompt.static_prompt()
+    for recipe in (
+        "(h_bit_amount - h_bit_amount % X) / X",
+        'different stores" is one vector counter',
+        "Use it for",
+        "(count + 1) mod N",
+        "day index =",
+        "offset =",
+        "## 7. Example",
+        'Within 30 days of joining" is',
+    ):
+        assert recipe not in text, recipe
+    flat = " ".join(text.split())
+    assert "Only offer counters keep a value from one BIT to the next" in flat
+    assert "reads as **-1**" not in flat and "reads as -1 in every date part" in flat
+    assert "Any other word the description leaves open takes its plain reading, recorded as an assumption" in flat
+
+
+def test_a_date_value_block_without_its_date_part_is_reported(fixture_catalog):
+    """Flow D03 (2026-11-03): date_of_joining in member_attribute blocks without date_operator compiled as
+    CALENDAR_DATE (a fixed year), so "the first 30 days after joining" never paid."""
+    joining = {"type": "member_attribute", "id": "b7", "ATTRIBUTE_TYPE": "MA_P", "ATTRIBUTE": "date_of_birth"}
+    got = said(screen_fields.unfilled(tree.expand(joining), fixture_catalog, {}))
+    assert any("no date part: set date_operator" in p for p in got), got
+    whole = dict(joining, date_operator="DATE")
+    assert not any("no date part" in p for p in said(screen_fields.unfilled(tree.expand(whole), fixture_catalog, {})))
+
+
+def test_every_loyalty_account_dropdown_is_the_models_choice_and_checked(fixture_catalog):
+    """2026-11-04: give_points always went to the configured account and its tag (filled in, hidden in saved rules);
+    the other accounts, their tags and the privileges' usage policies were not shown, so the model could not choose."""
+    import dataclasses
+    import xml.etree.ElementTree as ET
+
+    from offer_author.core.canvas.checks import grammar
+    from offer_author.core.canvas.fields import fill
+
+    second = {
+        "id": "7",
+        "name": "STARS",
+        "currency_type": "Points",
+        "sponsor_specific": True,
+        "tags": [{"code": "PROMO", "name": "Promo"}],
+    }
+    cat = dataclasses.replace(fixture_catalog, loyalty_accounts=[*fixture_catalog.loyalty_accounts, second])
+    text = prompt.catalog_text(cat)
+    assert "7 | STARS | Points | yes | PROMO" in text
+    # an action naming no account credits the sponsor's own account (2026-11-04: sponsor 1 on devintam1 got the
+    # program's account 12 instead of its own 42 on every offer), with that account's tag
+    assert 'names none: 7 "STARS" (the sponsor\'s own account)' in text
+    plain = fill({"type": "action", "fields": {"action_type": "give_points"}}, cat)
+    assert plain["LOYALTY_ACCOUNT"] == "7" and plain["REWARD_TAGS"] == "PROMO"
+    assert "names none: 1 " in prompt.catalog_text(fixture_catalog)  # no own account: the configured one
+    # the model's account is kept, and the tag comes from that account
+    node = {"type": "action", "fields": {"action_type": "give_points", "LOYALTY_ACCOUNT": "7"}}
+    f = fill(node, cat)
+    assert f["LOYALTY_ACCOUNT"] == "7" and f["REWARD_TAGS"] == "PROMO"
+    # saved rules show the account and tag they award to
+    saved = {"type": "action", "fields": {"action_type": "give_points", "LOYALTY_ACCOUNT": "7", "REWARD_TAGS": "PROMO"}}
+    assert tree.compact(saved)["LOYALTY_ACCOUNT"] == "7"
+
+    def block(fields):
+        x = "".join(f'<field name="{k}">{v}</field>' for k, v in fields.items())
+        return ET.fromstring(
+            f'<block xmlns="{grammar.NS[1:-1]}" type="action"><mutation attribute_type_input='
+            f'"{fields["action_type"]}"></mutation>{x}</block>'
+        )
+
+    bad = grammar.codes(block({"action_type": "give_points", "LOYALTY_ACCOUNT": "99", "REWARD_TAGS": "X"}), cat)
+    assert [p.code for p in bad] == ["account_not_in_catalog"]
+    wrong_tag = grammar.codes(block({"action_type": "give_points", "LOYALTY_ACCOUNT": "7", "REWARD_TAGS": "BASE"}), cat)
+    assert [p.code for p in wrong_tag] == ["tag_not_of_account"]
+    expire = grammar.codes(block({"action_type": "expire_points", "SELECTED_EXPIRE_LOYALTY_ACC": "99"}), cat)
+    assert [p.code for p in expire] == ["account_not_in_catalog"]
+
+
+def test_an_attribute_under_an_object_it_does_not_belong_to_is_a_problem(fixture_catalog):
+    """2026-11-04 (verticals iteration 2, V_BK2): `OBJECT location` with `h_location` loaded empty in the screen ("If
+    Block --> Location attribute is not selected"); the DRL compared the location with "null" and nothing paid."""
+    import xml.etree.ElementTree as ET
+
+    from offer_author.core.canvas.checks import grammar
+
+    def cond(obj):
+        return ET.fromstring(
+            f'<block xmlns="{grammar.NS[1:-1]}" type="if_generic_adaptive"><mutation object="{obj}" '
+            f'attribute="h_location"></mutation><field name="OBJECT">{obj}</field></block>'
+        )
+
+    assert [p.code for p in grammar.codes(cond("location"), fixture_catalog)] == ["attribute_not_of_object"]
+    assert "attribute_not_of_object" not in [p.code for p in grammar.codes(cond("activity"), fixture_catalog)]
+
+
+def test_a_vector_counter_reset_and_read_as_unique_is_a_problem():
+    """2026-11-04 (verticals iteration 2, V_RT2): "3 different stores in the same calendar month" was built as
+    RESET_ALL at a new month and `unique >= 3`; the keys outlive the reset, so December paid on its first spend."""
+    import os
+
+    from offer_author.core.canvas.checks.counters import counter_problems
+
+    xml = open(os.path.join(os.path.dirname(__file__), "..", "fixtures", "rt2_unique_after_reset.xml")).read()
+    assert [p.code for p in counter_problems(xml, [], None) if p.code == "unique_after_reset"] == ["unique_after_reset"]
+    across = xml.replace(">unique<", ">across<")
+    assert "unique_after_reset" not in [p.code for p in counter_problems(across, [], None)]
+
+
+def test_a_text_counter_compared_with_a_block_under_equals_is_a_problem(fixture_catalog):
+    """2026-11-04 (verticals V_RT2 it5, V_RT3 it6): `First Spend Rewarded == <static_string_value YES>` on a TEXT
+    counter: the screen takes = / != on text as a typed `value` and has no RHS_INPUT, so it dropped that block and every
+    block after it ("BLOCK MISSING"); the welcome points and the privilege never compiled."""
+    from offer_author.core.canvas.checks.screen_fields import unfilled
+
+    def cond(op, rhs):
+        fields = {"OBJECT": "member", "attribute_level": "MA_O", "attribute": "Flag", "operators": op}
+        return {"type": "if_generic_adaptive", "id": "c1", "fields": fields, "inputs": rhs}
+
+    text = {"Flag": {"data_type": "TEXT", "level": "MA_O"}}
+    block_rhs = {"RHS_INPUT": {"type": "static_string_value", "id": "v1", "fields": {"value": "YES"}}}
+    codes = lambda n, c: [p.code for p in unfilled(n, fixture_catalog, c)]
+    assert "text_compared_with_block" in codes(cond("==", block_rhs), text)
+    # a TEXT counter has no match / not_match: compared with typed text only (it7 V_RT2 wrote "doesn't match")
+    assert "text_compared_with_block" in codes(cond("not_match", block_rhs), text)
+    assert codes(cond("doesn't match", block_rhs), text) == ["operator_not_a_code"]
+    assert "text_compared_with_block" not in codes(cond("==", block_rhs), {"Flag": {"data_type": "NUMBER"}})

@@ -158,6 +158,8 @@ def judge(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, Any]:
                 )
             )
         ctx.run.trace.append(traced(state["turns"], name, x, out, ctx.settings.trace_inputs))
+    if fin is None and tuple(ctx.parts) == ("offer_main",) and ctx.run.offer_main.value is not None:
+        fin = {}  # an Offer Main run ends once the form is accepted: the rest of the job is built after it
     return {"messages": judged, "fin": fin}
 
 
@@ -212,12 +214,18 @@ verdict recorded.
 
 
 class VerifiedState(AgentState, total=False):
-    """The engine-checked run's state: the agent's, the cases, the verifier's verdict, and whether it repaired."""
+    """The engine-checked run's state.
+
+    The agent's, the cases, every check's transactions with the engine's answers, the verifier's verdict, whether it
+    repaired, and the repair's evidence (both checks' mismatches, the message and the canvases before it).
+    """
 
     cases: list[dict[str, Any]] | None
     cases_info: dict[str, Any]
+    checks: list[list[dict[str, Any]]]
     verdict: dict[str, Any] | None
     repaired: bool
+    repair: dict[str, Any]
 
 
 def fan_out(state: VerifiedState) -> list[Send]:
@@ -259,15 +267,49 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
     ctx.timing.tools_s["verify"] = round(ctx.timing.tools_s.get("verify", 0) + time.time() - t0, 2)
     repaired = bool(state.get("repaired"))
     verdict = verifier.verdict(report, repaired)
-    if report.get("ok") or repaired:
-        return {"verdict": verdict}
+    checks = [*(state.get("checks") or []), _answers(report)]
+    if repaired:
+        second = _mismatches(report)
+        return {"verdict": verdict, "checks": checks, "repair": {**(state.get("repair") or {}), "second_check": second}}
+    if report.get("ok"):
+        return {"verdict": verdict, "checks": checks}
+    message = cases.mismatch_message(report)
     return {
         "verdict": verdict,
+        "checks": checks,
         "repaired": True,
         "fin": None,
         "max_turns": state["turns"] + ctx.settings.verify_repair_turns,
-        "messages": [HumanMessage(content=cases.mismatch_message(report))],
+        "messages": [HumanMessage(content=message)],
+        "repair": {
+            "first_check": _mismatches(report),
+            "message": message,
+            "rules_xml_before": body.get("rules_xml"),
+            "segment_xml_before": body.get("segment_xml"),
+        },
     }
+
+
+def _answers(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """A check's every transaction: its scenario and header, the case's expectation and what the engine gave."""
+    head = ("h_bit_date", "h_bit_amount", "h_location", "h_bit_type")
+    keep = ("expect", "got", "agree", "counters_after", "skipped")
+    return [
+        {
+            "scenario": s.get("scenario"),
+            "bit": b.get("bit"),
+            "header": {k: v for k, v in (b.get("header") or {}).items() if k in head},
+            **{k: b[k] for k in keep if k in b},
+        }
+        for s in report.get("scenarios") or []
+        for b in s.get("bits") or []
+    ]
+
+
+def _mismatches(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """A check's disagreeing transactions as the repair's evidence keeps them."""
+    keep = ("scenario", "what", "bit", "header", "expect", "got", "counters_after", "rules_ran", "skipped")
+    return [{k: m[k] for k in keep if k in m} for m in report.get("mismatches") or []]
 
 
 def _after_verify(state: VerifiedState) -> str:

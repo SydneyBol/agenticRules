@@ -19,6 +19,7 @@ from general.loggerutils import get_logger
 from pulsar.data_validation.n_diverse_context import put_diverse_context, file_transfer
 from pulsar.data_store.lambda_function import retraining_data_to_s3, write_file, read_file
 from pulsar.data_validation.sub_prompts.blockwise_subprompt import xml_to_subprompt
+from pulsar.data_validation.sub_prompts.feedback import compare, place_label, units
 from general.pulsar.program_cache.template_cache import cache_processor
 from templatize_offer import templatize_xml
 
@@ -127,6 +128,8 @@ class OfferPromptValidator:
         newest_taken = False
         for index in range(len(df) - 1, -1, -1):
             row = df.iloc[index]
+            if index == len(df) - 1 and row["status"] == "suspended":  # suspended now: no example, no fine-tune row
+                break
             xml = row["offerXML"]
             if row["status"] == "launched" and newest_taken:  # an older saved version: not the offer any more
                 df.at[index, "status"] = "Validated"
@@ -159,36 +162,44 @@ def calculate_similarity(sentence1, sentence2):
     return similarity_score
 
 
-def failed_blocks_filter(model_generated_xml: str, xml: str):
-    if not model_generated_xml or len(model_generated_xml) == 0:
+FEEDBACK_COLUMNS = ['program_id', 'Kind', 'Place', 'SubPrompt', 'Block']
+
+
+def failed_blocks_filter(model_generated_xml: str, xml: str, program=None):
+    """What the manager changed in Pulsar's draft before saving: one row per line, by its place (feedback.py).
+
+    Both XMLs are the templatised ones (values as placeholders), so a store, amount or tier the manager changed is not
+    a model failure. Kind "missing": a saved line the draft lacks in that place (the fine-tune rows); "extra": a draft
+    line the saved offer does not have there. None when either offer cannot be read: an unreadable draft teaches
+    nothing (it used to turn every saved line into a failure).
+    """
+    if not model_generated_xml or not xml:
         return None
-    df_model_generated_blockwise = pd.DataFrame(columns=['SubPrompt', 'Block'])
     try:
-        model_generated_subprompt_block = xml_to_subprompt(model_generated_xml)
-
-        for line, block in model_generated_subprompt_block:
-            line = line.split(',,,')[1].strip()
-            new_row = pd.DataFrame({'SubPrompt': [line], 'Block': [block]}, index=[0])
-            df_model_generated_blockwise = pd.concat([df_model_generated_blockwise, new_row], ignore_index=True)
+        generated_pairs = xml_to_subprompt(model_generated_xml) or []
+        saved_pairs = xml_to_subprompt(xml) or []
     except Exception as e:
-        logger.info(f"Model generated XML issue : {e}")
-
-    subprompt_block = xml_to_subprompt(xml)
-    df_blockwise = pd.DataFrame(columns=['SubPrompt', 'Block'])
-    if not subprompt_block:
+        logger.info(f"Feedback skipped, sub-prompt issue: {e}")
         return None
-    for line, block in subprompt_block:
-        line = line.split(',,,')[1].strip()
-        new_row = pd.DataFrame({'SubPrompt': [line], 'Block': [block]}, index=[0])
-        df_blockwise = pd.concat([df_blockwise, new_row], ignore_index=True)
-    df_combined = pd.concat([df_model_generated_blockwise[['SubPrompt']], df_blockwise[['SubPrompt']]],
-                            ignore_index=True)
-    duplicates = df_combined[df_combined.duplicated(keep=False)]
+    if not generated_pairs or not saved_pairs:
+        return None
+    generated, saved = units(model_generated_xml, generated_pairs), units(xml, saved_pairs)
+    if generated is None or saved is None:
+        return None
+    missing, extra = compare(generated, saved)
 
-    # Remove duplicates from df_blockwise based on subprompts
-    df_blockwise_unique = df_blockwise[~df_blockwise['SubPrompt'].isin(duplicates['SubPrompt'])]
+    def block_of(pairs):
+        out = {}
+        for line, block in pairs:
+            out.setdefault(line.split(',,,', 1)[-1].strip(), block)
+        return out
 
-    return df_blockwise_unique
+    saved_blocks, generated_blocks = block_of(saved_pairs), block_of(generated_pairs)
+    rows = [{'program_id': program, 'Kind': 'missing', 'Place': place_label(unit, branches), 'SubPrompt': text,
+             'Block': saved_blocks[text]} for unit, branches, text in missing]
+    rows += [{'program_id': program, 'Kind': 'extra', 'Place': place_label(unit, branches), 'SubPrompt': text,
+              'Block': generated_blocks[text]} for unit, branches, text in extra]
+    return pd.DataFrame(rows, columns=FEEDBACK_COLUMNS)
 
 
 def templatisation(xml_templatise: str, sponsor_ids: list, prompt: str):
@@ -227,24 +238,33 @@ def rules_retrain_data(manual_trigger):
         OfferPromptValidator.process_prompts(offer_id=offer_id, sponsor_id=offer_sponsor)
 
     latest_data_list = []
-    fine_tune_data = pd.DataFrame(columns=['SubPrompt', 'Block'])
+    fine_tune_data = pd.DataFrame(columns=FEEDBACK_COLUMNS)
     for offer in OfferPromptValidator.instance.offer_list:
         for prompt in offer.valid_prompts:
             json_rag_format = rag_data_fetch(xml=offer.templatised_rule, prompt=prompt.prompt)
             if json_rag_format:
                 latest_data_list.append(json_rag_format)
+        draft = offer.base_prompt.model_generated_rule
+        templated_draft = templatisation(xml_templatise=draft, sponsor_ids=offer.sponsors,
+                                         prompt=offer.base_prompt.prompt) if draft else None
         fine_tune_data = pd.concat(
-            [fine_tune_data, failed_blocks_filter(model_generated_xml=offer.base_prompt.model_generated_rule,
-                                                  xml=offer.rule)], ignore_index=True)
+            [fine_tune_data, failed_blocks_filter(model_generated_xml=templated_draft, xml=offer.templatised_rule,
+                                                  program=program_id)], ignore_index=True)
         updated_df = OfferPromptValidator.instance.offers.get(offer.offer_Id).to_csv(index=False)
         write_file(f"{program_id}/gpt/data_store/offer/{offer.offer_Id}/data.csv", updated_df)
     already_prompts_data_list = create_rag_db(latest_data_list,manual_trigger,prompt_writer_context)
     retraining_data_to_s3(file_key=f'{program_id}/gpt/data_store/offer/data.csv',
                           data=already_prompts_data_list,
                           dup_check='user')
-    retraining_data_to_s3(data=fine_tune_data.to_dict(orient='records'), bucket='gravty-ai-pulsar',
+    # templated rows, each with its program: one program's line never overwrites another's
+    missing = fine_tune_data[fine_tune_data['Kind'] == 'missing']
+    retraining_data_to_s3(data=missing.to_dict(orient='records'), bucket='gravty-ai-pulsar',
                           key='blockwise_subprompt/retrain_data.csv',
-                          s3_client=s3_client, dup_check='SubPrompt')
+                          s3_client=s3_client, dup_check=['program_id', 'SubPrompt'])
+    extra = fine_tune_data[fine_tune_data['Kind'] == 'extra']  # lines the drafts had wrong: for review, not training
+    retraining_data_to_s3(data=extra.to_dict(orient='records'), bucket='gravty-ai-pulsar',
+                          key='blockwise_subprompt/extra_lines.csv',
+                          s3_client=s3_client, dup_check=['program_id', 'Place', 'SubPrompt'])
     for offer in OfferPromptValidator.instance.offer_list:  # stored now: the collected prompts can go
         s3.delete_object(Bucket=f"gravty-ai-{env}", Key=f"{program_id}/gpt/prompts/{offer.offer_Id}/offerrules_bin")
 

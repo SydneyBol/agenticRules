@@ -1,25 +1,37 @@
 # Usual readings of loyalty terms
 
 How managers' words are usually meant, when the description does not say otherwise. A tenant's earlier offers,
-when the message shows them, may show that tenant's own habit; the description itself always wins.
+when the message shows them, may show that tenant's own habit; the description itself always wins. Any other word the
+description leaves open takes its plain reading, recorded as an assumption.
 
 - "spend", "spends", "spending": the activity type labelled exactly "Spend". Use another type only when the manager
   names it. When no activity is named, use Spend and record that as an assumption.
 - "Nx points": points = the measure x N in total (not N extra on top). Record that as an assumption.
-- An offer gives only what it describes: a transaction that does not qualify earns nothing from this offer ("double
-  points on Sundays" pays nothing on a Monday; the program's base earning is not part of the offer).
-- "over X", "more than X": strictly greater (>). "at least X", "X or more": greater or equal (>=).
-- "reaches X", "hits X", "once the total is X": greater or equal (>=), on the transaction that brings it to X ($300
-  then $200 reaches $500 on the second).
-- DAY_OF_WEEK numbers run Monday=1 to Sunday=7 (the engine's ISO numbering). HOUR_OF_DAY is 0-23.
-- "in the birthday month", "on weekends", "during December", "between 5 and 7 pm": when the transaction happened,
-  i.e. the BIT date (`h_bit_date`), never the current date block.
-- Anything that must carry over from one transaction to the next (counts, totals, "once", caps, unlocks, distinct
-  values) is an offer counter (MA_O): MA_A values live for one transaction only (see how offers and blocks run: counters).
-- "a maximum of N", "up to N", "capped at N" points: the cap holds exactly. The award that would pass it is trimmed
-  to what is left (N minus the counter so far), the counter ends at N, and later transactions earn nothing more from
-  that rule.
-- "every Nth", "each Nth": the counter changes exactly once per counted transaction. A counter update is seen by the
-  conditions after it in the same transaction, so a branch that rewards and resets the count must not be followed by
-  a branch that also counts the same transaction: write one update (count = (count + 1) mod N, rewarding when the
-  count before it is N - 1) or make the branches exclusive.
+- "N bonus points", "N extra points", "N additional points": N on top of what the program already gives, i.e. this
+  offer's own award is N (the base earning is not part of the offer). "Nx bonus" / "N times bonus" is the measure x N.
+- "N points per X spent", "N points for every X": N for each whole X of the measure (AED 25 at "1 point per AED 10" is
+  2 points). Record that as an assumption when X is more than 1.
+- An offer gives only what it describes: a transaction that does not qualify earns nothing from this offer (the
+  program's base earning is not part of the offer).
+- "reaches X", "hits X", "once the total is X": the transaction that brings the total to X or more qualifies.
+- "weekend": Saturday and Sunday. In programs whose time zone is in Saudi Arabia, Qatar, Kuwait, Bahrain or Oman the
+  weekend is Friday and Saturday. Record the days taken as an assumption.
+- Days named in a period are whole days and both ends are included: "from 10 Dec", "until 31 Dec", "till", "through",
+  "by", "up to", "from 1 to 15 Jan", "between 1 and 15 Jan". "after 10 Dec" starts on 11 Dec and "before 10 Dec" ends
+  on 9 Dec. A number range ("between 100 and 500") includes both ends too.
+- "within N days of joining", "in the first N days after joining": the transaction's date is from the joining day
+  (day 1) to day N; the same with months.
+- "once", "one time", "only the first time" per member, with no period named: once in the offer's life for that
+  member. "first purchase" / "first spend" with no other words: the member's first transaction this offer sees.
+  Record that as an assumption.
+- "Gold and above", "Silver or higher": the tiers whose rank is at least that tier's in the same tier class. A
+  profile tier value (`tier_class`) has no rank in the catalog: the tiers taken go in an assumption.
+- "a maximum of N", "up to N", "capped at N" points, "until the member has earned N points": the cap holds exactly:
+  the transaction that would pass it earns what is left of N, and later transactions earn nothing more from it.
+- "every Nth", "each Nth": the Nth, 2Nth, 3Nth, ... counted transaction.
+- "once per birthday", "once per anniversary": once per occurrence of the date. A spend in late December inside the
+  window of a 5 Jan birthday belongs to that 5 Jan.
+- A currency the description names ("miles", "stars", "eCredits", an account's own currency name): the loyalty account
+  whose currency it is. "points" alone names no currency. None named: the account specific to the sponsor when there is
+  one, else the program's configured account. Record the account taken as an assumption. A named currency the catalog
+  has no account for is a blocking question.

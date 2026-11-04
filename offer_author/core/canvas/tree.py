@@ -213,7 +213,7 @@ def inline(root: Any, defs: Any = None) -> Any:
     """The tree with each {"use": name} replaced by a copy of defs[name].
 
     A def is a block, or blocks spliced into a statement list; defs may use other defs. A block written once and used
-    in several places (a period index, a repeated condition) becomes ordinary blocks here, before ids and XML.
+    in several places (a repeated value or condition) becomes ordinary blocks here, before ids and XML.
 
     Raises:
         TreeError: defs is not a mapping, names no such def, a def uses itself, or several blocks go in one place.
@@ -269,8 +269,8 @@ class _Inliner:
 def compact(root: Any, counters: Any = ()) -> Any:
     """The node form in the compact form, without the fields `fill` gives back without the catalog.
 
-    This is the offer's saved rules as the model would send them. A give_points action shows no account or tag: the
-    tenant's are filled in.
+    This is the offer's saved rules as the model would send them. A give_points action keeps its account and reward
+    tag: they are the offer's choice, not something filled in.
     """
     if isinstance(root, list):
         return [compact(n, counters) for n in root]
@@ -298,8 +298,6 @@ def _drop_filled(t: str, f: dict[str, Any], inputs: dict[str, Any], byname: dict
             f.pop("attribute_level")
         if f.get("OBJECT") == "member" and (counter or "attribute_level" in f):
             f.pop("OBJECT")
-    elif t == "action" and f.get("action_type") == "give_points":
-        f.pop("LOYALTY_ACCOUNT", None), f.pop("REWARD_TAGS", None), inputs.pop("LOYALTY_ACCOUNT", None)
     elif t == "action" and f.get("action_type") == "update_attribute":
         counter = byname.get(f.get("mta_attribute") or "")
         if counter and f.get("mta_type_value") == (counter.get("level") or OFFER_COUNTER):

@@ -63,7 +63,6 @@ def test_model_context_lives_with_the_ai_and_code_data_with_the_code():
         "block_reference_segment.md",
         "conventions.md",
         "kt.md",
-        "member_dates.md",
     ]
     assert {"block_reference.json", "offer_main_form.json", "blueprints", "segments"} <= set(
         os.listdir(os.path.join(PKG, "core", "data"))

@@ -97,7 +97,7 @@ cases:
           - {h_bit_amount: 5, lines: [{sku: BAK-1, qty: 1, amount: 5}], expect: {points: 5, privilege: 501}}
 
   - id: C11_nth_on_weekends
-    prompt: "Every 2nd weekend spend earns 150 bonus points."
+    prompt: "Count each member's spends made on a Saturday or Sunday; every 2nd such weekend spend (the 2nd, 4th, 6th, ...) earns 150 bonus points. Weekday spends are not counted and earn nothing."
     expect: {status: [draft]}
     sequences:
       - bits:

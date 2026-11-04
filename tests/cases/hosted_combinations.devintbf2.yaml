@@ -516,7 +516,9 @@ cases:
       - HYD
       - 52
 - id: C01_birthday_window_once_per_occurrence
-  prompt: 500 bonus points on a spend of $50 or more made within 15 days before or after the member's birthday, at most once per birthday.
+  prompt: 500 bonus points on a spend of $50 or more made within 15 days before or after the member's birthday, at most once per
+    birthday. The window follows the birthday across New Year (a 5 January birthday's window starts on 21 December), and spends
+    in December and January around the same birthday share its one reward.
   sequences:
   - member:
       date_of_birth: '1990-11-20'
@@ -1053,8 +1055,9 @@ cases:
       - '3263'
       - 200
 - id: C10_new_member_windows
-  prompt: New members earn 5 points per $1 on their first 2 spends made within 30 days of joining. From day 31 to day 90 after joining, spends over $50 earn 2 points per $1. No other spend earns from this
-    offer.
+  prompt: New members earn 5 points per $1 on their first 2 spends made no later than 30 days after their joining date
+    (the joining date plus 30 days included). Spends made 31 to 90 days after the joining date (both days included)
+    that are over $50 earn 2 points per $1. No other spend earns from this offer.
   sequences:
   - member:
       date_of_joining: '2026-10-25'
@@ -1200,6 +1203,542 @@ cases:
       - 100
       - HYD
       - 200
+- id: X01_birthday_10day_window_new_year
+  prompt: 500 bonus points on a spend of $50 or more within 10 days before or after the member's birthday, at most once per birthday.
+  sequences:
+  - member:
+      date_of_birth: '1992-11-15'
+    note: day -11, day -10 pays (online counts), day +10 already paid
+    bits:
+    - - '2026-11-04T12:00:00'
+      - 60
+      - HYD
+      - 0
+    - - '2026-11-05T09:00:00'
+      - 60
+      - AUTO5
+      - 500
+    - - '2026-11-25T12:00:00'
+      - 60
+      - HYD
+      - 0
+  - member:
+      date_of_birth: '1993-11-15'
+    note: day +10 late evening, $49.99 first
+    bits:
+    - - '2026-11-25T20:00:00'
+      - 49.99
+      - HYD
+      - 0
+    - - '2026-11-25T23:30:00'
+      - 50
+      - '3263'
+      - 500
+  - member:
+      date_of_birth: '1993-11-15'
+    note: day +11
+    bits:
+    - - '2026-11-26T08:00:00'
+      - 60
+      - HYD
+      - 0
+  - member:
+      date_of_birth: '1990-01-03'
+    note: '3 Jan birthday: 22 Dec is day -12, 24 Dec day -10; 8 and 14 Jan are the same birthday; 24 Dec 2027 is day -10 of the next'
+    hosted: false
+    bits:
+    - - '2026-12-22T12:00:00'
+      - 80
+      - HYD
+      - 0
+    - - '2026-12-24T10:00:00'
+      - 49.99
+      - HYD
+      - 0
+    - - '2026-12-24T11:00:00'
+      - 80
+      - HYD
+      - 500
+    - - '2027-01-08T12:00:00'
+      - 90
+      - '3263'
+      - 0
+    - - '2027-01-14T12:00:00'
+      - 90
+      - HYD
+      - 0
+    - - '2027-12-24T12:00:00'
+      - 60
+      - HYD
+      - 500
+- id: X03_threshold_unlocks_higher_rate
+  prompt: Each spend adds to the member's total spend. When the total reaches $1000, the member earns 500 bonus points once; spends after that earn 2 points per $1 instead of 1 point per $1.
+  sequences:
+  - note: the spend that crosses $1000 still earns 1 per $1, plus the bonus
+    bits:
+    - - '2026-11-03T10:00:00'
+      - 900
+      - HYD
+      - 900
+    - - '2026-11-03T11:00:00'
+      - 200
+      - HYD
+      - 700
+    - - '2026-11-03T12:00:00'
+      - 100
+      - HYD
+      - 200
+  - note: exactly $1000 on one spend, then 2 per $1
+    bits:
+    - - '2026-11-04T10:00:00'
+      - 1000
+      - '3263'
+      - 1500
+    - - '2026-11-04T11:00:00'
+      - 10
+      - '3263'
+      - 20
+  - note: $999.99 then 1 cent reaches it
+    bits:
+    - - '2026-11-05T10:00:00'
+      - 999.99
+      - HYD
+      - 999.99
+    - - '2026-11-05T11:00:00'
+      - 0.01
+      - HYD
+      - 500.01
+    - - '2026-11-05T12:00:00'
+      - 50
+      - HYD
+      - 100
+- id: X06_bands_daily_cap_two_spends
+  prompt: Gold members earn 2 points per $1 on the first $200 of a spend and 3 points per $1 on the part of the spend above $200; other members earn 1 point per $1. A member earns at most 1000 points per
+    calendar day from this offer; a spend that would pass the cap earns only the points left under it.
+  sequences:
+  - note: 550, then 700 trimmed to 450, then 0; the next day starts again
+    bits:
+    - - '2026-11-03T10:00:00'
+      - 250
+      - HYD
+      - 550
+    - - '2026-11-03T15:00:00'
+      - 300
+      - HYD
+      - 450
+    - - '2026-11-03T18:00:00'
+      - 10
+      - HYD
+      - 0
+    - - '2026-11-04T09:00:00'
+      - 100
+      - HYD
+      - 200
+  - member:
+      tier_class: SLVR
+    bits:
+    - - '2026-11-03T10:00:00'
+      - 600
+      - '3263'
+      - 600
+    - - '2026-11-03T11:00:00'
+      - 500
+      - '3263'
+      - 400
+    - - '2026-11-04T11:00:00'
+      - 500
+      - '3263'
+      - 500
+- id: X07_unique_stores_monthly
+  prompt: Shop at 3 different stores within one calendar month to earn 300 bonus points, at most once per calendar month.
+  probe_expect: same
+  sequences:
+  - note: a repeat store does not count; the 3rd different store pays; a 4th store in the same month does not
+    bits:
+    - - '2026-11-03T12:00:00'
+      - 20
+      - HYD
+      - 0
+    - - '2026-11-10T12:00:00'
+      - 20
+      - HYD
+      - 0
+    - - '2026-11-12T12:00:00'
+      - 20
+      - '3263'
+      - 0
+    - - '2026-11-20T12:00:00'
+      - 20
+      - '678934'
+      - 300
+    - - '2026-11-25T12:00:00'
+      - 20
+      - AUTO5
+      - 0
+  - note: December starts again from zero
+    hosted: false
+    bits:
+    - - '2026-11-03T12:00:00'
+      - 20
+      - HYD
+      - 0
+    - - '2026-11-04T12:00:00'
+      - 20
+      - '3263'
+      - 0
+    - - '2026-11-05T12:00:00'
+      - 20
+      - '678934'
+      - 300
+    - - '2026-12-01T12:00:00'
+      - 20
+      - HYD
+      - 0
+    - - '2026-12-02T12:00:00'
+      - 20
+      - '3263'
+      - 0
+    - - '2026-12-03T12:00:00'
+      - 20
+      - AUTO5
+      - 300
+  - note: two stores in November and one in December are not 3 in one month
+    hosted: false
+    bits:
+    - - '2026-11-28T12:00:00'
+      - 20
+      - HYD
+      - 0
+    - - '2026-11-29T12:00:00'
+      - 20
+      - '3263'
+      - 0
+    - - '2026-12-01T12:00:00'
+      - 20
+      - '678934'
+      - 0
+- id: X14_lunch_window_minute_edges
+  prompt: On weekdays from 11am until 2pm, spends earn 2 points per $1; every other spend earns 1 point per $1.
+  probe_expect: same
+  sequences:
+  - note: Wednesday 10:59 out, 11:00 in, 13:59 and 13:59:59 in, 14:00 out; Friday in; Saturday and Sunday out
+    bits:
+    - - '2026-11-04T10:59:00'
+      - 100
+      - HYD
+      - 100
+    - - '2026-11-04T11:00:00'
+      - 100
+      - HYD
+      - 200
+    - - '2026-11-04T13:59:00'
+      - 100
+      - HYD
+      - 200
+    - - '2026-11-04T13:59:59'
+      - 100
+      - HYD
+      - 200
+    - - '2026-11-04T14:00:00'
+      - 100
+      - HYD
+      - 100
+    - - '2026-11-06T13:30:00'
+      - 100
+      - '3263'
+      - 200
+    - - '2026-11-07T12:00:00'
+      - 100
+      - HYD
+      - 100
+    - - '2026-11-08T12:00:00'
+      - 100
+      - HYD
+      - 100
+- id: X15_weekly_limit_and_rule_cap
+  prompt: A spend of $50 or more earns 100 bonus points, at most 3 times per member in total. A member can use this offer at most once per week.
+  probe_expect: same
+  sequences:
+  - note: the weekly limit refuses the second spend of a week; the rule cap stops the 4th reward
+    bits:
+    - - '2026-11-04T12:00:00'
+      - 60
+      - HYD
+      - 100
+    - - '2026-11-05T12:00:00'
+      - 60
+      - HYD
+      - 0
+    - - '2026-11-11T12:00:00'
+      - 60
+      - HYD
+      - 100
+    - - '2026-11-18T12:00:00'
+      - 60
+      - HYD
+      - 100
+    - - '2026-11-25T12:00:00'
+      - 60
+      - HYD
+      - 0
+  - note: a $49.99 spend earns nothing, so it does not use the week
+    bits:
+    - - '2026-11-04T12:00:00'
+      - 49.99
+      - '3263'
+      - 0
+    - - '2026-11-05T12:00:00'
+      - 60
+      - '3263'
+      - 100
+- id: X16_voucher_per_100_cap3
+  prompt: One complimentary VOX Cinemas movie ticket for every full $100 of a spend, at most 3 per spend.
+  probe_expect: same
+  sequences:
+  - bits:
+    - - '2026-11-03T12:00:00'
+      - 99.99
+      - HYD
+      - null
+    - - '2026-11-03T13:00:00'
+      - 100
+      - HYD
+      - '13828'
+    - - '2026-11-03T14:00:00'
+      - 250
+      - HYD
+      - privileges:
+        - '13828'
+        - '13828'
+    - - '2026-11-03T15:00:00'
+      - 300
+      - '3263'
+      - privileges:
+        - '13828'
+        - '13828'
+        - '13828'
+    - - '2026-11-03T16:00:00'
+      - 720
+      - HYD
+      - privileges:
+        - '13828'
+        - '13828'
+        - '13828'
+- id: X17_twice_per_calendar_year
+  prompt: 500 bonus points on a spend of $1000 or more, at most twice per calendar year.
+  probe_expect: same
+  sequences:
+  - note: two rewards, then refused; $999.99 never pays
+    bits:
+    - - '2026-11-03T12:00:00'
+      - 1000
+      - HYD
+      - 500
+    - - '2026-11-04T12:00:00'
+      - 999.99
+      - HYD
+      - 0
+    - - '2026-11-05T12:00:00'
+      - 1000
+      - '3263'
+      - 500
+    - - '2026-11-06T12:00:00'
+      - 5000
+      - HYD
+      - 0
+  - note: a new calendar year allows two more
+    hosted: false
+    bits:
+    - - '2026-03-10T12:00:00'
+      - 1200
+      - HYD
+      - 500
+    - - '2026-07-10T12:00:00'
+      - 1100
+      - HYD
+      - 500
+    - - '2026-11-10T12:00:00'
+      - 1500
+      - HYD
+      - 0
+    - - '2027-01-05T12:00:00'
+      - 1000
+      - HYD
+      - 500
+    - - '2027-02-01T12:00:00'
+      - 999.99
+      - HYD
+      - 0
+    - - '2027-06-01T12:00:00'
+      - 1000
+      - HYD
+      - 500
+    - - '2027-09-01T12:00:00'
+      - 2000
+      - HYD
+      - 0
+- id: X18_every_1000_online_double
+  prompt: Every time a member's cumulative spend reaches another $1000 mark ($1000, $2000, $3000 and so on), they earn 500 bonus points for each mark reached. Spends at the Automation Online Location store
+    count double toward the cumulative spend.
+  probe_expect: same
+  sequences:
+  - note: 'totals 800, 3000 (online $1100 counts 2200: three marks), 3050, 4000'
+    bits:
+    - - '2026-11-03T10:00:00'
+      - 800
+      - HYD
+      - 0
+    - - '2026-11-03T11:00:00'
+      - 1100
+      - AUTO5
+      - 1500
+    - - '2026-11-03T12:00:00'
+      - 50
+      - HYD
+      - 0
+    - - '2026-11-03T13:00:00'
+      - 950
+      - '3263'
+      - 500
+- id: B1_birthday_season_ladder
+  prompt: During the 15 days before and after a member's birthday, their spends at any store except the Automation Online Location store add up. When that birthday-window total reaches $200 the member earns
+    a complimentary VOX Cinemas movie ticket, and when it reaches $500 they earn 1000 bonus points (Gold members 2000). Each reward at most once per birthday; a spend that reaches both earns both.
+  probe_expect: same
+  sequences:
+  - member:
+      tier_class: SLVR
+      date_of_birth: '1991-11-15'
+    note: online does not add; 1 cent reaches $200; $500 pays Silver 1000; nothing more this birthday
+    bits:
+    - - '2026-11-03T12:00:00'
+      - 199.99
+      - HYD
+      - null
+    - - '2026-11-04T12:00:00'
+      - 300
+      - AUTO5
+      - null
+    - - '2026-11-05T12:00:00'
+      - 0.01
+      - '3263'
+      - '13828'
+    - - '2026-11-10T12:00:00'
+      - 300
+      - HYD
+      - 1000
+    - - '2026-11-20T12:00:00'
+      - 500
+      - HYD
+      - null
+  - member:
+      date_of_birth: '1990-01-05'
+    note: 'Gold, 5 Jan birthday: 20 Dec is day -16; both rewards on 2 Jan; 21 Jan is day +16; 22 Dec 2027 starts the next birthday'
+    hosted: false
+    bits:
+    - - '2026-12-20T12:00:00'
+      - 150
+      - HYD
+      - null
+    - - '2026-12-22T12:00:00'
+      - 150
+      - HYD
+      - null
+    - - '2026-12-31T12:00:00'
+      - 400
+      - AUTO5
+      - null
+    - - '2027-01-02T12:00:00'
+      - 400
+      - '3263'
+      - points: 2000
+        privilege: '13828'
+    - - '2027-01-10T12:00:00'
+      - 300
+      - HYD
+      - null
+    - - '2027-01-21T12:00:00'
+      - 600
+      - HYD
+      - null
+    - - '2027-12-22T12:00:00'
+      - 250
+      - HYD
+      - '13828'
+- id: B2_monthly_streak_weekend_cap
+  prompt: The first spend of each calendar month earns 100 bonus points. Weekday spends earn 1 point per $1. Weekend spends earn 2 points per $1 until the member has earned 400 points from weekend spends
+    in that calendar month, then 1 point per $1; a weekend spend that crosses the 400 earns 2 points per $1 only on the part up to it. A member with a spend in each of 3 consecutive calendar months earns
+    a free Ski Dubai entry pass, once.
+  sequences:
+  - note: first-spend bonus plus 300 weekend points; the next weekend spend splits 100 + 50; weekday 1 per $1; next weekend spend 1 per $1
+    bits:
+    - - '2026-11-07T12:00:00'
+      - 150
+      - HYD
+      - 400
+    - - '2026-11-08T12:00:00'
+      - 100
+      - HYD
+      - 150
+    - - '2026-11-09T12:00:00'
+      - 10
+      - HYD
+      - 10
+    - - '2026-11-14T12:00:00'
+      - 10
+      - HYD
+      - 10
+  - note: 'September to November: the split, a monthly reset, the yoga session in the 3rd month, then not again'
+    hosted: false
+    bits:
+    - - '2026-09-05T12:00:00'
+      - 150
+      - HYD
+      - 400
+    - - '2026-09-06T12:00:00'
+      - 100
+      - HYD
+      - 150
+    - - '2026-09-07T12:00:00'
+      - 10
+      - HYD
+      - 10
+    - - '2026-10-14T12:00:00'
+      - 50
+      - HYD
+      - 150
+    - - '2026-11-01T12:00:00'
+      - 100
+      - HYD
+      - points: 300
+        privilege: '13829'
+    - - '2026-11-07T12:00:00'
+      - 200
+      - HYD
+      - 300
+    - - '2026-12-05T12:00:00'
+      - 10
+      - HYD
+      - 120
+  - note: 'October missing breaks the streak: November, December, January earn it'
+    hosted: false
+    bits:
+    - - '2026-09-10T12:00:00'
+      - 10
+      - HYD
+      - 110
+    - - '2026-11-10T12:00:00'
+      - 10
+      - HYD
+      - 110
+    - - '2026-12-10T12:00:00'
+      - 10
+      - HYD
+      - 110
+    - - '2027-01-12T12:00:00'
+      - 10
+      - HYD
+      - points: 110
+        privilege: '13829'
 - id: V01_trips_by_meaning
   prompt: Members earn 2 points per AED 1 on every trip they book with us.
   bit_type: Travel
@@ -1259,3 +1798,193 @@ cases:
       - HYD
       - 0
       - ENROL
+- id: W01_winter_festival
+  prompt: Winter Festival, from 1 December 2026 to 31 January 2027, for Gold and Platinum members only. Spends of AED 50 or more at the Hyderabad or Kolkata store earn 2 points per AED 1, and Platinum members
+    earn 3 points per AED 1 instead; spends at the Automation Online Location store never earn and never count. Every 4th qualifying spend also earns 250 bonus points. When a member's total qualifying spend
+    during the festival reaches AED 1,000 they get a complimentary VOX Cinemas movie ticket, and when it reaches AED 2,500 a free Ski Dubai entry pass, each once; a spend that passes both marks earns both.
+    A member earns at most 3,000 points per calendar week (Monday to Sunday) from this offer, bonus points included; a spend that would pass the cap earns only the points left under it.
+  sequences:
+  - member:
+      tier_class: GLDGLW
+    note: 'Gold: under AED 50 and online do not count; ticket at AED 1,000; weekly cap trims; Ski pass in a new week; 8th spend bonus'
+    bits:
+    - - '2026-12-07T12:00:00'
+      - 300
+      - HYD
+      - 600
+    - - '2026-12-08T12:00:00'
+      - 49.99
+      - HYD
+      - 0
+    - - '2026-12-08T13:00:00'
+      - 400
+      - AUTO5
+      - 0
+    - - '2026-12-09T12:00:00'
+      - 400
+      - '3263'
+      - 800
+    - - '2026-12-10T12:00:00'
+      - 300
+      - HYD
+      - points: 600
+        privilege: '13828'
+    - - '2026-12-11T12:00:00'
+      - 500
+      - HYD
+      - 1000
+    - - '2026-12-12T12:00:00'
+      - 100
+      - HYD
+      - 0
+    - - '2026-12-14T12:00:00'
+      - 1000
+      - '3263'
+      - points: 2000
+        privilege: '13829'
+    - - '2026-12-15T12:00:00'
+      - 50
+      - HYD
+      - 100
+    - - '2026-12-16T12:00:00'
+      - 50
+      - HYD
+      - 350
+  - member:
+      tier_class: PLTNM
+    note: 'Platinum 3 per AED 1: AED 1,000 fills the week''s cap and earns the ticket; the next spend crosses AED 2,500 (Ski pass)'
+    bits:
+    - - '2026-12-07T12:00:00'
+      - 1000
+      - HYD
+      - points: 3000
+        privilege: '13828'
+    - - '2026-12-08T12:00:00'
+      - 2000
+      - HYD
+      - '13829'
+  - member:
+      tier_class: SLVR
+    note: Silver is outside the segment
+    bits:
+    - - '2026-12-07T12:00:00'
+      - 500
+      - HYD
+      - null
+  - member:
+      tier_class: GLDGLW
+    note: outside the festival dates (Offer Main's dates; not in a rules-only run)
+    hosted: false
+    bits:
+    - - '2027-02-01T12:00:00'
+      - 300
+      - HYD
+      - null
+- id: D01_per_whole_x_amount_range
+  prompt: Spends between AED 100 and AED 500 earn 1 point for every AED 10 spent; spends above AED 500 earn 2 points for every AED 10 spent.
+  sequences:
+  - note: both range ends included, whole AED 10 only, above 500 strict
+    bits:
+    - - '2026-11-03T12:00:00'
+      - 100
+      - HYD
+      - 10
+    - - '2026-11-03T12:00:00'
+      - 255
+      - HYD
+      - 25
+    - - '2026-11-03T12:00:00'
+      - 500
+      - HYD
+      - 50
+    - - '2026-11-03T12:00:00'
+      - 505
+      - HYD
+      - 100
+    - - '2026-11-03T12:00:00'
+      - 99.99
+      - HYD
+      - null
+- id: D02_day_of_month_periods
+  prompt: From the 10th to the 20th of every month, spends at the Hyderabad store earn 3x points. After the 25th of the month, spends at any store earn 2x points.
+  sequences:
+  - note: 10th and 20th included, 21st not; the 25th is not after the 25th, the 26th is; other store only after the 25th
+    bits:
+    - - '2026-11-09T12:00:00'
+      - 100
+      - HYD
+      - null
+    - - '2026-11-10T12:00:00'
+      - 100
+      - HYD
+      - 300
+    - - '2026-11-20T12:00:00'
+      - 100
+      - HYD
+      - 300
+    - - '2026-11-21T12:00:00'
+      - 100
+      - HYD
+      - null
+    - - '2026-11-10T12:00:00'
+      - 100
+      - '3263'
+      - null
+    - - '2026-11-25T12:00:00'
+      - 100
+      - '3263'
+      - null
+    - - '2026-11-26T12:00:00'
+      - 100
+      - '3263'
+      - 200
+- id: D03_first_30_days_after_joining
+  prompt: In their first 30 days after joining, members earn 5 bonus points per AED 1 spent.
+  sequences:
+  - member:
+      date_of_joining: '2026-10-01'
+    note: the joining day is day 1, day 30 is the last; before joining and day 31 earn nothing
+    bits:
+    - - '2026-10-01T12:00:00'
+      - 20
+      - HYD
+      - 100
+    - - '2026-10-30T12:00:00'
+      - 20
+      - HYD
+      - 100
+    - - '2026-10-31T12:00:00'
+      - 20
+      - HYD
+      - null
+    - - '2026-09-30T12:00:00'
+      - 20
+      - HYD
+      - null
+  - note: a member without a joining date earns nothing (and the offer does not fail)
+    bits:
+    - - '2026-10-05T12:00:00'
+      - 20
+      - HYD
+      - null
+- id: D04_weekend
+  prompt: Weekend spends of AED 50 or more earn 50 bonus points.
+  sequences:
+  - note: 'Asia/Dubai program: Saturday and Sunday; Friday is a weekday'
+    bits:
+    - - '2026-10-24T12:00:00'
+      - 50
+      - HYD
+      - 50
+    - - '2026-10-25T12:00:00'
+      - 80
+      - '3263'
+      - 50
+    - - '2026-10-23T12:00:00'
+      - 80
+      - HYD
+      - null
+    - - '2026-10-24T12:00:00'
+      - 49.99
+      - HYD
+      - null

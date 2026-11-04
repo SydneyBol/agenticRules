@@ -111,8 +111,8 @@ cases:
           - {h_bit_type: STAY,    h_bit_amount: 50,  expect: {points: 0,   mto: {boosted left: 2}}}
 
   - id: M09_monthly_budget_with_vector_by_month
-    prompt: "Give 10% bonus points on every spend, but at most 100 bonus points per member per calendar month. Track the bonus given each month in a vector offer counter 'monthly bonus' keyed by the transaction month."
-    expect: {status: [draft, needs_input], features: [counter:VECTOR]}
+    prompt: "Give 10% bonus points on every spend, but at most 100 bonus points per member per calendar month: once a member has had 100 bonus points in a month, further spends that month earn only what is left of the 100, then nothing, and the allowance starts again the next month."
+    expect: {status: [draft]}
     sequences:
       - bits:
           - {h_bit_date: "2026-10-05T12:00:00", h_bit_amount: 600, expect: {points: 60}}
@@ -121,7 +121,7 @@ cases:
           - {h_bit_date: "2026-11-02T12:00:00", h_bit_amount: 600, expect: {points: 60}}
 
   - id: M10_combined_ladder_streak_and_tier
-    prompt: "Gold members only. Count their spends at the Downtown or Mall store in 'store spends'. Every 4th such spend gives 200 points, but if that 4th spend is also over $100 it gives a Free Coffee voucher instead of the points. Separately, once 'store spends' reaches 8, set the text attribute 'vip' to Yes, and while vip is Yes every spend anywhere earns 2x points."
+    prompt: "Gold members only. Count their spends at the Downtown or Mall store in 'store spends'. Every 4th such spend gives 200 points, but if that 4th spend is also over $100 it gives a Free Coffee voucher instead of the points. Separately, once 'store spends' reaches 8, set the text attribute 'vip' to Yes. From the next spend on, while vip is Yes, every spend anywhere earns 2x points (2 points per $1); the spend that sets vip earns no 2x."
     expect: {status: [draft, needs_input], features: [obj:member, mode:attribute_level=MA_O, act:give_privilege, block:static_string_value]}
     sequences:
       - bits:
