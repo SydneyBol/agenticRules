@@ -1,9 +1,11 @@
 """Latency levers that must not change what is built: the shared prompt prefix cached for an hour and written ahead
 of the popup's first run, cache writes counted at either lifetime, the bolapi reads made in parallel."""
 
+import copy
 import json
 import threading
 
+import pytest
 from langchain_core.messages import AIMessage
 
 from offer_author.ai import agent
@@ -122,3 +124,35 @@ def test_the_live_catalog_reads_bolapi_in_parallel_and_builds_the_same_catalog(f
     assert len(seen) == 12 and peak[0] > 1  # all twelve read, several at once
     assert cat.attr("activity", "h_bit_amount").type == "NUMBER" and cat.loyalty_accounts[0]["id"] == "9"
     json.dumps(catalog_text(cat))
+
+
+def test_after_a_run_the_catalog_is_read_again_and_its_changes_embedded_for_the_next(fixture_catalog, monkeypatch):
+    from offer_author.api.pulsar import runs as runs_mod
+
+    fresh = copy.deepcopy(fixture_catalog)
+    warmed, done = [], threading.Event()
+    monkeypatch.setattr(runs_mod, "warm_values", lambda cat, settings=None: warmed.append(("values", cat)))
+    monkeypatch.setattr(
+        runs_mod, "warm_history", lambda cat, settings=None: (warmed.append(("history", cat)), done.set())
+    )
+    current, reads = [fixture_catalog], []
+
+    def reread(sponsor, account, auth):
+        reads.append((sponsor, auth))
+        current[0] = fresh
+        return fresh
+
+    r = runs_mod.Runs(ScriptedLLM([]), lambda s, a, auth: current[0], refresh_catalog=reread)
+    assert r.segment_job("Gold members", 1, "JWT x").wait(10)  # the scripted model has no turn: the run fails
+    assert done.wait(5)
+    assert reads == [(1, "JWT x")] and warmed == [("values", fresh), ("history", fresh)]  # no model call in it
+    assert r.catalog_for(1, None, "JWT x") is fresh  # the next run reads the catalog read again
+
+
+def test_no_refresh_without_a_way_to_read_the_catalog_again(fixture_catalog, monkeypatch):
+    from offer_author.api.pulsar import runs as runs_mod
+
+    monkeypatch.setattr(runs_mod, "warm_values", lambda *a, **k: pytest.fail("nothing to refresh"))
+    r = runs_mod.Runs(ScriptedLLM([]), lambda s, a, auth: fixture_catalog)
+    assert r.segment_job("Gold members", 1, None).wait(10)
+    threading.Event().wait(0.2)

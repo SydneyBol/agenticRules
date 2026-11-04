@@ -195,6 +195,7 @@ def pulsar_blueprint(
     store: JobStore | None = None,
     counters_for: CountersFor | None = None,
     settings: Settings | None = None,
+    refresh_catalog: CatalogFor | None = None,
 ) -> Blueprint:
     """The Pulsar endpoints.
 
@@ -205,12 +206,13 @@ def pulsar_blueprint(
         counters_for: (offer_id, authorization) -> {offer_status, counters} | None
             (existing_counters.BolapiCounterSource.get).
         settings: The service's settings (core.settings.Settings), handed to every agent run.
+        refresh_catalog: Reads the tenant's catalog again after each run (Runs.refresh), or None.
 
     Returns:
         The blueprint; its `store` and `prewarm` are exposed for the service and tests.
     """
     bp = Blueprint("pulsar", __name__)
-    runs = Runs(llm, catalog_for, store, counters_for, settings)
+    runs = Runs(llm, catalog_for, store, counters_for, settings, refresh_catalog)
     bp.store, bp.prewarm = runs.store, runs.prewarm  # type: ignore[attr-defined]
     views = _Routes(runs, catalog_for)
     for rule, view, method in (

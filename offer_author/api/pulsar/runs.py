@@ -18,6 +18,7 @@ from typing import Any
 
 from ...ai.agent import run as run_agent
 from ...ai.agent import warm as warm_cache
+from ...ai.agent import warm_history, warm_values
 from ...ai.prompt import rules_context
 from ...core.settings import Settings
 from ...core.tenant.existing_counters import Guard, decode_rules_xml, normalize
@@ -46,6 +47,7 @@ class Runs:
         store: JobStore | None = None,
         counters_for: CountersFor | None = None,
         settings: Settings | None = None,
+        refresh_catalog: CatalogFor | None = None,
     ) -> None:
         """Runs the agent with this service's model and settings.
 
@@ -56,8 +58,12 @@ class Runs:
             counters_for: (offer_id, authorization) -> the offer's status and counters (counters.BolapiCounterSource),
                 or None when they cannot be read.
             settings: The service's settings.
+            refresh_catalog: (sponsor_id, account_id, authorization) -> the tenant's catalog read again, which
+                catalog_for serves from then on; None when the catalog does not change while the service runs.
         """
         self.llm, self.catalog_for, self.counters_for = llm, catalog_for, counters_for
+        self.refresh_catalog = refresh_catalog
+        self._refreshing: set[Any] = set()  # sponsors whose catalog is being read again
         self.settings = settings or Settings()
         self.store = store or JobStore()
         self.prompts = PromptLog(self.settings.history)  # no history folder: nothing kept
@@ -90,6 +96,46 @@ class Runs:
 
         threading.Thread(target=work, daemon=True).start()
 
+    def refresh(self, sponsor_id: Any, auth: str | None) -> None:
+        """Reads the tenant's catalog again after a run and embeds what changed, for the next run.
+
+        In the background, one at a time per sponsor, with no model call: the value lists are embedded by their
+        contents (value_search.py), so only a list with a new or changed value is embedded again, and the earlier
+        offers are loaded again when the catalog they are vetted and masked with changed (history.py). A value
+        created after this is read waits for the next run's refresh.
+        """
+        if self.refresh_catalog is None:
+            return
+        with self._warm_lock:
+            if sponsor_id in self._refreshing:
+                return
+            self._refreshing.add(sponsor_id)
+
+        def work() -> None:
+            try:
+                t = time.time()
+                catalog = self.refresh_catalog(sponsor_id, None, auth)  # type: ignore[misc]
+                read_s = time.time() - t
+                warm_values(catalog, self.settings)
+                warm_history(catalog, self.settings)
+                log.info(
+                    "catalog refreshed sponsor=%s read_s=%.2f warm_s=%.2f", sponsor_id, read_s, time.time() - t - read_s
+                )
+            except Exception:  # the next run reads the catalog it has
+                log.exception("catalog refresh failed")
+            finally:
+                with self._warm_lock:
+                    self._refreshing.discard(sponsor_id)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _then_refresh(self, sponsor_id: Any, auth: str | None, run: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+        """A run's result, with the catalog refresh started behind it (after a failed run too)."""
+        try:
+            return run()
+        finally:
+            self.refresh(sponsor_id, auth)
+
     def existing_counters(self, body: dict[str, Any], auth: str | None) -> dict[str, Any] | None:
         """The offer's counters (and saved rules canvas) before generating.
 
@@ -113,7 +159,8 @@ class Runs:
                 job.offer_main = om
                 job.main.set()
 
-            return self.agent(prompt, self.catalog_for(sponsor_id, None, auth), on_offer_main=on_main)
+            catalog = self.catalog_for(sponsor_id, None, auth)
+            return self._then_refresh(sponsor_id, auth, lambda: self.agent(prompt, catalog, on_offer_main=on_main))
 
         return self.store.start(self.store.key("offer", prompt), work, track=False, prompt=prompt)
 
@@ -121,7 +168,11 @@ class Runs:
         """A segment-only run for a segment prompt no offer run wrote."""
         return self.store.start(
             self.store.key("segment", prompt),
-            lambda job: self.agent(prompt, self.catalog_for(sponsor_id, None, auth), parts=("segment",)),
+            lambda job: self._then_refresh(
+                sponsor_id,
+                auth,
+                lambda: self.agent(prompt, self.catalog_for(sponsor_id, None, auth), parts=("segment",)),
+            ),
             track=False,
         )
 
@@ -140,8 +191,12 @@ class Runs:
         """A rules-only run for the rules screen's prompt."""
         catalog = self.catalog_for(body.get("sponsor_id"), None, auth)
         self.prompts.add(catalog.tenant, body.get("id"), prompt)  # paired with the offer's saved rules by core.harvest
-        return self.agent(
-            prompt, catalog, offer_id=body.get("id"), parts=("rules",), context=context, existing=existing
+        return self._then_refresh(
+            body.get("sponsor_id"),
+            auth,
+            lambda: self.agent(
+                prompt, catalog, offer_id=body.get("id"), parts=("rules",), context=context, existing=existing
+            ),
         )
 
     def rules_job(self, body: dict[str, Any], prompt: str, auth: str | None, reuse_offer: Callable[[Job], bool]) -> Job:

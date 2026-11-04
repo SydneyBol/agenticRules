@@ -376,10 +376,16 @@ class BolapiCatalogSource:
         self, tenant: str, sponsor_id: int, account_id: Any, authorization: str | None, default_tag: str | None = None
     ) -> Catalog:
         """The tenant's catalog: cached, else read with the caller's JWT (the GETs run together)."""
-        key = (tenant, sponsor_id, str(account_id))
-        hit = self._cache.get(key)
+        hit = self._cache.get((tenant, sponsor_id, str(account_id)))
         if hit and time.time() - hit[0] < self.ttl_s:
             return hit[1]
+        return self.refresh(tenant, sponsor_id, account_id, authorization, default_tag)
+
+    def refresh(
+        self, tenant: str, sponsor_id: int, account_id: Any, authorization: str | None, default_tag: str | None = None
+    ) -> Catalog:
+        """The tenant's catalog read again with the caller's JWT, cached in place of the one before."""
+        key = (tenant, sponsor_id, str(account_id))
 
         def fetch(rel: str) -> Any:
             r = self.http.get(self.base + rel, headers={"Authorization": authorization or ""})

@@ -30,6 +30,7 @@ def create_app(
     catalog_for: CatalogFor,
     counters_for: CountersFor | None = None,
     settings: Settings | None = None,
+    refresh_catalog: CatalogFor | None = None,
 ) -> Flask:
     """The service's Flask app.
 
@@ -38,13 +39,16 @@ def create_app(
         catalog_for: (sponsor_id, account_id, authorization) -> the tenant's Catalog.
         counters_for: (offer_id, authorization) -> the offer's status and counters (existing_counters.py), or None.
         settings: The settings handed to every agent run.
+        refresh_catalog: Reads the tenant's catalog again after each run, so the next one has new values embedded.
 
     Returns:
         The app, with the Pulsar endpoints registered.
     """
     app = Flask(__name__)
     app.register_blueprint(
-        pulsar_blueprint(llm, catalog_for, counters_for=counters_for, settings=settings)
+        pulsar_blueprint(
+            llm, catalog_for, counters_for=counters_for, settings=settings, refresh_catalog=refresh_catalog
+        )
     )  # the contract the stock gravty-ui already calls
 
     @app.get("/ai/offer-author/health")
@@ -89,13 +93,24 @@ def main() -> None:
     folder = a.catalog_dir or (settings.catalogs and os.path.join(settings.catalogs, a.tenant, "bolapi"))
     if not folder:
         ap.error("give --catalog-dir or OFFER_AUTHOR_CATALOGS (the tenant dumps folder)")
-    cat = Catalog.from_bolapi_dumps(folder, a.tenant, a.sponsor, a.account, a.tag)
+    current = [Catalog.from_bolapi_dumps(folder, a.tenant, a.sponsor, a.account, a.tag)]
+
+    def reread(sponsor: Any, account: Any, auth: Any) -> Catalog:
+        """The dumps read again (a new dump is served from the next run on, without a restart)."""
+        current[0] = Catalog.from_bolapi_dumps(folder, a.tenant, a.sponsor, a.account, a.tag)
+        return current[0]
+
+    cat = current[0]
     counters_for = BolapiCounterSource(a.bolapi_base).get if a.bolapi_base else None
     threading.Thread(target=warm_values, args=(cat, settings), daemon=True).start()  # value-search models and lists
     threading.Thread(target=warm_history, args=(cat, settings), daemon=True).start()  # the earlier offers' embeddings
-    create_app(make_llm(), lambda sponsor, account, auth: cat, counters_for=counters_for, settings=settings).run(
-        port=a.port
-    )
+    create_app(
+        make_llm(),
+        lambda sponsor, account, auth: current[0],
+        counters_for=counters_for,
+        settings=settings,
+        refresh_catalog=reread,
+    ).run(port=a.port)
 
 
 if __name__ == "__main__":
