@@ -35,8 +35,8 @@ class CaseBit(BaseModel):
     header: dict[str, Any] = Field(
         description="h_bit_date (ISO date-time, inside the offer's dates), h_bit_amount, h_location (a store code "
         "from the catalog), h_bit_type when the activity is not Spend, and any other header attribute the offer reads. "
-        "The engine processes these test transactions today (the catalog's today), whatever their h_bit_date: a "
-        "segment's current date is today"
+        "The engine processes each test transaction on its own h_bit_date, as a program sends a transaction when it "
+        "happens: a segment's current date is that day"
     )
     lines: list[dict[str, Any]] = Field(
         default_factory=list,
@@ -100,7 +100,9 @@ TASK = (
     "transaction after a cap or limit is reached, a member the offer excludes), and expects what the offer still "
     "gives without that clause, often nothing. Give each clause one positive and one negative scenario; where the "
     "description names a threshold or an Nth transaction, the positive meets it exactly and the negative falls one "
-    "short. Leave out any scenario that shows only what another one already shows. A member starts with no offer "
+    "short. Where a clause is a span of days, its cases include the first and last day and the day just outside "
+    "each end; where the span follows a date that recurs every year, one member's span runs across 31 Dec. Leave out "
+    "any scenario that shows only what another one already shows. A member starts with no offer "
     "history: when a clause depends on what came before (after 4 visits, near a cap, a reward already given), the "
     "scenario makes those earlier transactions first, each with what it gives, and then the one under test. Use the "
     "tenant catalog's codes. Call write_cases once."

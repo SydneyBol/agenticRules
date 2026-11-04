@@ -179,15 +179,38 @@ def _level_form(t: str | None, f: dict[str, Any], catalog: Catalog | None) -> Fo
     return "attribute_not_of_level", {"given": level, "owner": owner}
 
 
+FILTER = "ACTIVITY_CRITERIA"  # the On Activity filter: its conditions compile into the rule's when-clause
+
+
+def _filter_problems(root: Any) -> list[Problem]:
+    """Rule conditions (if_generic_adaptive) in an On Activity filter that read the transaction date as CALENDAR_DATE.
+
+    The screen writes such a condition with bitHeader, a variable of the rule's actions
+    (activity-attribute-drl.service.ts checkforlineattribute): in the filter the rules do not compile (2026-11-04 X01:
+    "Unable to Analyse Expression").
+    The filter's own condition (activity_criteria) reads it with readAttributeS and compiles (B1).
+    """
+    return [
+        Problem.of("bit_calendar_date_in_filter", BlockRef(str(m.get("type")), str(m.get("id"))))
+        for n, _, _ in nodes(root)
+        if (n.get("inputs") or {}).get(FILTER)
+        for m, _, _ in nodes(n["inputs"][FILTER])
+        if m.get("type") == "if_generic_adaptive"
+        and (m.get("fields") or {}).get("attribute") == "h_bit_date"
+        and (m.get("fields") or {}).get("datetime_operator") == "CALENDAR_DATE"
+    ]
+
+
 def unfilled(root: Any, catalog: Catalog | None = None, counters: dict[str, Any] | None = None) -> list[Problem]:
     """Problems the screen would cause that code can tell before any compile, by block.
 
     A rule with no action (it can never reward or count anything), the conditions and ORs _shape reports, fields the
     model left out that `fill` cannot work out (a counter that is not declared, an attribute the catalog does not
     have), a coded value given in the form its operator does not take (_value_form), and a date part or a compared
-    number in a field the attribute's type does not have (_date_form).
+    number in a field the attribute's type does not have (_date_form), a transaction date read as CALENDAR_DATE in the
+    filter (_filter_problems).
     """
-    out = []
+    out = _filter_problems(root)
     for n, _, _ in nodes(root):
         t, f = n.get("type"), _as_condition(n.get("type"), fill(n, catalog, counters))
         name = f.get("attribute") if t in CHECKED else f.get("mta_attribute")

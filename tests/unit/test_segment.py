@@ -118,3 +118,28 @@ def test_member_attribute_level_must_list_its_attribute():
     assert form("MP_S") == ("attribute_not_of_level", {"given": "MP_S", "owner": "MA_P"})
     assert form("MA_P") is None
     assert form("MA_O") is None  # an offer counter: counters are named by the rules
+
+
+def test_rule_condition_reading_bit_calendar_date_in_the_filter_is_reported():
+    """X01: if_generic_adaptive on h_bit_date CALENDAR_DATE in ACTIVITY_CRITERIA compiles with bitHeader, which fails."""
+    from offer_author.core.canvas.checks.screen_fields import _filter_problems
+
+    cond = {
+        "type": "if_generic_adaptive",
+        "id": "c1",
+        "fields": {"attribute": "h_bit_date", "datetime_operator": "CALENDAR_DATE"},
+    }
+    filt = {
+        "type": "activity_criteria",
+        "id": "c2",
+        "fields": {"attribute": "h_bit_date", "datetime_operator": "CALENDAR_DATE"},
+    }
+    tree = lambda c: {"type": "activity", "id": "a", "inputs": {"ACTIVITY_CRITERIA": [c]}}
+    assert [p.code for p in _filter_problems(tree(cond))] == ["bit_calendar_date_in_filter"]
+    assert _filter_problems(tree(filt)) == []  # the filter's own condition compiles
+    rule = {
+        "type": "activity",
+        "id": "a",
+        "inputs": {"RULES": [{"type": "rule", "id": "r", "inputs": {"CONDITION": [cond]}}]},
+    }
+    assert _filter_problems(rule) == []  # in a rule it compiles

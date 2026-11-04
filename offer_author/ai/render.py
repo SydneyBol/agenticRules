@@ -224,6 +224,9 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     # finishing (core/run/policy.py)
     "offer_main_not_set": lambda f: "Offer Main is not set: call set_offer_main",
     "segment_name_empty": lambda f: "segment_name is empty: name the member segment you built",
+    "bit_calendar_date_in_filter": lambda f: "an if_generic_adaptive reading h_bit_date as CALENDAR_DATE in the On "
+    "Activity filter: the screen writes it with a variable only a rule has, and the offer's rules do not compile. The "
+    "filter's own condition block (activity_criteria) and a rule condition both compile",
     "attribute_not_of_level": lambda f: f"{f['name']} is not an attribute of ATTRIBUTE_TYPE {f['given']}: the catalog "
     f"lists it under {f['owner']}, and the screen drops an ATTRIBUTE its level does not list",
     "segment_prompt_without_segment": lambda f: "Offer Main's segment_prompt names who the offer is for, but the "
