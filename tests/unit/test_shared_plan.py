@@ -107,6 +107,27 @@ def test_plan_ids_no_scenario_covers_get_one_more_cases_turn_and_the_first_cases
     assert info["scenarios"] == 2
 
 
+def test_cases_written_in_two_calls_are_all_kept_and_every_call_gets_its_result(fixture_catalog, verifier_calls):
+    # 2026-11-05 X01: two write_cases calls in one turn, only the first answered: Bedrock refused the next request
+    first = [
+        ("write_cases", {"scenarios": [case(["C1"])]}),
+        ("write_cases", {"scenarios": [case(["E1"], what="the 4th visit gives nothing")]}),
+    ]
+    more = [("write_cases", {"scenarios": [case(["M1"], what="the count starts again after the coffee")]})]
+    res, _, cases_llm = run(fixture_catalog, [[("write_plan", PLAN)], first, more])
+    sent = cases_llm.calls[2]
+    asked = [b["id"] for b in sent[-2]["content"] if b.get("type") == "tool_use"]
+    answered = [b["tool_use_id"] for b in sent[-1]["content"] if b.get("type") == "tool_result"]
+    assert len(asked) == 2 and answered == asked
+    assert "M1" in json.dumps(sent[-1]) and "E1" not in json.dumps(sent[-1])
+    assert [s["what"] for s in verifier_calls[0]["scenarios"]] == [
+        "the 5th visit earns the coffee",
+        "the 4th visit gives nothing",
+        "the count starts again after the coffee",
+    ]
+    assert res["diagnostics"]["verify"]["ok"]
+
+
 def test_an_unknown_code_gets_one_more_plan_turn_then_the_plan_goes_without_it(fixture_catalog):
     bad = json.loads(json.dumps(PLAN))
     bad["inputs"][0]["code"] = "h_store_grade"

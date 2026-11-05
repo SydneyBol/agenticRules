@@ -128,6 +128,7 @@ MISSING = (
     "These plan ids are not covered by any scenario: {ids}. Call write_cases again with only the scenarios that "
     "cover them (the ones you wrote are kept)."
 )
+KEPT = "Kept."
 
 
 def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]:
@@ -143,22 +144,26 @@ def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]
     messages: list[Any] = [HumanMessage(content=ctx.prompt + task)]
     turn = llm.turn(ctx.system, messages, tools=[WRITE_CASES])
     usage = dict(turn.usage or {})
-    scenarios, call = _scenarios(turn)
+    scenarios = _scenarios(turn)
     info: dict[str, Any] = {}
-    if ctx.plan and scenarios is not None and call is not None:
+    if ctx.plan and scenarios is not None:
         missing = _uncovered(ctx.plan, scenarios)
         info["uncovered_first"] = missing
         if missing:
+            # every call of the turn gets its result, or the next request is refused (2026-11-05 X01: two
+            # write_cases calls in one turn, one result, Bedrock 400); the uncovered ids go in the first
+            told = MISSING.format(ids=", ".join(missing))
             messages += [
                 turn.message,
-                ToolMessage(
-                    content=MISSING.format(ids=", ".join(missing)), tool_call_id=call["id"], name="write_cases"
+                *(
+                    ToolMessage(content=told if i == 0 else KEPT, tool_call_id=c["id"], name=c["name"])
+                    for i, c in enumerate(turn.message.tool_calls)
                 ),
             ]
             more = llm.turn(ctx.system, messages, tools=[WRITE_CASES])
             for k, v in (more.usage or {}).items():
                 usage[k] = usage.get(k, 0) + (v or 0)
-            added, _ = _scenarios(more)
+            added = _scenarios(more)
             scenarios += added or []
             info["uncovered"] = _uncovered(ctx.plan, scenarios)
     info = {"s": round(time.time() - t0, 1), "usage": usage, **info}
@@ -167,14 +172,18 @@ def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]
     return scenarios, info
 
 
-def _scenarios(turn: Any) -> tuple[list[dict[str, Any]] | None, dict[str, Any] | None]:
-    """The scenarios a turn wrote with write_cases (None when they do not fit the schema), and the call."""
-    call = next((c for c in turn.message.tool_calls if c["name"] == "write_cases"), None)
-    try:
-        cases = Cases.model_validate(call["args"]) if call else None
-    except ValidationError:
-        cases = None
-    return ([s.model_dump() for s in cases.scenarios] if cases else None), call
+def _scenarios(turn: Any) -> list[dict[str, Any]] | None:
+    """The scenarios a turn wrote with write_cases, over all its calls (None when no call fits the schema)."""
+    found: list[dict[str, Any]] | None = None
+    for call in turn.message.tool_calls:
+        if call["name"] != "write_cases":
+            continue
+        try:
+            cases = Cases.model_validate(call["args"])
+        except ValidationError:
+            continue
+        found = [*(found or []), *(s.model_dump() for s in cases.scenarios)]
+    return found
 
 
 def _uncovered(plan: dict[str, Any], scenarios: list[dict[str, Any]]) -> list[str]:
