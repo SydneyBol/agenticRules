@@ -16,6 +16,7 @@ conversation, the turn count and limit, the usage, and how the run ended.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from collections.abc import Sequence
@@ -204,20 +205,24 @@ r"""The whole-offer run with an engine check: the offer and its test cases in pa
 
     START -Send-> build  (the agent graph above: Offer Main, segment, rules) -> verify -> END
           -Send-> cases  (one turn: write_cases, from the description)       -/    |
-                                                       mismatch, first time:  build (repair turn) -> verify -> END
+                                   mismatch, under settings.verify_repairs:  build (repair turn) -> verify -> ...
 
 Both branches read the same knowledge (the run's system blocks). verify sends the canvases, Offer Main and the cases to
-the verifier service (compile + engine, mocked members). On a mismatch the build run gets one repair: it fixes the
-blocks; the cases are never rewritten. A second mismatch, an unreachable verifier or no cases: the run ends with the
-verdict recorded.
+the verifier service (compile + engine, mocked members). On a mismatch the build run gets a repair: it fixes the
+blocks; the cases are never rewritten. A repair's own recheck that still disagrees gets the next repair, up to
+settings.verify_repairs (2: owner, 2026-11-05, after W01's repair left a double award its recheck had found). After
+the last repair, an unreachable verifier or no cases: the run ends with the verdict recorded.
 """
+
+ORDINAL = ("first", "second", "third", "fourth", "fifth")
 
 
 class VerifiedState(AgentState, total=False):
     """The engine-checked run's state.
 
-    The agent's, the cases, every check's transactions with the engine's answers, the verifier's verdict, whether it
-    repaired, and the repair's evidence (both checks' mismatches, the message and the canvases before it).
+    The agent's, the cases, every check's transactions with the engine's answers, the verifier's verdict, how many
+    repairs it sent, whether the last check asked for one, and the repairs' evidence (each check's mismatches, each
+    message and the canvases before the first).
     """
 
     cases: list[dict[str, Any]] | None
@@ -225,6 +230,8 @@ class VerifiedState(AgentState, total=False):
     checks: list[list[dict[str, Any]]]
     verdict: dict[str, Any] | None
     repaired: bool
+    repairs: int
+    repair_asked: bool
     repair: dict[str, Any]
 
 
@@ -266,29 +273,43 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
     except verifier.VerifierUnavailableError as e:
         return {"verdict": {"error": str(e)[:300]}}
     ctx.timing.tools_s["verify"] = round(ctx.timing.tools_s.get("verify", 0) + time.time() - t0, 2)
-    repaired = bool(state.get("repaired"))
-    verdict = verifier.verdict(report, repaired)
+    n = int(state.get("repairs") or 0)
+    verdict = {**verifier.verdict(report, n > 0), "repairs": n}
     checks = [*(state.get("checks") or []), _answers(report)]
-    if repaired:
-        second = _mismatches(report)
-        return {"verdict": verdict, "checks": checks, "repair": {**(state.get("repair") or {}), "second_check": second}}
-    if report.get("ok"):
-        return {"verdict": verdict, "checks": checks}
+    evidence = dict(state.get("repair") or {})
+    if n:
+        evidence[f"{ORDINAL[min(n, len(ORDINAL) - 1)]}_check"] = _mismatches(report)
+    # a repair that changed no canvas gets the same answer again: no further repair (W01 local, 2026-11-05: the
+    # cases had misread three amounts; both repairs rightly kept the blocks, and the second cost a model turn)
+    unchanged = n > 0 and _canvases(body) == evidence.get("canvases_checked")
+    evidence["canvases_checked"] = _canvases(body)
+    if report.get("ok") or n >= ctx.settings.verify_repairs or unchanged:
+        return {"verdict": verdict, "checks": checks, "repair_asked": False, **({"repair": evidence} if n else {})}
     message = cases.mismatch_message(report)
+    if not n:
+        evidence = {
+            "first_check": _mismatches(report),
+            "rules_xml_before": body.get("rules_xml"),
+            "segment_xml_before": body.get("segment_xml"),
+            "canvases_checked": evidence["canvases_checked"],
+        }
+    evidence["message" if not n else f"message_{n + 1}"] = message
     return {
         "verdict": verdict,
         "checks": checks,
         "repaired": True,
+        "repairs": n + 1,
+        "repair_asked": True,
         "fin": None,
         "max_turns": state["turns"] + ctx.settings.verify_repair_turns,
         "messages": [HumanMessage(content=message)],
-        "repair": {
-            "first_check": _mismatches(report),
-            "message": message,
-            "rules_xml_before": body.get("rules_xml"),
-            "segment_xml_before": body.get("segment_xml"),
-        },
+        "repair": evidence,
     }
+
+
+def _canvases(body: dict[str, Any]) -> str:
+    """What a check ran on: the rules and segment canvases, as one fingerprint."""
+    return hashlib.sha1(json.dumps([body.get("rules_xml"), body.get("segment_xml")]).encode()).hexdigest()
 
 
 def _answers(report: dict[str, Any]) -> list[dict[str, Any]]:
@@ -314,13 +335,8 @@ def _mismatches(report: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _after_verify(state: VerifiedState) -> str:
-    return "build" if state.get("fin") is None and state.get("repaired") and not _verified(state) else END
-
-
-def _verified(state: VerifiedState) -> bool:
-    """The check has its final word: it passed, or it already sent the build run its one repair and checked again."""
-    v = state.get("verdict") or {}
-    return bool(v.get("ok") or v.get("repaired") or "skipped" in v or "error" in v)
+    """Back to the build run only when this check asked for a repair; otherwise the run ends."""
+    return "build" if state.get("repair_asked") else END
 
 
 def build_verified() -> CompiledStateGraph[VerifiedState, RunContext, Any, Any]:

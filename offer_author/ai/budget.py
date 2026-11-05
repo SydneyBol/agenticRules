@@ -5,7 +5,8 @@ User, 2026-11-04: "Do not exceed 200 LLM calls ... hardcode this limit", then "i
 test plan) "Raise the call limit to 900", then (to finish the devintbf2 rerun and the airport and currency
 tests) "Raise to 1100", then (for the 86-offer fixture rerun) "Raise to 1350",
 then (to rerun the cases the per-$1 reading changes) "Raise to 1500",
-then (for the final 45-offer regression) "Raise to 1700", then (for the shared-plan regression) "Raise to 2300".
+then (for the final 45-offer regression) "Raise to 1700", then (for the shared-plan regression) "Raise to 2300",
+then (for the plan vs previous A/B benchmark, 2026-11-05) "Raise to 3300".
 
 Every request the chat model sends to Bedrock (each turn, each retry, each cache warm) first takes one call from a
 ledger file shared by every process on the machine (backend, CLI, live tests). The ledger counts up and is never reset
@@ -20,7 +21,7 @@ import os
 import time
 from pathlib import Path
 
-MAX_LLM_CALLS = 2300
+MAX_LLM_CALLS = 3300
 DEFAULT_LEDGER = Path.home() / ".offer_author" / "llm_calls.json"
 
 

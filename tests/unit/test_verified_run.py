@@ -13,6 +13,7 @@ from tests.fakes import ScriptedLLM
 from tests.support import finish, golden, offer_main
 
 S07 = golden("S07_every_5th_visit")
+S14 = golden("S14_simple_sanity")  # another canvas: a repair that changes the blocks
 FIN = finish(readback="every 5th visit earns a coffee")
 CASE = {
     "aim": "positive",
@@ -119,16 +120,52 @@ def test_the_cases_and_repair_evidence_are_logged_on_their_own_lines_and_kept_ou
     assert any(m.startswith("pulsar repair offer=1 ") for m in lines)
 
 
-def test_a_second_mismatch_is_delivered_with_a_note_for_the_manager(fixture_catalog, verifier_calls):
+def test_a_repair_whose_recheck_still_disagrees_gets_a_second_repair(fixture_catalog, verifier_calls):
+    """W01 (2026-11-05): the one repair left a double award its own recheck had found; a second repair now follows."""
+    sent, answers = verifier_calls
+    answers += [BAD, BAD, OK]
+    turns = [[offer_main()], [("compose", S07)], [FIN], [("compose", S14), FIN], [FIN]]
+    res, llm, cases_llm = run(fixture_catalog, turns)
+    assert len(sent) == 3 and len(cases_llm.calls) == 1  # three checks of the same cases
+    assert "The test cases are fixed" in json.dumps(llm.calls[4])  # the second repair reads the recheck's mismatches
+    v = res["diagnostics"]["verify"]
+    assert v["ok"] and v["repaired"] and v["repairs"] == 2 and res["status"] == "draft"
+    ev = v["repair"]
+    assert len(ev["first_check"]) == len(ev["second_check"]) == 1 and ev["third_check"] == []
+    assert ev["message"] and ev["message_2"] and len(v["evidence"]["checks"]) == 3
+
+
+def test_a_mismatch_after_the_last_repair_is_delivered_with_a_note_for_the_manager(fixture_catalog, verifier_calls):
     sent, answers = verifier_calls
     answers.append(BAD)
-    res, _, cases_llm = run(fixture_catalog, [[offer_main()], [("compose", S07)], [FIN], [FIN]])
-    assert len(sent) == 2 and len(cases_llm.calls) == 1 and res["rules"]
+    turns = [[offer_main()], [("compose", S07)], [FIN], [("compose", S14), FIN], [FIN]]
+    res, _, cases_llm = run(fixture_catalog, turns)
+    assert len(sent) == 3 and len(cases_llm.calls) == 1 and res["rules"]  # two repairs, then delivered
     v = res["diagnostics"]["verify"]
-    assert not v["ok"] and v["repaired"] and v["mismatches"] == 1
-    assert len(v["repair"]["first_check"]) == len(v["repair"]["second_check"]) == 1  # both checks kept
+    assert not v["ok"] and v["repairs"] == 2 and v["mismatches"] == 1
+    assert len(v["repair"]["first_check"]) == len(v["repair"]["second_check"]) == len(v["repair"]["third_check"]) == 1
     said = public(res)["by_part"]["rules"]["assumptions"]
     assert any("1 of 1 test transactions did not give what the description implies" in a for a in said)
+
+
+def test_a_repair_that_kept_the_blocks_gets_no_second_repair(fixture_catalog, verifier_calls):
+    """W01 local (2026-11-05): the cases misread three amounts and the repair kept the blocks; the same canvases would
+    get the same answer, so the run ends after that recheck."""
+    sent, answers = verifier_calls
+    answers.append(BAD)
+    res, llm, _ = run(fixture_catalog, [[offer_main()], [("compose", S07)], [FIN], [FIN]])
+    v = res["diagnostics"]["verify"]
+    assert len(sent) == 2 and len(llm.calls) == 4 and v["repairs"] == 1 and not v["ok"]
+    assert len(v["repair"]["second_check"]) == 1 and "message_2" not in v["repair"]
+
+
+def test_one_repair_when_the_settings_allow_one(fixture_catalog, verifier_calls):
+    sent, answers = verifier_calls
+    answers.append(BAD)
+    one = Settings(**{**SETTINGS.__dict__, "verify_repairs": 1})
+    turns = [[offer_main()], [("compose", S07)], [FIN], [("compose", S14), FIN]]
+    res, _, _ = run(fixture_catalog, turns, settings=one)
+    assert len(sent) == 2 and res["diagnostics"]["verify"]["repairs"] == 1
 
 
 def test_rules_only_runs_and_runs_without_a_verifier_are_not_checked(fixture_catalog, verifier_calls):
@@ -286,3 +323,15 @@ def test_a_refused_compose_in_the_repair_holds_back_the_finish_of_the_same_turn(
     assert "not finished: fix these and compose again before finish" in held
     assert len(llm.calls) == 5 and len(sent) == 2  # the builder got its turn back and the blocks were checked again
     assert res["diagnostics"]["verify"]["ok"] and res["status"] == "draft"
+
+
+def test_the_check_runs_the_offer_to_the_end_of_its_last_day_as_the_screen_saves_it(fixture_catalog, verifier_calls):
+    """Offer Main's bare dates reach the engine with the times the UI saves (00:00, 23:59), not as midnight (W01)."""
+    sent, answers = verifier_calls
+    answers.append(OK)
+    om = offer_main(start_date="2026-12-01", end_date="2027-01-31")
+    run(fixture_catalog, [[om], [("compose", S07)], [FIN]])
+    assert (sent[0]["offer_main"]["start_date"], sent[0]["offer_main"]["end_date"]) == (
+        "2026-12-01T00:00:00",
+        "2027-01-31T23:59:00",
+    )

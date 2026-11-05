@@ -35,8 +35,8 @@ def request(run: Run, scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
         "rules_xml": rules.xml,
         "segment_xml": seg.xml if seg is not None and seg.built else None,
         "offer_main": {
-            "start_date": om.get("start_date") or None,
-            "end_date": om.get("end_date") or None,
+            "start_date": _saved(om.get("start_date"), "T00:00:00"),
+            "end_date": _saved(om.get("end_date"), "T23:59:00"),
             "max_usage_per_user": om.get("max_usage_per_user") or 0,
             "frequency": om.get("frequency") or "total",
         },
@@ -46,6 +46,18 @@ def request(run: Run, scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
         "reference": {k: v for k, v in cat.reference.items() if k != "features"},
         "program": {k: v for k, v in (("features", cat.reference.get("features")), ("timezone", cat.timezone)) if v},
     }
+
+
+def _saved(day: str | None, time_of_day: str) -> str | None:
+    """An Offer Main date as the screen saves it: a bare day gets the time the UI adds (start 00:00, end 23:59).
+
+    The engine reads the offer's dates with their time, so a bare end date would end the offer at the start of its
+    last day (2026-11-05, W01: a spend at 23:30 on the last day was refused in the check, though the saved offer runs
+    to 23:59).
+    """
+    if not day:
+        return None
+    return day + time_of_day if len(day) == 10 else day
 
 
 def stores(run: Run) -> list[str]:

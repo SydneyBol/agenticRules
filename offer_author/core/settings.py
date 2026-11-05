@@ -33,7 +33,8 @@ class Settings:
         200  # activity types listed in the prompt up to this many; more: found with lookup_values
     )
     verifier_url: str = ""  # the verifier service (compile + engine, a separate deployable); "" = no engine check
-    verify_repair_turns: int = 4  # model turns the one repair after a failed engine check may take
+    verify_repair_turns: int = 4  # model turns each repair after a failed engine check may take
+    verify_repairs: int = 2  # repairs after failed engine checks: a second only when the first one's recheck fails
     shared_plan: bool = True  # the engine-checked run first writes one plan that build and cases both read
 
     @classmethod
