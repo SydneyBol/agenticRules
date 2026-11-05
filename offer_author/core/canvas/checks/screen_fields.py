@@ -136,7 +136,9 @@ def _shape(n: Any, f: dict[str, Any], catalog: Catalog | None, block: BlockRef, 
     """Conditions, ORs and attribute values the screen cannot make whole.
 
     A condition with no operator or nothing to compare with, a segment tier the catalog does not have, an OR with an
-    empty side, a member_attribute naming an attribute its level does not list (_level_form).
+    empty side, a member_attribute naming an attribute its level does not list (_level_form), an activity_attribute
+    naming something that is not a transaction attribute of the catalog (the screen compiles it to an empty read, and
+    the offer's rules then do not compile: 2026-11-05 C03, an offer counter read with activity_attribute).
     """
     t, out = n.get("type"), []
     if t in CHECKED and (code := _incomplete(n, f)):
@@ -147,6 +149,9 @@ def _shape(n: Any, f: dict[str, Any], catalog: Catalog | None, block: BlockRef, 
         out.append(Problem.of("or_operand_empty", block))
     if form := _level_form(t, f, catalog):
         out.append(Problem.of(form[0], block, name=f.get("ATTRIBUTE"), **form[1]))
+    attr = f.get("ATTRIBUTE")
+    if t == "activity_attribute" and catalog is not None and attr and catalog.attr("activity", str(attr)) is None:
+        out.append(Problem.of("not_a_transaction_attribute", block, name=attr))
     return out
 
 

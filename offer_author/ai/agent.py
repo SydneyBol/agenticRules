@@ -16,17 +16,19 @@ import copy
 import logging
 import time
 from collections.abc import Callable, Sequence
-from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import replace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END, START, StateGraph
+from langgraph.types import Send
 
 from ..core.run import PARTS, Run, error_result, outcome
 from ..core.settings import Settings
 from ..domain import Problem
 from . import graph
+from . import plan as plans
 from .model import LLMError
 from .prompt import intro, offer_main_context, system_blocks
 from .tools import SCHEMAS, RunContext
@@ -76,36 +78,94 @@ def run(
     t0 = time.time()
     settings = settings or Settings()
     rest = tuple(p for p in parts if p != "offer_main")
-    with ThreadPoolExecutor(1) as pool:  # the earlier offers are for the build: looked up while Offer Main is set
-        found = pool.submit(_earlier, prompt, catalog, settings, offer_id, history, rest)
+    planned = settings.shared_plan and bool(settings.verifier_url) and "rules" in rest
+
+    def plan_node(state: JobState) -> dict[str, Any]:
+        if not planned:
+            return {}
+        try:
+            plan, info = plans.write(cases_llm or llm, _system(catalog, account_id, settings), prompt, catalog)
+        except LLMError as e:  # the job goes on as before the plan: each run reads the description alone
+            return {"plan_info": {"error": str(e)[:300]}}
+        return {"plan": plan, "plan_info": info}
+
+    def earlier_node(state: JobState) -> dict[str, Any]:
+        return {"earlier": _earlier(prompt, catalog, settings, offer_id, history, rest)}
+
+    def offer_main_node(state: JobState) -> dict[str, Any]:
         main = _run(
             prompt,
             catalog,
             llm,
             parts=("offer_main",),
-            context=context,
+            context=context,  # answered at once: the Offer Main popup waits on it, so it does not wait for the plan
             on_offer_main=on_offer_main,
             settings=replace(settings, max_turns=min(OFFER_MAIN_TURNS, settings.max_turns)),
             **kw,
         )
-        om = main.get("offer_main")
-        if not om:  # not an offer, or a question first: that answer is the job's
-            return _whole_job(main, parts, t0)
-        given = offer_main_context(om)
+        return {"main": main}
+
+    def build_node(state: JobState) -> dict[str, Any]:
+        om = state["main"]["offer_main"]
         build = _run(
             prompt,
             catalog,
             llm,
             parts=rest,
-            context=f"{context}\n\n{given}" if context else given,
+            context=_with_plan(
+                f"{context}\n\n{offer_main_context(om)}" if context else offer_main_context(om), state.get("plan")
+            ),
             settings=settings,
             cases_llm=cases_llm,
             offer_main=om,
             verify=True,
-            earlier_found=found,
+            earlier=state.get("earlier"),
+            plan=state.get("plan"),
             **kw,
         )
-    return _merged(main, build, parts, t0)
+        return {"build": build}
+
+    def prepared(state: JobState) -> str:
+        return "build" if state["main"].get("offer_main") else END
+
+    g = StateGraph(JobState)
+    g.add_node("plan", plan_node)
+    g.add_node("earlier", earlier_node)
+    g.add_node("offer_main", offer_main_node)
+    g.add_node("build", build_node)
+    # Offer Main (the popup waits on it), the plan and the earlier offers at once; the build run starts from all three
+    g.add_conditional_edges(START, lambda st: [Send("offer_main", st), Send("plan", st), Send("earlier", st)])
+    g.add_node("prepared", lambda st: {})
+    g.add_edge(["offer_main", "plan", "earlier"], "prepared")
+    g.add_conditional_edges("prepared", prepared, ["build", END])
+    g.add_edge("build", END)
+    job: Any = g.compile()
+    out: dict[str, Any] = job.invoke({})
+    main = out["main"]
+    if "build" not in out:  # not an offer, or a question first: that answer is the job's
+        return _whole_job(main, parts, t0)
+    res = _merged(main, out["build"], parts, t0)
+    if out.get("plan_info") is not None:
+        res["diagnostics"]["plan"] = out["plan_info"]
+    return res
+
+
+class JobState(TypedDict, total=False):
+    """A whole-offer job's graph state: what both runs start from (the plan, the earlier offers), then each run."""
+
+    plan: dict[str, Any] | None
+    plan_info: dict[str, Any]
+    earlier: tuple[dict[str, Any] | None, float]
+    main: dict[str, Any]
+    build: dict[str, Any]
+
+
+def _with_plan(context: str | None, plan: dict[str, Any] | None) -> str | None:
+    """A run's context with the offer's plan after it, when there is one."""
+    if not plan:
+        return context
+    told = "The offer's plan, written from the same description; its test cases are written from it too:\n"
+    return f"{context}\n\n{told}{plans.text(plan)}" if context else told + plans.text(plan)
 
 
 def _whole_job(main: dict[str, Any], parts: Sequence[str], t0: float) -> dict[str, Any]:
@@ -161,7 +221,8 @@ def _run(
     cases_llm: Any = None,
     offer_main: dict[str, Any] | None = None,
     verify: bool = False,
-    earlier_found: Future[tuple[dict[str, Any] | None, float]] | None = None,
+    earlier: tuple[dict[str, Any] | None, float] | None = None,
+    plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One agent run for the given parts of an offer.
 
@@ -186,7 +247,8 @@ def _run(
         offer_main: Offer Main already accepted for this offer (an earlier run of the same job): the run holds it
             without setting it again, and the engine check applies its dates and limits.
         verify: Engine-check the rules although Offer Main is not one of the parts (it was set by an earlier run).
-        earlier_found: The earlier-offer lookup, already started (_earlier's result).
+        earlier: The earlier-offer lookup, already made (_earlier's result).
+        plan: The offer's plan (plan.py): the test cases cover it; the build run was given it in context.
 
     Returns:
         core.run.outcome, with the model's usage and the run's timing in diagnostics.
@@ -197,14 +259,12 @@ def _run(
     tools = Run(catalog, offer_id, existing, on_offer_main, search=searcher(settings))
     if offer_main:
         tools.offer_main.value = dict(offer_main)
-    earlier, earlier_s = (
-        earlier_found.result() if earlier_found else _earlier(prompt, catalog, settings, offer_id, history, parts)
-    )
-    ctx = RunContext(llm, tools, _system(catalog, account_id, settings), parts, settings, prompt, cases_llm)
+    found, earlier_s = earlier or _earlier(prompt, catalog, settings, offer_id, history, parts)
+    ctx = RunContext(llm, tools, _system(catalog, account_id, settings), parts, settings, prompt, cases_llm, plan)
     checked = bool(settings.verifier_url) and "rules" in parts and ("offer_main" in parts or verify)
     current = tools.current() if "rules" in parts else None
     start: dict[str, Any] = {
-        "messages": [HumanMessage(content=intro(prompt, parts, context, existing, current, earlier))],
+        "messages": [HumanMessage(content=intro(prompt, parts, context, existing, current, found))],
         "turns": 0,
         "max_turns": settings.max_turns,
         "usage": {},
@@ -222,12 +282,16 @@ def _run(
         if last.get("verdict"):
             _verdict(res, last["verdict"], last.get("cases_info"), last.get("repair"))
             if last.get("cases"):  # the agent's test cases and every check's answers, whatever the verdict
-                res["diagnostics"]["verify"]["evidence"] = {"cases": last["cases"], "checks": last.get("checks") or []}
-        if earlier:  # which earlier offers the model was shown
+                res["diagnostics"]["verify"]["evidence"] = {
+                    "cases": last["cases"],
+                    "checks": last.get("checks") or [],
+                    **({"plan": plan} if plan else {}),
+                }
+        if found:  # which earlier offers the model was shown
             res["diagnostics"]["earlier"] = {
-                "named": [e.name for e in earlier["named"]],
+                "named": [e.name for e in found["named"]],
                 "s": round(earlier_s, 2),
-                "similar": [[e.id, round(sc, 3)] for sc, e in earlier["similar"]],
+                "similar": [[e.id, round(sc, 3)] for sc, e in found["similar"]],
             }
         return res
 

@@ -126,9 +126,11 @@ Offer semantics:
 
 HISTORY_RULE = """
 Earlier offers, when the message shows them, are what this tenant built before for similar descriptions. They are
-not part of the request. Use them only to choose among things the description leaves open: which attribute, counter
-or tag this tenant uses for a concept. Never take a value from them (amount, multiplier, store, tier, date, limit,
-privilege) that the description does not state. When the description and an earlier offer differ, the description
+not part of the request, and some are prebuilt offers shared by several tenants. Use them only to choose among
+things the description leaves open: which counter or reward tag this tenant uses for a concept. Never take an attribute
+from them: the attributes an offer reads come from this tenant's catalog (and the offer's plan, when there is one).
+Never take a value from them (amount, multiplier, store, tier, date, limit, privilege) that the description does not
+state. When the description and an earlier offer differ, the description
 wins. Anything you took from an earlier offer goes in assumptions, naming the offer. An offer the manager refers to
 by name ("like our Ramadan offer") is part of the request: follow it where the description does not say otherwise. A
 name that appears only as ordinary words of the description ("in the birthday month") is not a reference.

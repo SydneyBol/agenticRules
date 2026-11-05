@@ -34,6 +34,7 @@ class Settings:
     )
     verifier_url: str = ""  # the verifier service (compile + engine, a separate deployable); "" = no engine check
     verify_repair_turns: int = 4  # model turns the one repair after a failed engine check may take
+    shared_plan: bool = True  # the engine-checked run first writes one plan that build and cases both read
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:

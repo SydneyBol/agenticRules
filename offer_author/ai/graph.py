@@ -247,7 +247,8 @@ def cases_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str, 
     sc = scenarios or []
     aims = {a: sum(s.get("aim") == a for s in sc) for a in ("positive", "negative")}
     size = {"scenarios": len(sc), **aims, "bits": sum(len(s.get("bits") or []) for s in sc)}
-    return {"cases": scenarios, "cases_info": {"s": info["s"], **size, **info["usage"]}}
+    cover = {k: info[k] for k in ("uncovered_first", "uncovered") if k in info}
+    return {"cases": scenarios, "cases_info": {"s": info["s"], **size, **cover, **info["usage"]}}
 
 
 def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str, Any]:

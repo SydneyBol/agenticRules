@@ -230,6 +230,10 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     "bit_calendar_date_in_filter": lambda f: "an if_generic_adaptive reading h_bit_date as CALENDAR_DATE in the On "
     "Activity filter: the screen writes it with a variable only a rule has, and the offer's rules do not compile. The "
     "filter's own condition block (activity_criteria) and a rule condition both compile",
+    "not_a_transaction_attribute": lambda f: f"activity_attribute {f['name']!r} is not an attribute of the "
+    "transaction in the catalog: the screen leaves the value empty and the offer's rules do not compile. "
+    "activity_attribute reads the transaction's attributes; an offer counter or an activity-level value is read with "
+    "member_attribute at its own level",
     "attribute_not_of_level": lambda f: f"{f['name']} is not an attribute of ATTRIBUTE_TYPE {f['given']}: the catalog "
     f"lists it under {f['owner']}, and the screen drops an ATTRIBUTE its level does not list",
     "segment_prompt_without_segment": lambda f: "Offer Main's segment_prompt names who the offer is for, but the "

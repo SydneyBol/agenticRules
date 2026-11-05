@@ -157,3 +157,24 @@ def test_rule_without_a_tag_of_its_own_is_reported():
         "rule_tag_repeated"
     ]
     assert _tag_problems(tree(rule("r1", "Birthday 2x"), rule("r2", "Once a year"))) == []
+
+
+def test_an_activity_attribute_naming_a_counter_is_reported(fixture_catalog):
+    """C03 (2026-11-05): activity_attribute 'Daily Points' (an offer counter) compiles to an empty read."""
+    from offer_author.core.canvas.checks.screen_fields import _shape
+    from offer_author.domain import BlockRef
+
+    block = BlockRef("activity_attribute", "v1")
+    counter = {"type": "activity_attribute", "id": "v1", "fields": {"ATTRIBUTE": "Daily Points"}}
+    amount = {"type": "activity_attribute", "id": "v1", "fields": {"ATTRIBUTE": "h_bit_amount"}}
+    shape = lambda n: [p.code for p in _shape(n, n["fields"], fixture_catalog, block, None)]
+    assert shape(counter) == ["not_a_transaction_attribute"] and shape(amount) == []
+
+
+def test_a_check_where_nothing_ran_tells_the_build_the_rules_do_not_compile():
+    from offer_author.ai.cases import mismatch_message
+
+    told = mismatch_message(
+        {"ok": False, "scenarios": [{"scenario": 0, "error": "x"}], "mismatches": [], "compile": {}}
+    )
+    assert "do not compile in the engine" in told and "no problem" in told and "rule " not in told

@@ -12,9 +12,10 @@ import json
 import time
 from typing import Any, Literal
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from . import plan as plans
 from .tools import RunContext, _schema
 
 
@@ -33,7 +34,8 @@ class CaseBit(BaseModel):
     """One transaction of a scenario, and what it gives."""
 
     header: dict[str, Any] = Field(
-        description="h_bit_date (ISO date-time, inside the offer's dates), h_bit_amount, h_location (a store code "
+        description="h_bit_date (ISO date-time in the program's own time zone, written without an offset, as Offer "
+        "Testing sends it; inside the offer's dates), h_bit_amount, h_location (a store code "
         "from the catalog), h_bit_type when the activity is not Spend, and any other header attribute the offer reads. "
         "The engine processes each test transaction on its own h_bit_date, as a program sends a transaction when it "
         "happens: a segment's current date is that day"
@@ -77,6 +79,10 @@ class Scenario(BaseModel):
         "as the member is",
     )
     bits: list[CaseBit] = Field(description="the member's transactions, in order")
+    covers: list[str] = Field(
+        default_factory=list,
+        description="the ids of the offer's plan this scenario covers (clauses, edges, kinds, what is remembered)",
+    )
 
 
 class Cases(BaseModel):
@@ -112,23 +118,68 @@ TASK = (
 )
 
 
+PLANNED = (
+    "\n\nThe offer's plan, written from the same description; the run that builds the offer reads it too:\n{plan}"
+    "\n\nCover the plan: every clause with a positive and a negative scenario, every edge from both sides (its "
+    "inside and its outside value), every kind, and every remembered item before and after it is set. Each scenario "
+    "lists in covers the plan ids it covers. Read every term as the plan's readings say."
+)
+MISSING = (
+    "These plan ids are not covered by any scenario: {ids}. Call write_cases again with only the scenarios that "
+    "cover them (the ones you wrote are kept)."
+)
+
+
 def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]:
-    """One model turn writing the cases.
+    """One model turn writing the cases; with a plan, one more turn for the plan ids no scenario covers.
 
     Returns:
-        (the scenarios, or None when the turn wrote none that fit the schema; the turn's usage and time).
+        (the scenarios, or None when the turn wrote none that fit the schema; the turns' usage and time, and the
+        plan coverage).
     """
     t0 = time.time()
-    turn = (ctx.cases_llm or ctx.llm).turn(ctx.system, [HumanMessage(content=ctx.prompt + TASK)], tools=[WRITE_CASES])
-    info = {"s": round(time.time() - t0, 1), "usage": turn.usage}
+    llm = ctx.cases_llm or ctx.llm
+    task = TASK + (PLANNED.format(plan=plans.text(ctx.plan)) if ctx.plan else "")
+    messages: list[Any] = [HumanMessage(content=ctx.prompt + task)]
+    turn = llm.turn(ctx.system, messages, tools=[WRITE_CASES])
+    usage = dict(turn.usage or {})
+    scenarios, call = _scenarios(turn)
+    info: dict[str, Any] = {}
+    if ctx.plan and scenarios is not None and call is not None:
+        missing = _uncovered(ctx.plan, scenarios)
+        info["uncovered_first"] = missing
+        if missing:
+            messages += [
+                turn.message,
+                ToolMessage(
+                    content=MISSING.format(ids=", ".join(missing)), tool_call_id=call["id"], name="write_cases"
+                ),
+            ]
+            more = llm.turn(ctx.system, messages, tools=[WRITE_CASES])
+            for k, v in (more.usage or {}).items():
+                usage[k] = usage.get(k, 0) + (v or 0)
+            added, _ = _scenarios(more)
+            scenarios += added or []
+            info["uncovered"] = _uncovered(ctx.plan, scenarios)
+    info = {"s": round(time.time() - t0, 1), "usage": usage, **info}
+    if not scenarios:
+        return None, info
+    return scenarios, info
+
+
+def _scenarios(turn: Any) -> tuple[list[dict[str, Any]] | None, dict[str, Any] | None]:
+    """The scenarios a turn wrote with write_cases (None when they do not fit the schema), and the call."""
     call = next((c for c in turn.message.tool_calls if c["name"] == "write_cases"), None)
     try:
         cases = Cases.model_validate(call["args"]) if call else None
     except ValidationError:
         cases = None
-    if cases is None or not cases.scenarios:
-        return None, info
-    return [s.model_dump() for s in cases.scenarios], info
+    return ([s.model_dump() for s in cases.scenarios] if cases else None), call
+
+
+def _uncovered(plan: dict[str, Any], scenarios: list[dict[str, Any]]) -> list[str]:
+    covered = {x for s in scenarios for x in s.get("covers") or []}
+    return [x for x in plans.to_cover(plan) if x not in covered]
 
 
 def _counters_before(scenario: dict[str, Any], bit: int) -> dict[str, Any]:
@@ -182,6 +233,14 @@ def mismatch_message(report: dict[str, Any]) -> str:
             }
         )
     problems = [p for part in (report.get("compile") or {}).values() for p in part or []]
+    if not rows:  # nothing ran: the rules the screen made did not compile in the engine (2026-11-05 C03)
+        return (
+            "The offer's test cases could not run in the engine on your canvases: the rules the stock screen made from "
+            "them do not compile in the engine, though the screen reported "
+            + (json.dumps(problems) if problems else "no problem")
+            + ". A block reads something the screen leaves empty: a value block naming an attribute or counter its "
+            "own list does not have. Fix the blocks (compose with edits on the segment or rules canvas), then finish."
+        )
     text = (
         "The offer's test cases were run in the engine on your canvases, with mocked members as Offer Testing runs "
         "them. These transactions did not give what the cases expect:\n"

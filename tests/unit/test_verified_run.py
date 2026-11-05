@@ -38,7 +38,7 @@ BAD = {
         }
     ],
 }
-SETTINGS = Settings(verifier_url="http://verifier", value_search=False)
+SETTINGS = Settings(verifier_url="http://verifier", value_search=False, shared_plan=False)  # the flow before the plan
 
 
 @pytest.fixture
