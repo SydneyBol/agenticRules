@@ -215,12 +215,13 @@ def _num(v: Any) -> Any:
     return int(v) if isinstance(v, float) and v.is_integer() else ("empty" if v in (None, "") else v)
 
 
-def mismatch_message(report: dict[str, Any]) -> str:
+def mismatch_message(report: dict[str, Any], outlines: dict[str, dict[str, Any] | None] | None = None) -> str:
     """The failed engine check, as the build run reads it: per transaction, the case, what it expects, what it got.
 
     Never the compiled rules: the scenario, the member, the transaction's header, the two results, the offer
     counters (the canvas's own names) before and after the transaction, and what each rule did on it, in the order
-    the rules ran (their IDENTIFIERs: points, privileges, counter changes).
+    the rules ran (their IDENTIFIERs: points, privileges, counter changes). With outlines (Canvases.outline), the
+    canvases as last composed with their block ids, so the fix is sent as edits.
     """
     rows = []
     by_scenario = {s["scenario"]: s for s in report.get("scenarios") or []}
@@ -244,21 +245,31 @@ def mismatch_message(report: dict[str, Any]) -> str:
             }
         )
     problems = [p for part in (report.get("compile") or {}).values() for p in part or []]
+    shown = "".join(
+        f"\n\nThe {c} canvas as you last composed it (block ids for edits):\n" + json.dumps(o, separators=(",", ":"))
+        for c, o in (outlines or {}).items()
+        if o
+    )
+    edits = (
+        "compose with edits by these block ids (only the blocks that change; the rest stay as they are), never the "
+        "whole tree again, with finish in the same compose"
+    )
     if not rows:  # nothing ran: the rules the screen made did not compile in the engine (2026-11-05 C03)
         return (
             "The offer's test cases could not run in the engine on your canvases: the rules the stock screen made from "
             "them do not compile in the engine, though the screen reported "
             + (json.dumps(problems) if problems else "no problem")
             + ". A block reads something the screen leaves empty: a value block naming an attribute or counter its "
-            "own list does not have. Fix the blocks (compose with edits on the segment or rules canvas), then finish."
+            "own list does not have." + shown + "\n\nFix the blocks: " + edits + "."
         )
     text = (
         "The offer's test cases were run in the engine on your canvases, with mocked members as Offer Testing runs "
         "them. These transactions did not give what the cases expect:\n"
         + json.dumps(rows, indent=1)
         + (("\nThe stock screen also reported: " + json.dumps(problems)) if problems else "")
-        + "\n\nThe test cases are fixed: they will not change. Fix the blocks (compose with edits on the segment or "
-        "rules canvas) so the offer does what the description says, then finish. If a case misreads the description, "
-        "keep the blocks and name that clause in an assumption, then finish."
+        + shown
+        + "\n\nThe test cases are fixed: they will not change. Fix the blocks so the offer does what the description "
+        "says: " + edits + ". If a case misreads the description, keep the blocks and name that clause in an "
+        "assumption, then finish."
     )
     return text

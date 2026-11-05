@@ -133,6 +133,27 @@ class SetOfferMain(BaseModel):
     )
 
 
+class Finish(BaseModel):
+    """Input of finish: what the manager reads with the offer."""
+
+    readback: Readback
+    segment_name: SegmentName | None = None
+    segment_description: str | None = None
+    assumptions: list[Note]
+    blocking_questions: list[Note]
+    unsupported: list[Unsupported]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _one_note_as_a_list(cls, v: Any) -> Any:
+        """One note sent as a plain string instead of a list of them (live 2026-10-26): a list of that one."""
+        if isinstance(v, dict):
+            v = {
+                k: [x] if k in ("assumptions", "blocking_questions") and isinstance(x, str) else x for k, x in v.items()
+            }
+        return v
+
+
 class Canvas(BaseModel):
     """Input of compose: a whole block tree, or edits and loose blocks on the canvas's last one."""
 
@@ -169,27 +190,11 @@ class Canvas(BaseModel):
         "you attach where it cannot plug in is moved here by the "
         "tools, and the result says why",
     )
-
-
-class Finish(BaseModel):
-    """Input of finish: what the manager reads with the offer."""
-
-    readback: Readback
-    segment_name: SegmentName | None = None
-    segment_description: str | None = None
-    assumptions: list[Note]
-    blocking_questions: list[Note]
-    unsupported: list[Unsupported]
-
-    @model_validator(mode="before")
-    @classmethod
-    def _one_note_as_a_list(cls, v: Any) -> Any:
-        """One note sent as a plain string instead of a list of them (live 2026-10-26): a list of that one."""
-        if isinstance(v, dict):
-            v = {
-                k: [x] if k in ("assumptions", "blocking_questions") and isinstance(x, str) else x for k, x in v.items()
-            }
-        return v
+    finish: Finish | None = Field(
+        None,
+        description="With the compose that completes the offer: the finish fields. The run ends when every canvas's "
+        "last compose is clean, with no separate finish call; with problems, they come back with this result",
+    )
 
 
 @dataclass
@@ -339,7 +344,11 @@ def set_offer_main(runtime: ToolRuntime[RunContext], **fields: Any) -> tuple[str
 @tool("compose", args_schema=Canvas, response_format="content_and_artifact")
 def compose(runtime: ToolRuntime[RunContext], **fields: Any) -> tuple[str, Done]:
     """Write the canvas as XML and check it: block types and where each plugs in, field values and catalog codes, the fields the screen needs filled, and the counters. Returns the problems by block id and where they sit, and the loose blocks."""  # noqa: E501
-    return _call(runtime.context, runtime.context.run.compose, fields)
+    finish = fields.pop("finish", None)
+    text, done_ = _call(runtime.context, runtime.context.run.compose, fields)
+    if finish is not None:  # judged once the turn's other calls have run, as a finish call is (graph.py)
+        done_.input["finish"] = _plain(finish)
+    return text, done_
 
 
 @tool("finish", args_schema=Finish, response_format="content_and_artifact")

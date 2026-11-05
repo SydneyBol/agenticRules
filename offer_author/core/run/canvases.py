@@ -119,6 +119,18 @@ class Canvases:
             "counters": self.saved_counters,
         }
 
+    def outline(self, canvas: str) -> dict[str, Any] | None:
+        """A canvas as last composed, as the model reads it (compact blocks with the ids edits name), or None.
+
+        Shown with a repair, so the fix is sent as edits by these ids instead of the whole tree again (A/B 1: two
+        repairs resent the full tree, 7.1k characters against 3.3k, in 47-54 s turns).
+        """
+        tops = self.trees.get(canvas)
+        if not tops:
+            return None
+        counters = list(self.declared.get(canvas, {}).values()) or self.saved_counters
+        return {"root": compact(tops[0], counters), "loose": [compact(t, counters) for t in tops[1:]]}
+
     def edited(self, canvas: str) -> bool:
         """The canvas is the saved one, edited (its saved text is kept where unchanged)."""
         return canvas == "rules" and self.doc is not None and canvas not in self.rebuilt

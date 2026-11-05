@@ -335,3 +335,50 @@ def test_the_check_runs_the_offer_to_the_end_of_its_last_day_as_the_screen_saves
         "2026-12-01T00:00:00",
         "2027-01-31T23:59:00",
     )
+
+
+def test_finish_sent_with_the_compose_ends_the_build_in_that_turn_and_the_engine_check_starts_at_once(
+    fixture_catalog, verifier_calls
+):
+    # A/B 1 (2026-11-05): 28 of 52 finish calls took a turn of their own (~4 s) before the engine check could start
+    sent, answers = verifier_calls
+    answers.append(OK)
+    res, llm, _ = run(fixture_catalog, [[offer_main()], [("compose", {**S07, "finish": FIN[1]})]])
+    assert res["status"] == "draft" and len(llm.calls) == 2 and len(sent) == 1
+    assert res["readback"] == FIN[1]["readback"] and res["diagnostics"]["verify"]["ok"]
+    assert [t["tool"] for t in res["diagnostics"]["trace"] if t["tool"] in ("compose", "finish")] == [
+        "compose",
+        "finish",
+    ]
+
+
+def test_finish_with_a_compose_that_has_problems_comes_back_with_them_and_the_next_turn_fixes_them(
+    fixture_catalog, verifier_calls
+):
+    sent, answers = verifier_calls
+    answers.append(OK)
+    broken = json.loads(json.dumps(S07).replace('"picked": "SPEND"', '"picked": "NO_SUCH_TYPE"'))
+    assert broken != S07
+    broken["finish"] = FIN[1]
+    res, llm, _ = run(
+        fixture_catalog, [[offer_main()], [("compose", broken)], [("compose", {**S07, "finish": FIN[1]})]]
+    )
+    told = json.dumps(llm.calls[2])
+    assert "not finished" in told and len(llm.calls) == 3
+    assert res["status"] == "draft" and len(sent) == 1
+
+
+def test_the_repair_shows_the_canvas_with_its_block_ids_and_asks_for_edits_with_finish(fixture_catalog, verifier_calls):
+    _, answers = verifier_calls
+    answers += [BAD, OK]
+    repair = [("compose", {"canvas": "rules", "edits": [{"id": "b1", "fields": {}}], "finish": FIN[1]})]
+    res, llm, _ = run(fixture_catalog, [[offer_main()], [("compose", {**S07, "finish": FIN[1]})], repair])
+    told = json.loads(json.dumps(llm.calls[2]))
+    text = json.dumps(told)
+    assert "The rules canvas as you last composed it (block ids for edits)" in text
+    assert (
+        '\\"id\\":\\"b1\\"' in text
+        and "never the whole tree again" in text
+        and "with finish in the same compose" in text
+    )
+    assert len(llm.calls) == 3 and res["diagnostics"]["verify"]["repaired"] and res["status"] == "draft"

@@ -37,7 +37,7 @@ from ..domain import Problem, Result, ToolInput
 from . import cases, render
 from .tools import SCHEMAS, TOOLS, Done, RunContext, content, done, schema_error, started_or_run
 
-NUDGE = "Use the tools: compose, then finish."
+NUDGE = "Use the tools: compose, with finish in the compose that completes the offer."
 
 
 class AgentState(TypedDict, total=False):
@@ -159,9 +159,40 @@ def judge(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, Any]:
                 )
             )
         ctx.run.trace.append(traced(state["turns"], name, x, out, ctx.settings.trace_inputs))
+    if fin is None and not any(c["name"] == "finish" for c in ai.tool_calls):
+        fin = _finish_with_compose(ctx, state["turns"], ai, results, judged)
     if fin is None and tuple(ctx.parts) == ("offer_main",) and ctx.run.offer_main.value is not None:
         fin = {}  # an Offer Main run ends once the form is accepted: the rest of the job is built after it
     return {"messages": judged, "fin": fin}
+
+
+def _finish_with_compose(
+    ctx: RunContext, turn: int, ai: AIMessage, results: dict[str, ToolMessage], judged: list[ToolMessage]
+) -> dict[str, Any] | None:
+    """The finish fields sent with the turn's last compose, judged as a finish call is: the accepted fields or None.
+
+    That compose's result gets the verdict under "finish" (A/B 1, 2026-11-05: 28 of 52 finish calls came in a turn
+    of their own, ~4 s each, before the engine check could start).
+    """
+    calls = [c for c in ai.tool_calls if c["name"] == "compose"]
+    with_finish = [
+        results[c["id"] or ""]
+        for c in calls
+        if isinstance((m := results[c["id"] or ""]).artifact, Done) and "finish" in m.artifact.input
+    ]
+    if not with_finish:
+        return None
+    msg = with_finish[-1]
+    x, out = done(msg)
+    accepted, verdict = judge_finish(ctx.run, ctx.parts, x["finish"])
+    merged = {**(out or {}), "finish": verdict}
+    judged.append(
+        ToolMessage(
+            id=msg.id, content=content(merged), tool_call_id=msg.tool_call_id, name="compose", artifact=Done(x, merged)
+        )
+    )
+    ctx.run.trace.append(traced(turn, "finish", x["finish"], verdict, ctx.settings.trace_inputs))
+    return accepted
 
 
 def _after_model(state: AgentState) -> str:
@@ -285,7 +316,7 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
     evidence["canvases_checked"] = _canvases(body)
     if report.get("ok") or n >= ctx.settings.verify_repairs or unchanged:
         return {"verdict": verdict, "checks": checks, "repair_asked": False, **({"repair": evidence} if n else {})}
-    message = cases.mismatch_message(report)
+    message = cases.mismatch_message(report, {c: ctx.run.canvases.outline(c) for c in ("rules", "segment")})
     if not n:
         evidence = {
             "first_check": _mismatches(report),

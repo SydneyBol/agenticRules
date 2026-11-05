@@ -81,11 +81,11 @@ Work like this:
 4. Before you compose, check the rules against how the engine runs them (the knowledge below): for each kind of
    transaction the description implies, including boundaries and repeats across transactions, the rules give what
    was asked, and every counter is read and updated where the knowledge says it is seen.
-5. finish with the readback, assumptions, blocking_questions, unsupported, segment name and description. It ends the
-   run when every canvas's last compose is clean.
-Tools in one turn run in call order and each sees what the previous one did. Send compose and finish in the same
-turn: a finish after a compose with problems is sent back with them, and you fix them in the next turn. Every turn
-costs the manager waiting time.
+5. finish: the readback, assumptions, blocking_questions, unsupported, segment name and description, given in the
+   finish field of the compose that completes the offer. It ends the run when every canvas's last compose is clean;
+   with problems, they come back with that compose's result and you fix them in the next turn.
+Tools in one turn run in call order and each sees what the previous one did. Every turn costs the manager waiting
+time: a turn of its own for finish is one more.
 
 Saved rules and single blocks:
 - When the message shows the rules saved on this offer, a request to change, add to, keep or remove part of them is
@@ -121,7 +121,8 @@ Offer semantics:
   codes (then ask even if the draft uses all of them). Still build everything else.
 - Something that cannot be expressed on a single member's own data and transactions goes in `unsupported` with an
   alternative.
-- Always end with finish. Do not answer in prose.
+- Always end with finish (in the last compose, or the finish tool when nothing is left to compose). Do not answer
+  in prose.
 """
 
 HISTORY_RULE = """
