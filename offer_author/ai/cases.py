@@ -141,6 +141,8 @@ def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]
     t0 = time.time()
     llm = ctx.cases_llm or ctx.llm
     task = TASK + (PLANNED.format(plan=plans.text(ctx.plan)) if ctx.plan else "")
+    if ctx.attributes:  # the data the terms refer to, confirmed once for the build and the cases (never its logic)
+        task += "\n\n" + ctx.attributes
     messages: list[Any] = [HumanMessage(content=ctx.prompt + task)]
     turn = llm.turn(ctx.system, messages, tools=[WRITE_CASES])
     usage = dict(turn.usage or {})

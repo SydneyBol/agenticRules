@@ -248,6 +248,7 @@ class RunContext:
         prompt: The manager's description (the test-case branch writes its cases from it).
         cases_llm: The chat model of the test-case branch (default: llm).
         plan: The offer's plan both the build run and the test cases read (plan.py), or None.
+        attributes: The confirmed attributes as the test cases read them (attributes.hint), or "".
     """
 
     llm: Any
@@ -258,6 +259,7 @@ class RunContext:
     prompt: str = ""
     cases_llm: Any = None
     plan: dict[str, Any] | None = None
+    attributes: str = ""
     timing: Timing = field(default_factory=Timing)
     started: dict[str, Future[ToolMessage]] = field(default_factory=dict)
     invalid: set[str] = field(default_factory=set)

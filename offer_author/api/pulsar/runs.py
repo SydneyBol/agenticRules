@@ -187,15 +187,22 @@ class Runs:
         auth: str | None,
         context: str | None,
         existing: dict[str, Any] | None,
+        attributes: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """A rules-only run for the rules screen's prompt."""
+        """A rules-only run for the rules screen's prompt (with the attributes the offer's job confirmed, if any)."""
         catalog = self.catalog_for(body.get("sponsor_id"), None, auth)
         self.prompts.add(catalog.tenant, body.get("id"), prompt)  # paired with the offer's saved rules by core.harvest
         return self._then_refresh(
             body.get("sponsor_id"),
             auth,
             lambda: self.agent(
-                prompt, catalog, offer_id=body.get("id"), parts=("rules",), context=context, existing=existing
+                prompt,
+                catalog,
+                offer_id=body.get("id"),
+                parts=("rules",),
+                context=context,
+                existing=existing,
+                attributes=attributes,
             ),
         )
 
@@ -218,6 +225,7 @@ class Runs:
         ):
             return oj
         ctx = rules_context(oj.offer_main, oj.result.get("segment")) if oj and oj.offer_main else None
+        found = confirmed(oj)  # the offer job's attributes: reused when this prompt says nothing new
         # a different set of existing counters (names) or saved canvas is a different answer: part of the job key
         sig = (
             json.dumps(body["existing_counters"], sort_keys=True, default=str) if body.get("existing_counters") else ""
@@ -226,7 +234,7 @@ class Runs:
             sig += "|" + hashlib.sha1(str(body["current_rules_xml"]).encode()).hexdigest()
         return store.start(
             store.key(offer_id, prompt + sig),
-            lambda job: self.rules_only(body, prompt, auth, ctx, self.existing_counters(body, auth)),
+            lambda job: self.rules_only(body, prompt, auth, ctx, self.existing_counters(body, auth), found),
         )
 
     def deliver(self, job: Job, body: dict[str, Any], prompt: str, auth: str | None) -> dict[str, Any] | None:
@@ -250,8 +258,19 @@ class Runs:
             context = rules_context(job.offer_main or {}, res.get("segment"))
             again = self.store.start(
                 self.store.key(body.get("id"), prompt + "|counters"),
-                lambda j: self.rules_only(body, prompt, auth, context, existing),
+                lambda j: self.rules_only(body, prompt, auth, context, existing, confirmed(job)),
             )
             again.wait(jobs.WAIT_CACHED_S)
             return again.result if again.state == "done" else None
         return dict(res, rules=dict(res["rules"], counter_report=guard.report(posted)))
+
+
+def confirmed(job: Job | None) -> dict[str, Any] | None:
+    """The attributes a finished job confirmed ({value, prompt}), for a later rules run of the same offer.
+
+    None while it runs or when it had none (AttributeGrounding.md, Reuse).
+    """
+    if job is None or job.state != "done":
+        return None
+    found = ((job.result or {}).get("diagnostics") or {}).get("attributes") or {}
+    return found if found.get("value") else None

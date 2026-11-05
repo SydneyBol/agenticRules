@@ -15,7 +15,7 @@ from tests.support import finish, golden, offer_main
 
 S07 = golden("S07_every_5th_visit")
 FIN = finish(readback="every 5th visit earns a coffee")
-SETTINGS = Settings(verifier_url="http://verifier", value_search=False)
+SETTINGS = Settings(verifier_url="http://verifier", value_search=False, shared_plan=True)  # off by default since A/B 1
 OK = {"ok": True, "compile": {"rules": []}, "scenarios": [{"scenario": 0, "bits": [{}]}], "mismatches": []}
 PLAN = {
     "clauses": [{"id": "C1", "text": "every 5th visit earns a coffee", "gives": "a coffee"}],

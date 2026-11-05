@@ -56,6 +56,13 @@ class ValueSearch:
         with self.lock:
             return [float(s) for s in self.ce.predict([(text, d) for d in docs], batch_size=64)]
 
+    def nearest_many(self, docs: list[str], texts: list[str], k: int) -> list[list[int]]:
+        """For each text, the indexes of the k docs nearest it by meaning: the texts embedded in one batch."""
+        vectors = self._vectors(docs)
+        with self.lock:
+            q = self.bi.encode([self.query + t for t in texts], normalize_embeddings=True, batch_size=64)
+        return [[int(i) for i in np.argsort(-(vectors @ v))[:k]] for v in q]
+
     def warm(self, catalog: Catalog) -> ValueSearch:
         """Embeds every value list of the catalog and runs the cross-encoder once, so no lookup pays a first call."""
         for obj, attrs in catalog.attributes.items():

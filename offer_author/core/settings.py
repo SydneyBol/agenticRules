@@ -35,7 +35,10 @@ class Settings:
     verifier_url: str = ""  # the verifier service (compile + engine, a separate deployable); "" = no engine check
     verify_repair_turns: int = 4  # model turns each repair after a failed engine check may take
     verify_repairs: int = 2  # repairs after failed engine checks: a second only when the first one's recheck fails
-    shared_plan: bool = True  # the engine-checked run first writes one plan that build and cases both read
+    shared_plan: bool = False  # the engine-checked run first writes one plan that build and cases both read (off:
+    # A/B 1, 2026-11-05, no accuracy gain for +6 s p50 and +40% calls; SharedPlan.md)
+    attributes: bool = False  # the attribute step: which catalog data the terms refer to, confirmed once for the
+    # build and the cases (AttributeGrounding.md); off until its A/B
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:

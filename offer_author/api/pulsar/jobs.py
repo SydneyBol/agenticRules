@@ -102,6 +102,9 @@ def _log_finished(key: Key, res: dict[str, Any]) -> None:
         log.info("pulsar cases offer=%s %s", key[0], json.dumps(verify["evidence"], separators=(",", ":"), default=str))
     if verify.get("repair"):  # the repair's evidence: both checks' mismatches, the message, the canvases before it
         log.info("pulsar repair offer=%s %s", key[0], json.dumps(verify["repair"], separators=(",", ":"), default=str))
+    attributes = (res.get("diagnostics") or {}).get("attributes")
+    if attributes:  # the attribute step: its tokens, seconds and turns, and what it confirmed (AttributeGrounding.md)
+        log.info("pulsar attributes offer=%s %s", key[0], json.dumps(attributes, separators=(",", ":"), default=str))
     trace = (res.get("diagnostics") or {}).get("trace") or []
     if any("input" in t for t in trace):  # Settings.trace_inputs on
         log.info("pulsar job offer=%s trace=%s", key[0], json.dumps(trace, separators=(",", ":")))

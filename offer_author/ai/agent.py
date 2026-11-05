@@ -27,6 +27,7 @@ from langgraph.types import Send
 from ..core.run import PARTS, Run, error_result, outcome
 from ..core.settings import Settings
 from ..domain import Problem
+from . import attributes as grounding
 from . import graph
 from . import plan as plans
 from .model import LLMError
@@ -55,30 +56,31 @@ def run(
     settings: Settings | None = None,
     history: History | None = None,
     cases_llm: Any = None,
+    attributes: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The parts of an offer the job asks for (arguments as _run's).
 
     A job with Offer Main and other parts runs Offer Main first, on its own (so the Offer Main screen is answered
     before the rules are designed), then the segment and rules with that Offer Main as given (OfferMainFirst.md).
+    With settings.attributes on, the data the description's terms refer to is confirmed once, alongside Offer Main,
+    and both the build and the cases read it (AttributeGrounding.md); a rules or segment job is given the attributes
+    an earlier job of the offer confirmed ({value, prompt}: its diagnostics.attributes), reused when its description
+    says nothing new.
     """
+    t0 = time.time()
+    settings = settings or Settings()
     parts = tuple(p for p in PARTS if p in parts)
     kw: dict[str, Any] = dict(offer_id=offer_id, account_id=account_id, existing=existing, history=history)
     if "offer_main" not in parts or len(parts) == 1:
-        return _run(
-            prompt,
-            catalog,
-            llm,
-            parts=parts,
-            context=context,
-            on_offer_main=on_offer_main,
-            settings=settings,
-            cases_llm=cases_llm,
-            **kw,
-        )
-    t0 = time.time()
-    settings = settings or Settings()
+        return _single(prompt, catalog, llm, parts, context, on_offer_main, settings, cases_llm, attributes, t0, kw)
     rest = tuple(p for p in parts if p != "offer_main")
     planned = settings.shared_plan and bool(settings.verifier_url) and "rules" in rest
+    grounded = settings.attributes and bool(set(rest) & {"rules", "segment"})
+
+    def attributes_node(state: JobState) -> dict[str, Any]:
+        # beside Offer Main: the side runs' client (the cases', as the plan's), so the two runs never share a script
+        attrs, info = _grounding(prompt, catalog, cases_llm or llm, settings, account_id) if grounded else (None, {})
+        return {"attributes": attrs, "attributes_info": info}
 
     def plan_node(state: JobState) -> dict[str, Any]:
         if not planned:
@@ -107,15 +109,16 @@ def run(
 
     def build_node(state: JobState) -> dict[str, Any]:
         om = state["main"]["offer_main"]
+        hint = grounding.hint(state.get("attributes"), catalog)
+        told = f"{context}\n\n{offer_main_context(om)}" if context else offer_main_context(om)
         build = _run(
             prompt,
             catalog,
             llm,
             parts=rest,
-            context=_with_plan(
-                f"{context}\n\n{offer_main_context(om)}" if context else offer_main_context(om), state.get("plan")
-            ),
+            context=_with_plan("\n\n".join(c for c in (told, hint) if c), state.get("plan")),
             settings=settings,
+            attributes_hint=hint,
             cases_llm=cases_llm,
             offer_main=om,
             verify=True,
@@ -126,28 +129,84 @@ def run(
         return {"build": build}
 
     def prepared(state: JobState) -> str:
-        return "build" if state["main"].get("offer_main") else END
+        # not an offer, or a question first; or a term the description leaves open, asked before either branch reads it
+        if not state["main"].get("offer_main") or grounding.questions(state.get("attributes")):
+            return END
+        return "build"
 
     g = StateGraph(JobState)
     g.add_node("plan", plan_node)
     g.add_node("earlier", earlier_node)
     g.add_node("offer_main", offer_main_node)
     g.add_node("build", build_node)
-    # Offer Main (the popup waits on it), the plan and the earlier offers at once; the build run starts from all three
-    g.add_conditional_edges(START, lambda st: [Send("offer_main", st), Send("plan", st), Send("earlier", st)])
+    g.add_node("attributes", attributes_node)
+    # Offer Main (the popup waits on it), the attributes, the plan and the earlier offers at once; the build run (and
+    # its test cases) starts from all of them
+    g.add_conditional_edges(
+        START,
+        lambda st: [Send("offer_main", st), Send("attributes", st), Send("plan", st), Send("earlier", st)],
+    )
     g.add_node("prepared", lambda st: {})
-    g.add_edge(["offer_main", "plan", "earlier"], "prepared")
+    g.add_edge(["offer_main", "attributes", "plan", "earlier"], "prepared")
     g.add_conditional_edges("prepared", prepared, ["build", END])
     g.add_edge("build", END)
     job: Any = g.compile()
     out: dict[str, Any] = job.invoke({})
+    return _job_answer(out, parts, t0, prompt, catalog, grounded)
+
+
+def _job_answer(
+    out: dict[str, Any], parts: Sequence[str], t0: float, prompt: str, catalog: Catalog, grounded: bool
+) -> dict[str, Any]:
+    """A whole-offer job's answer from its graph's final state."""
     main = out["main"]
-    if "build" not in out:  # not an offer, or a question first: that answer is the job's
+    attrs, info = out.get("attributes"), out.get("attributes_info") or {}
+    if "build" not in out and main.get("offer_main") and (asked := grounding.questions(attrs)):
+        return _asked(asked, parts, t0, main=main, attrs_info=_kept(info, attrs, prompt))
+    if "build" not in out:  # not an offer, or a question first: that answer is the job's (the attributes are dropped)
         return _whole_job(main, parts, t0)
     res = _merged(main, out["build"], parts, t0)
     if out.get("plan_info") is not None:
         res["diagnostics"]["plan"] = out["plan_info"]
-    return res
+    return _noted(res, attrs, info, prompt, catalog) if grounded else res
+
+
+def _single(
+    prompt: str,
+    catalog: Catalog,
+    llm: Any,
+    parts: tuple[str, ...],
+    context: str | None,
+    on_offer_main: Callable[[dict[str, Any]], None] | None,
+    settings: Settings,
+    cases_llm: Any,
+    stored: dict[str, Any] | None,
+    t0: float,
+    kw: dict[str, Any],
+) -> dict[str, Any]:
+    """A job of one part; a rules or segment job confirms its attributes first (or reuses the offer job's)."""
+    grounded = settings.attributes and parts in (("rules",), ("segment",))
+    attrs, info = (
+        _grounding(prompt, catalog, llm, settings, kw["account_id"], stored, (kw["existing"] or {}).get("rules_xml"))
+        if grounded
+        else (None, {})
+    )
+    if asked := grounding.questions(attrs):
+        return _asked(asked, parts, t0, attrs_info=_kept(info, attrs, prompt))
+    hint = grounding.hint(attrs, catalog)
+    res = _run(
+        prompt,
+        catalog,
+        llm,
+        parts=parts,
+        context="\n\n".join(c for c in (context, hint) if c) or None,
+        on_offer_main=on_offer_main,
+        settings=settings,
+        cases_llm=cases_llm,
+        attributes_hint=hint,
+        **kw,
+    )
+    return _noted(res, attrs, info, prompt, catalog) if grounded else res
 
 
 class JobState(TypedDict, total=False):
@@ -155,6 +214,8 @@ class JobState(TypedDict, total=False):
 
     plan: dict[str, Any] | None
     plan_info: dict[str, Any]
+    attributes: dict[str, Any] | None
+    attributes_info: dict[str, Any]
     earlier: tuple[dict[str, Any] | None, float]
     main: dict[str, Any]
     build: dict[str, Any]
@@ -223,6 +284,7 @@ def _run(
     verify: bool = False,
     earlier: tuple[dict[str, Any] | None, float] | None = None,
     plan: dict[str, Any] | None = None,
+    attributes_hint: str = "",
 ) -> dict[str, Any]:
     """One agent run for the given parts of an offer.
 
@@ -249,6 +311,8 @@ def _run(
         verify: Engine-check the rules although Offer Main is not one of the parts (it was set by an earlier run).
         earlier: The earlier-offer lookup, already made (_earlier's result).
         plan: The offer's plan (plan.py): the test cases cover it; the build run was given it in context.
+        attributes_hint: The confirmed attributes (attributes.hint): the test cases read them; the build run was given
+            them in context.
 
     Returns:
         core.run.outcome, with the model's usage and the run's timing in diagnostics.
@@ -260,7 +324,9 @@ def _run(
     if offer_main:
         tools.offer_main.value = dict(offer_main)
     found, earlier_s = earlier or _earlier(prompt, catalog, settings, offer_id, history, parts)
-    ctx = RunContext(llm, tools, _system(catalog, account_id, settings), parts, settings, prompt, cases_llm, plan)
+    ctx = RunContext(
+        llm, tools, _system(catalog, account_id, settings), parts, settings, prompt, cases_llm, plan, attributes_hint
+    )
     checked = bool(settings.verifier_url) and "rules" in parts and ("offer_main" in parts or verify)
     current = tools.current() if "rules" in parts else None
     start: dict[str, Any] = {
@@ -311,6 +377,112 @@ def _run(
         return done(last["result"])
     # notes the model tags for an Offer Main it was given land on that part, not on every part
     return done(outcome(tools, last.get("fin"), ("offer_main", *parts) if offer_main else parts, offer_id))
+
+
+def _grounding(
+    prompt: str,
+    catalog: Catalog,
+    llm: Any,
+    settings: Settings,
+    account_id: Any,
+    stored: dict[str, Any] | None = None,
+    saved_xml: str | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """The description's attributes (attributes.ground), or the stored ones when the description says nothing new.
+
+    Stored ones ({value, prompt}: an earlier job of this offer) are reused as they are when this description adds no
+    word to the one they were confirmed for (an edited amount or date adds none); otherwise, and for saved rules
+    edited in place, the agent starts from them (and from what the saved rules read). Never fails the run: without
+    attributes it goes on as before (the hint is only a hint).
+
+    Returns:
+        (the attributes or None, info for the diagnostics).
+    """
+    before = (stored or {}).get("value")
+    if before and not saved_xml and not _new_words(prompt, (stored or {}).get("prompt") or ""):
+        return before, {"reused": True, "s": 0.0}
+    start = grounding.merged(before, grounding.from_canvas(saved_xml, catalog))
+    try:
+        return grounding.ground(llm, _system(catalog, account_id, settings), prompt, catalog, searcher(settings), start)
+    except LLMError as e:
+        return None, {"error": str(e)[:300]}
+    except Exception as e:  # the build and the cases read the description alone, as without the step
+        log.exception("attribute step failed")
+        return None, {"error": f"{type(e).__name__}: {e}"[:300]}
+
+
+def _new_words(prompt: str, before: str) -> set[str]:
+    """The description's telling words the earlier one lacked.
+
+    Numbers aside (any word with a digit: an amount, an ordinal "5th", a date), and function words.
+    """
+    from ..core.tenant.attribute_search import function_words
+    from ..core.tenant.catalog import norm
+
+    def telling(text: str) -> set[str]:
+        return {w for w in norm(text).split() if not _numeric(w) and w not in function_words()}
+
+    return telling(prompt) - telling(before)
+
+
+def _numeric(word: str) -> bool:
+    return any(ch.isdigit() for ch in word)
+
+
+def _kept(info: dict[str, Any], attrs: dict[str, Any] | None, prompt: str) -> dict[str, Any]:
+    """The attribute step in the diagnostics: its info, and what a later rules or segment job may reuse."""
+    return {**info, **({"value": attrs, "prompt": prompt} if attrs else {})}
+
+
+def _noted(
+    res: dict[str, Any], attrs: dict[str, Any] | None, info: dict[str, Any], prompt: str, catalog: Catalog
+) -> dict[str, Any]:
+    """The result with the attribute step in its diagnostics and each settled ambiguity as an assumption."""
+    res.setdefault("diagnostics", {})["attributes"] = _kept(info, attrs, prompt)
+    notes = grounding.assumptions(attrs, catalog)
+    if notes and res.get("status") != "error":
+        res["assumptions"] = [*res.get("assumptions", []), *notes]
+        for part in ("rules", "segment"):
+            if part in (res.get("by_part") or {}):
+                res["by_part"][part]["assumptions"] = [*res["by_part"][part].get("assumptions", []), *notes]
+    return res
+
+
+def _asked(
+    questions: list[str],
+    parts: Sequence[str],
+    t0: float,
+    main: dict[str, Any] | None = None,
+    attrs_info: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """The job's answer when a term the description leaves open must be asked first: nothing built from it.
+
+    Offer Main (already answered on its screen) is kept; the segment and the rules ask the manager.
+    """
+    rest = [p for p in parts if p != "offer_main"]
+    res: dict[str, Any] = {
+        "status": "needs_input",
+        "readback": "",
+        "assumptions": [],
+        "blocking_questions": list(questions),
+        "unsupported": [],
+        "by_part": {p: {"assumptions": [], "blocking_questions": list(questions), "unsupported": []} for p in rest},
+        "offer_main": None,
+        "offer_settings": None,
+        "segment": None,
+        "rules": None,
+        "diagnostics": {"parts": list(parts), "attributes": attrs_info or {}},
+    }
+    if main:
+        res.update(offer_main=main.get("offer_main"), offer_settings=main.get("offer_settings"))
+        res["readback"] = main.get("readback") or ""
+        res["assumptions"] = list(main.get("assumptions") or [])
+        if "offer_main" in (main.get("by_part") or {}):
+            res["by_part"]["offer_main"] = main["by_part"]["offer_main"]
+        md = main.get("diagnostics") or {}
+        res["diagnostics"]["offer_main_run"] = {k: md.get(k) for k in ("latency_s", "turns", "usage", "timing")}
+    res["diagnostics"]["latency_s"] = round(time.time() - t0, 2)
+    return res
 
 
 def _verdict(

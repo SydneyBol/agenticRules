@@ -41,6 +41,9 @@ BOLAPI_LEVELS = {
 }
 
 ACTIVITY_TYPE = "h_bit_type"  # the activity attribute whose values are the tenant's activity types (lookup BIT_TYPE)
+# the transaction's own type, amount and date-time: nearly every offer reads them, and a description rarely names them
+# as such ("a spend of $50", "on weekends"), so attribute grounding always offers them (AttributeGrounding.md)
+TRANSACTION_FIELDS = (ACTIVITY_TYPE, "h_bit_amount", "h_bit_date")
 
 # value lists whose values set one offer apart from another of its kind: stores and tier classes (bolapi lookup types)
 DISTINCT_VALUE_LISTS = ("SPONSOR_LOCATION_LIST", "TIER_CLASS")
