@@ -1,0 +1,159 @@
+# Complex offers from six verticals (hotels, airlines, retail, telecom, restaurants, banks), 3 each, in devintam1 codes,
+# for tools/qa/check_offer_flow.py (OFFER_FLOW_CASES=tests/cases/verticals.yaml). Expectations written by hand from the
+# prompt and the usual readings, never from a generation.
+#
+# devintam1 codes: stores HQ (Chennai HQ), WEB (online store), Chennai, VJD (Vijayawada); tier_class GOLD, Silver,
+# Basic; privileges 37 (2 hours of yoga), 64 (complimentary voucher); point decimal scale 2.
+# BIT row: [date, amount, store, expect]: points (number), privilege id (string) or null (nothing). Times are the
+# program's local time. Each sequence is one member (default tier_class GOLD) whose counters carry from BIT to BIT.
+# Nov 2026: Mon 2, Tue 3, Wed 4, Thu 5, Fri 6, Sat 7, Sun 8, Tue 10.
+
+cases:
+  # ---- hotels: a BIT is a stay, its amount the bill ----
+  - id: V_HT1_every3rd_stay_online_rate
+    prompt: "Hotel stays: every 3rd stay of $150 or more at the Chennai HQ or Vijayawada hotel earns a complimentary voucher. Stays booked at the online store earn 2 points per whole $10 spent."
+    sequences:
+      - note: "3rd and 6th qualifying stays; $149.99 and online stays do not count toward the 3rd"
+        bits: [["2026-11-03T12:00:00", 150, HQ, null], ["2026-11-03T12:00:00", 200, VJD, null], ["2026-11-03T12:00:00", 149.99, HQ, null],
+               ["2026-11-03T12:00:00", 300, HQ, "64"], ["2026-11-03T12:00:00", 150, VJD, null], ["2026-11-03T12:00:00", 95, WEB, 18],
+               ["2026-11-03T12:00:00", 150, HQ, null], ["2026-11-03T12:00:00", 150, VJD, "64"]]
+      - note: "online rate, another hotel"
+        bits: [["2026-11-03T12:00:00", 160, WEB, 32], ["2026-11-03T12:00:00", 500, Chennai, null]]
+
+  - id: V_HT2_weekend_tier_multiplier_cap
+    prompt: "Weekend getaway: stays at the Vijayawada hotel on a Friday or Saturday earn 3x points for Silver members and 2x points for everyone else, up to a maximum of 1500 points per member."
+    sequences:
+      - member: {tier_class: Silver}
+        note: "cap crossed on the 2nd stay"
+        bits: [["2026-11-06T12:00:00", 200, VJD, 600], ["2026-11-07T12:00:00", 400, VJD, 900], ["2026-11-07T12:00:00", 100, VJD, null]]
+      - member: {tier_class: Silver}
+        note: "Sunday, another hotel (Chennai HQ), Thursday"
+        bits: [["2026-11-08T12:00:00", 100, VJD, null], ["2026-11-06T12:00:00", 100, HQ, null], ["2026-11-05T12:00:00", 100, VJD, null]]
+      - note: "everyone else 2x, cap"
+        bits: [["2026-11-07T12:00:00", 100, VJD, 200], ["2026-11-06T12:00:00", 750, VJD, 1300], ["2026-11-07T12:00:00", 10, VJD, null]]
+
+  - id: V_HT3_long_stay_bands_twice
+    prompt: "Long stays: a stay of $500 or more earns 1000 bonus points, and a stay from $200 to $499.99 earns 250 bonus points. A member gets this bonus at most twice."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 500, HQ, 1000], ["2026-11-03T12:00:00", 200, WEB, 250], ["2026-11-03T12:00:00", 199.99, HQ, null],
+               ["2026-11-03T12:00:00", 800, VJD, null]]
+      - bits: [["2026-11-03T12:00:00", 499.99, Chennai, 250], ["2026-11-03T12:00:00", 10000, HQ, 1000], ["2026-11-03T12:00:00", 600, HQ, null]]
+
+  # ---- airlines: a BIT is a booking, its amount the fare, its store the sales channel ----
+  - id: V_AL1_channel_rates_big_fare_bonus
+    prompt: "Flight bookings earn 5 points per whole $10 of fare when booked at the online store and 3 points per whole $10 everywhere else; a booking of $1000 or more also earns 500 bonus points."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 1000, WEB, 1000], ["2026-11-03T12:00:00", 95, WEB, 45], ["2026-11-03T12:00:00", 1000, HQ, 800],
+               ["2026-11-03T12:00:00", 9.99, HQ, null], ["2026-11-03T12:00:00", 999.99, Chennai, 297], ["2026-11-03T12:00:00", 1005, VJD, 800]]
+
+  - id: V_AL2_after_4th_booking_double
+    prompt: "Frequent flyer challenge: once a member has made 4 bookings of $300 or more, every further booking of $300 or more earns 2x points."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 300, HQ, null], ["2026-11-03T12:00:00", 400, WEB, null], ["2026-11-03T12:00:00", 299.99, HQ, null],
+               ["2026-11-03T12:00:00", 350, VJD, null], ["2026-11-03T12:00:00", 300, Chennai, null], ["2026-11-03T12:00:00", 300, HQ, 600],
+               ["2026-11-03T12:00:00", 299.99, HQ, null], ["2026-11-03T12:00:00", 500, WEB, 1000]]
+
+  - id: V_AL3_redeye_monthly
+    prompt: "Red-eye promo: bookings made from 10pm until 5:59am earn 1000 bonus points, at most once per calendar month per member. Bookings at the Vijayawada office do not qualify."
+    sequences:
+      - note: "once in November, again in December"
+        bits: [["2026-11-03T22:00:00", 100, HQ, 1000], ["2026-11-04T01:00:00", 100, HQ, null], ["2026-12-01T05:59:00", 50, WEB, 1000],
+               ["2026-12-02T23:30:00", 50, HQ, null]]
+      - note: "edges 9:59pm and 6am, Vijayawada, then a qualifying one"
+        bits: [["2026-11-03T21:59:00", 100, HQ, null], ["2026-11-03T06:00:00", 100, HQ, null], ["2026-11-03T23:00:00", 100, VJD, null],
+               ["2026-11-04T03:00:00", 100, Chennai, 1000]]
+
+  # ---- retail ----
+  - id: V_RT1_basket_bands_online_extra
+    prompt: "Retail spend bands: spends of $250 or more earn 3 points per $1, spends from $100 to $249.99 earn 2 points per $1, and smaller spends earn 1 point per $1. Spends at the online store earn 100 extra points on top."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 250, HQ, 750], ["2026-11-03T12:00:00", 100, Chennai, 200], ["2026-11-03T12:00:00", 99, VJD, 99],
+               ["2026-11-03T12:00:00", 250, WEB, 850], ["2026-11-03T12:00:00", 10, WEB, 110], ["2026-11-03T12:00:00", 249, HQ, 498]]
+
+  - id: V_RT2_three_stores_a_month
+    prompt: "Store explorer: a member who shops at 3 different stores in the same calendar month earns a complimentary voucher, once per month. Only spends of $20 or more count."
+    sequences:
+      - note: "3rd store in November; a 4th store pays nothing more; December starts again"
+        bits: [["2026-11-03T12:00:00", 20, HQ, null], ["2026-11-05T12:00:00", 50, HQ, null], ["2026-11-06T12:00:00", 19.99, VJD, null],
+               ["2026-11-07T12:00:00", 25, WEB, null], ["2026-11-09T12:00:00", 30, Chennai, "64"], ["2026-11-10T12:00:00", 30, VJD, null],
+               ["2026-12-01T12:00:00", 20, HQ, null], ["2026-12-02T12:00:00", 20, WEB, null], ["2026-12-03T12:00:00", 20, VJD, "64"]]
+
+  - id: V_RT3_welcome_then_big_basket
+    prompt: "Retail welcome: a member's first spend of $50 or more earns 500 bonus points. After that, every spend over $400 at the Chennai HQ store earns a free 2 hours of yoga session."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 49.99, HQ, null], ["2026-11-03T12:00:00", 50, WEB, 500], ["2026-11-03T12:00:00", 401, HQ, "37"],
+               ["2026-11-03T12:00:00", 400, HQ, null], ["2026-11-03T12:00:00", 500, Chennai, null], ["2026-11-03T12:00:00", 60, WEB, null]]
+
+  # ---- telecom: a BIT is a bill payment or recharge ----
+  - id: V_TC1_bill_streak_three_months
+    prompt: "Telecom bill streak: a member who pays a bill of $40 or more in 3 consecutive calendar months earns 600 bonus points on the third payment; a month without such a payment starts the streak again. The streak can be earned again after it is rewarded."
+    sequences:
+      - note: "Oct-Nov-Dec pays; a 2nd December bill does not; Jan-Feb-Mar across the year pays again"
+        bits: [["2026-10-05T12:00:00", 45, WEB, null], ["2026-11-05T12:00:00", 40, WEB, null], ["2026-12-05T12:00:00", 50, WEB, 600],
+               ["2026-12-20T12:00:00", 50, WEB, null], ["2027-01-05T12:00:00", 40, WEB, null], ["2027-02-05T12:00:00", 40, WEB, null],
+               ["2027-03-05T12:00:00", 40, WEB, 600]]
+      - note: "a $39.99 month breaks the streak"
+        bits: [["2026-10-05T12:00:00", 40, HQ, null], ["2026-11-05T12:00:00", 39.99, HQ, null], ["2026-12-05T12:00:00", 40, HQ, null],
+               ["2027-01-05T12:00:00", 40, HQ, null], ["2027-02-05T12:00:00", 40, HQ, 600]]
+
+  - id: V_TC2_night_recharge_sunday
+    prompt: "Night recharge: recharges made from 11pm until 5:59am at the online store earn 3x points; recharges at any store on Sundays earn 50 bonus points. A recharge that meets both earns both."
+    sequences:
+      - bits: [["2026-11-03T23:00:00", 20, WEB, 60], ["2026-11-04T05:59:00", 10, WEB, 30], ["2026-11-04T06:00:00", 10, WEB, null],
+               ["2026-11-03T22:59:00", 10, WEB, null], ["2026-11-08T12:00:00", 10, HQ, 50], ["2026-11-08T23:30:00", 10, WEB, 80],
+               ["2026-11-03T23:30:00", 10, HQ, null]]
+
+  - id: V_TC3_data_pack_daily_cap
+    prompt: "Data pack bonus: each recharge of $15 or more earns 2 points per whole $1, up to 100 points per member per calendar day; recharges under $15 earn nothing."
+    sequences:
+      - bits: [["2026-11-03T09:00:00", 15, WEB, 30], ["2026-11-03T10:00:00", 30, HQ, 60], ["2026-11-03T11:00:00", 40, WEB, 10],
+               ["2026-11-03T12:00:00", 20, WEB, null], ["2026-11-04T09:00:00", 14.99, WEB, null], ["2026-11-04T10:00:00", 15.5, WEB, 30],
+               ["2026-11-04T11:00:00", 60, HQ, 70]]
+
+  # ---- restaurants: a BIT is a bill ----
+  - id: V_RS1_weekday_lunch_tier
+    prompt: "Restaurant lunch: bills on weekdays from 12pm until 2:59pm earn 2 points per whole $1, and Silver members earn 3 points per whole $1 instead; a bill of $80 or more at that time also earns 100 bonus points."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 50, HQ, 100], ["2026-11-03T14:59:00", 80, VJD, 260], ["2026-11-03T15:00:00", 50, HQ, null],
+               ["2026-11-07T13:00:00", 50, HQ, null], ["2026-11-03T11:59:00", 50, HQ, null]]
+      - member: {tier_class: Silver}
+        bits: [["2026-11-04T13:00:00", 50, Chennai, 150], ["2026-11-04T13:00:00", 79.99, WEB, 237]]
+
+  - id: V_RS2_5th_visit_voucher_10th_yoga
+    prompt: "Restaurant stamp card: every 5th visit with a bill of $25 or more earns a complimentary voucher, except the 10th such visit, which earns a free 2 hours of yoga session instead. Online store orders do not count as visits."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 25, HQ, null], ["2026-11-03T12:00:00", 25, HQ, null], ["2026-11-03T12:00:00", 25, HQ, null],
+               ["2026-11-03T12:00:00", 25, HQ, null], ["2026-11-03T12:00:00", 24.99, HQ, null], ["2026-11-03T12:00:00", 30, WEB, null],
+               ["2026-11-03T12:00:00", 25, VJD, "64"], ["2026-11-03T12:00:00", 25, Chennai, null], ["2026-11-03T12:00:00", 25, Chennai, null],
+               ["2026-11-03T12:00:00", 25, Chennai, null], ["2026-11-03T12:00:00", 25, Chennai, null], ["2026-11-03T12:00:00", 25, HQ, "37"],
+               ["2026-11-03T12:00:00", 25, HQ, null], ["2026-11-03T12:00:00", 25, HQ, null], ["2026-11-03T12:00:00", 25, HQ, null],
+               ["2026-11-03T12:00:00", 25, HQ, null], ["2026-11-03T12:00:00", 25, HQ, "64"]]
+
+  - id: V_RS3_happy_hour_first_bonus
+    prompt: "Happy hour: bills from 5pm until 6:59pm on Tuesdays and Thursdays earn 4x points, capped at 200 points per bill; a member's first happy-hour bill also earns 300 bonus points."
+    sequences:
+      - bits: [["2026-11-03T17:00:00", 40, HQ, 460], ["2026-11-05T18:59:00", 100, VJD, 200], ["2026-11-05T19:00:00", 10, HQ, null],
+               ["2026-11-04T17:30:00", 10, HQ, null], ["2026-11-10T17:30:00", 50, WEB, 200], ["2026-11-10T18:00:00", 49.99, HQ, 199.96]]
+
+  # ---- banks: a BIT is a card spend ----
+  - id: V_BK1_monthly_spend_milestones
+    prompt: "Credit card spend milestones: when a member's total card spend in a calendar month reaches $1000 they earn 1000 bonus points, and when it reaches $2500 they earn another 2000 bonus points; each milestone once per month."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 600, HQ, null], ["2026-11-05T12:00:00", 400, WEB, 1000], ["2026-11-10T12:00:00", 1499.99, HQ, null],
+               ["2026-11-11T12:00:00", 0.01, VJD, 2000], ["2026-11-12T12:00:00", 5000, HQ, null], ["2026-12-01T12:00:00", 3000, HQ, 3000]]
+
+  - id: V_BK2_cashback_total_cap
+    prompt: "Debit card cashback: 5% back in points on spends at the online store and 2% back everywhere else, but nothing on spends under $10; a member earns at most 500 points from this offer in total."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 100, WEB, 5], ["2026-11-03T12:00:00", 100, HQ, 2], ["2026-11-03T12:00:00", 9.99, WEB, null],
+               ["2026-11-03T12:00:00", 10, HQ, 0.2], ["2026-11-03T12:00:00", 10000, WEB, 492.8], ["2026-11-03T12:00:00", 100, WEB, null]]
+
+  - id: V_BK3_premium_tier_bands
+    prompt: "Premium banking: Silver members spending over $2000 earn 3x points and Basic members spending over $2000 earn 2x points; every other spend earns 1 point per whole $10. Spends at the Vijayawada branch earn nothing."
+    sequences:
+      - bits: [["2026-11-03T12:00:00", 2001, HQ, 200], ["2026-11-03T12:00:00", 2000, HQ, 200], ["2026-11-03T12:00:00", 5, HQ, null],
+               ["2026-11-03T12:00:00", 3000, VJD, null]]
+      - member: {tier_class: Silver}
+        bits: [["2026-11-03T12:00:00", 2001, WEB, 6003], ["2026-11-03T12:00:00", 2000.5, Chennai, 6001.5], ["2026-11-03T12:00:00", 1999, HQ, 199]]
+      - member: {tier_class: Basic}
+        bits: [["2026-11-03T12:00:00", 3000, HQ, 6000], ["2026-11-03T12:00:00", 2000, HQ, 200]]
