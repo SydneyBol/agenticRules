@@ -22,9 +22,31 @@ Existing = Callable[[Block, list[Block], str], str | None]
 Keep = Callable[[str, Any], str | None]
 
 
-def loose_attrs(i: int) -> str:
-    """Start-tag attributes of the i-th loose block: disabled, to the right of the rules, one under the other."""
-    return f' x="900" y="{40 + 160 * i}" {LOOSE_ATTRS}'
+# Where loose blocks go: under the rules, at the rules' own x (Blockly puts a top block with no x/y at 10, 10). The
+# rendered height is not in the XML; ROW_HEIGHT over-estimates one row of blocks (C10's 15 rows rendered 656 units tall,
+# about 44 a row, in the stock rules screen, 2026-11-06), so a loose block never lands on the rules.
+LOOSE_X, TOP_Y, ROW_HEIGHT, LOOSE_GAP = 10, 10, 50, 60
+
+
+def rows(node: Block | list[Block]) -> int:
+    """The rows a block takes on the canvas: itself and every block in its statement inputs (value inputs are inline)."""
+    if isinstance(node, list):
+        return sum(rows(n) for n in node)
+    return 1 + sum(rows(v) for v in (node.get("inputs") or {}).values() if isinstance(v, list))
+
+
+def loose_ys(tops: list[Block]) -> list[int]:
+    """The y of each loose block (tops[1:]): below the rules and each loose block before it, one under the other."""
+    ys, y = [], TOP_Y + ROW_HEIGHT * rows(tops[0]) + LOOSE_GAP if tops else TOP_Y
+    for t in tops[1:]:
+        ys.append(y)
+        y += ROW_HEIGHT * rows(t) + LOOSE_GAP
+    return ys
+
+
+def loose_attrs(y: int) -> str:
+    """Start-tag attributes of a loose block: disabled (no code), at the rules' x and the given y."""
+    return f' x="{LOOSE_X}" y="{y}" {LOOSE_ATTRS}'
 
 
 def own_xml(
@@ -172,5 +194,6 @@ def to_xml(
     if not tops:
         raise TreeError(Problem.of("no_root"))
     w = Writer(catalog, counters, canvas)
-    body = w.chain([tops[0]], "") + "".join(w.chain([b], "loose", loose_attrs(i)) for i, b in enumerate(tops[1:]))
+    ys = loose_ys(tops)
+    body = w.chain([tops[0]], "") + "".join(w.chain([b], "loose", loose_attrs(y)) for b, y in zip(tops[1:], ys))
     return f'<xml xmlns="{XMLNS}">{body}</xml>', w.paths

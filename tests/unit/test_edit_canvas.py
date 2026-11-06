@@ -11,7 +11,7 @@ import pytest
 from offer_author.ai import agent
 from offer_author.api.service import create_app
 from offer_author.core.canvas import tree
-from offer_author.core.canvas.build import to_xml
+from offer_author.core.canvas.build import rows, to_xml
 from offer_author.core.canvas.checks.grammar import check, detach
 from offer_author.core.canvas.edit import Doc
 from offer_author.core.canvas.tree import apply_edits, nodes, number
@@ -152,7 +152,8 @@ def test_blocks_that_cannot_plug_in_are_detached_and_the_rest_stays():
 def test_loose_blocks_are_written_disabled_and_only_enabled_extras_are_problems(fixture_catalog):
     root = selections(S01)[0]
     xml, _ = to_xml([root, {"type": "static_value", "id": "L1", "fields": {"value": "100"}}], fixture_catalog)
-    assert '<block type="static_value" id="L1" x="900" y="40" disabled-reasons="MANUALLY_DISABLED">' in xml
+    y = 10 + 50 * rows(root) + 60  # under the rules, at their x (2026-11-06: the user chose below the rules)
+    assert f'<block type="static_value" id="L1" x="10" y="{y}" disabled-reasons="MANUALLY_DISABLED">' in xml
     assert not [p for p in said(check(xml, fixture_catalog)) if "top-level" in p]
     enabled = xml.replace(' disabled-reasons="MANUALLY_DISABLED"', "")
     assert any("exactly one enabled top-level block" in p for p in said(check(enabled, fixture_catalog)))
@@ -340,3 +341,30 @@ def test_a_changed_counter_declaration_rewrites_the_blocks_that_use_it(fixture_c
         if m.tag.endswith("mutation") and "Total spend" in (m.get("attribute"), m.get("mta_attribute"))
     ]
     assert muts and all(m.get("type") == "DATE" for m in muts if m.get("type"))
+
+
+def test_an_edit_leaves_one_value_never_a_stale_value_field_beside_picked_codes():
+    # 2026-11-05 X07: an edit gave new picked codes and left the old value field; the XML wrote value "" with the
+    # labels of the picked codes, and the On Activity filter compiled to nothing
+    from offer_author.core.canvas.tree import apply_edits, expand
+
+    picked = expand({"type": "activity_criteria", "id": "b3", "attribute": "h_bit_type", "operators": "==", "picked": "PURCHASE"})
+    field = expand({"type": "activity_criteria", "id": "b3", "attribute": "h_bit_type", "operators": "==", "value": "PURCHASE"})
+    got = apply_edits(field, [{"id": "b3", "operators": "in", "value": "", "picked": "PURCHASE,SPEND"}])
+    assert got["picked"] == "PURCHASE,SPEND" and "value" not in got["fields"]
+    got = apply_edits(picked, [{"id": "b3", "operators": "in", "value": "PURCHASE,SPEND"}])
+    assert got["picked"] == "PURCHASE,SPEND" and "value" not in got["fields"]
+    got = apply_edits(field, [{"id": "b3", "value": "SPEND"}])  # a value field with no picked codes stays a field
+    assert got["fields"]["value"] == "SPEND" and not got.get("picked")
+
+
+def test_loose_blocks_go_under_the_rules_one_under_the_other():
+    # 2026-11-06 live check: at x=900 loose blocks drew over C10's rules (about 922 wide); the user chose below them
+    from offer_author.core.canvas.build import loose_ys, rows
+
+    root = {"type": "offer_generic", "inputs": {"activities": [{"type": "activity", "inputs": {"RULES": [
+        {"type": "rule", "inputs": {"CONDITION": [{"type": "if_generic_adaptive"}], "ACTION": [{"type": "action"}]}}]}}]}}
+    loose = [{"type": "action"}, {"type": "static_value"}]
+    assert rows(root) == 5
+    first, second = loose_ys([root, *loose])
+    assert first == 10 + 50 * 5 + 60 and second == first + 50 + 60

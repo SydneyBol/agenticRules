@@ -19,7 +19,7 @@ from xml.parsers import expat
 
 from ...domain import Block
 from ..vocabulary import OFFER_COUNTER
-from .build import Writer, label, loose_attrs, own_xml
+from .build import Writer, label, loose_attrs, loose_ys, own_xml
 from .fields import Counters
 from .reference import reference
 from .tree import nodes, select
@@ -285,13 +285,12 @@ class Doc:
         w = Writer(catalog, counters, self.canvas, existing=self._existing)
         self._w, self._catalog, self._counters = w, catalog, counters
         saved_loose = {t["id"] for t in self.tops[1:]}
-        body, new_loose = [w.chain([tops[0]], "")], 0
-        for t in tops[1:]:
+        body = [w.chain([tops[0]], "")]
+        for t, y in zip(tops[1:], loose_ys(tops)):
             if t.get("id") in saved_loose and t.get("id") in self.el:
-                body.append(w.chain([t], "loose"))
+                body.append(w.chain([t], "loose"))  # where the manager left it
             else:
-                body.append(w.chain([t], "loose", loose_attrs(new_loose)))
-                new_loose += 1
+                body.append(w.chain([t], "loose", loose_attrs(y)))
         others = "".join(k.text() for k in self.root.kids if k.tag != "block")  # <variables> and the like, as saved
         xml = self.prefix + self.root.open_tag() + others + "".join(body) + self.root.close_tag() + self.suffix
         ids = {bid: self.xid.get(bid, bid) for bid in w.paths}

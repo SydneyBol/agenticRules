@@ -6,6 +6,8 @@ description leaves open takes its plain reading, recorded as an assumption.
 
 - "spend", "spends", "spending": the activity type labelled exactly "Spend". Use another type only when the manager
   names it. When no activity is named, use Spend and record that as an assumption.
+- A spend, purchase or transaction that earns, counts or qualifies has an amount above 0: one of 0 (or less) is not a
+  spend; it earns nothing and counts toward nothing (no visit, store, month, streak or total).
 - "Nx points": points = the measure x N in total (not N extra on top). Record that as an assumption.
 - "N bonus points", "N extra points", "N additional points": N on top of what the program already gives, i.e. this
   offer's own award is N (the base earning is not part of the offer). "Nx bonus" / "N times bonus" is the measure x N.
@@ -29,6 +31,9 @@ description leaves open takes its plain reading, recorded as an assumption.
 - "a maximum of N", "up to N", "capped at N" points, "until the member has earned N points": the cap holds exactly:
   the transaction that would pass it earns what is left of N, and later transactions earn nothing more from it.
 - "every Nth", "each Nth": the Nth, 2Nth, 3Nth, ... counted transaction.
+- "per week", "in a calendar month", "in a year", "consecutive weeks/months": the period is the transaction's own.
+  A late transaction, dated in an earlier period than one already counted for the member, leaves the current
+  period as it is: it does not restart, add to or end its count, cap, streak or reward.
 - "once per birthday", "once per anniversary": once per occurrence of the date. A spend in late December inside the
   window of a 5 Jan birthday belongs to that 5 Jan.
 - A currency the description names ("miles", "stars", "eCredits", an account's own currency name): the loyalty account

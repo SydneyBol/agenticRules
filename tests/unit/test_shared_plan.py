@@ -160,3 +160,29 @@ def test_the_off_switch_and_the_rules_only_run_write_no_plan(fixture_catalog, ve
     llm, cases_llm = ScriptedLLM([[("compose", S07)], [FIN]]), ScriptedLLM([])
     res = agent.run("every 5th visit earns a coffee", fixture_catalog, llm, parts=("rules",), settings=SETTINGS)
     assert res["status"] == "draft" and "plan" not in res["diagnostics"] and cases_llm.calls == []
+
+
+def dated(day, what):
+    c = case([], what=what)
+    c["bits"][0]["header"]["h_bit_date"] = day
+    return c
+
+
+def test_a_scenario_dated_where_a_real_test_cannot_post_it_is_written_again(fixture_catalog, verifier_calls):
+    # 2026-11-05 agent vs baselines: most cases were dated before the offer existed or more than 12 months ahead,
+    # where the engine refuses them; the catalog's date is 2026-10-21, so the window runs to 2027-10-21
+    first = [("write_cases", {"scenarios": [dated("2026-11-02T10:00:00", "kept"), dated("2026-01-05T10:00:00", "past"),
+                                            dated("2027-12-01T10:00:00", "too far")]})]
+    more = [("write_cases", {"scenarios": [dated("2027-01-05T10:00:00", "past, rewritten")]})]
+    res, _, cases_llm = run(fixture_catalog, [first, more], settings=Settings(**{**SETTINGS.__dict__, "shared_plan": False}))
+    told = json.dumps(cases_llm.calls[1])
+    assert "past; too far" in told and "2026-10-21T00:00:00 to 2027-10-21T23:59:59" in told
+    assert [s["what"] for s in verifier_calls[0]["scenarios"]] == ["kept", "past, rewritten"]
+    assert "dropped_undated" not in res["diagnostics"]["verify"]["cases"]
+
+
+def test_a_scenario_still_undated_after_the_second_turn_is_dropped(fixture_catalog, verifier_calls):
+    first = [("write_cases", {"scenarios": [dated("2026-11-02T10:00:00", "kept"), dated("2026-01-05T10:00:00", "past")]})]
+    more = [("write_cases", {"scenarios": [dated("2026-02-05T10:00:00", "still past")]})]
+    res, _, _ = run(fixture_catalog, [first, more], settings=Settings(**{**SETTINGS.__dict__, "shared_plan": False}))
+    assert [s["what"] for s in verifier_calls[0]["scenarios"]] == ["kept"]

@@ -8,17 +8,20 @@ block, in the order the engine meets them. The screen compiles the canvas; how i
 A BIT is one member transaction sent to the program: a header (activity type `h_bit_type`, category
 `h_bit_category`, amount `h_bit_amount`, date `h_bit_date`, store `h_location`, sponsor, ...), optional line items
 (one per product, `l_*` attributes) and optional payment items.
+The amount can be 0, and the engine does not reject a negative amount: such a BIT reaches the offers like any other,
+and a rule whose conditions hold rewards it and updates its counters whatever its amount.
 
 For each BIT the engine, in this order:
 1. Rejects the BIT before any offer when it is invalid: an unknown store code (LOCATION_NOT_FOUND), a duplicate of a
-   BIT already processed, a member whose membership does not allow it.
+   BIT already processed, a member whose membership does not allow it, a BIT dated more than 12 months after the day
+   it is sent (VALIDATION_FAILED; Offer Testing refuses it too).
 2. Finds the offers that apply: launched offers (test offers only for test members), for the member's segment, at a
    location the offer allows, opted into when the offer needs opt-in, whose dates contain the BIT date (program
    timezone), whose per-member limit and frequency (per day, week, month or lifetime; there is no yearly
    frequency: a lifetime limit counts the member's rewards over the whole life of the offer and never starts over at a
    new year)
    and total limit are not used up. Offer Main holds one per-member limit with its one frequency, and one total
-   limit with its frequency; a per-member limit for a second period is not an Offer Main setting. A BIT before the offer's start date is refused for that offer
+   limit with its frequency; a per-member limit for a second period is not an Offer Main setting. A BIT before the offer's start (a date and time: an offer with no stated start starts at the moment it is saved) is refused for that offer
    (REWARD_OFFER_DOES_NOT_QUALIFY). These are Offer Main and segment settings: they are checked before any block of
    the rules runs, and a BIT they stop never reaches the rules.
 3. Runs the rules of each offer that applies, as described below. Offers that are not cumulative are exclusive: at
@@ -197,24 +200,35 @@ Text: `=` and `matches` are exact and case-sensitive; contains, starts with and 
 an attribute that holds several values, `=` holds when any of them equals the value. `in` / `not in` take the chosen
 codes from the value popup. Payment Amount is an old list attribute: it takes only `in` / `not in`.
 
-**Dates and times.** Date conditions read dates in the program timezone. A BIT date sent without a timezone offset is
-read as UTC; one with an offset keeps it. DAY_OF_WEEK runs Monday = 1 to Sunday = 7; HOUR_OF_DAY 0-23.
+**Dates and times.** A date's parts are read as the date and time are written: a BIT date written with an offset
+(`2026-11-13T22:00:00Z`, `...+04:00`) keeps its own day and hour, which are not converted to the program timezone
+(`2026-11-13T22:00:00Z` is a Friday at 22:00 in every program), and one written without an offset is read as the
+program's local time. DAY_OF_WEEK runs Monday = 1 to Sunday = 7; HOUR_OF_DAY 0-23.
 When the transaction happened is the BIT's date, `h_bit_date` (an activity attribute block, or the condition's own
 attribute). The current date block is the moment the engine processes the BIT, not when the transaction happened: a
 BIT sent late, replayed or tested with another date has a different current date. So a condition about the
 transaction ("in the birthday month", "on Sundays", "in December") compares a part of `h_bit_date`; the current date
 is only for what is meant as "today" at processing time.
-The DATE part of a date or date-time is its calendar day in the program timezone, compared day by day with the
+BITs are processed in the order they arrive, not in the order of their dates. A BIT sent late, dated before BITs
+already processed for the member, reads the counters as those later-dated BITs left them, and its own updates are
+what the next BIT reads. So a late BIT's own week, month or year can be earlier than the period a counter already
+holds: it differs from that period without being a later one.
+The DATE part of a date or date-time is its calendar day as written, compared day by day with the
 right-hand side: a static date, the current date, another date attribute or a date arithmetic block. `h_bit_date`
 DATE `>` 10 Nov holds from 11 Nov; `>=` 10 Nov from 10 Nov; `<=` 10 Nov up to the end of 10 Nov.
 A date part (YEAR, MONTH, DAY_OF_MONTH, DAY_OF_YEAR, WEEK_OF_YEAR, ...) is a whole number; DAY_OF_YEAR runs 1 to 365, or 366 in a
 leap year, where every day after 28 Feb is one higher; it starts again at 1 every 1 Jan.
+WEEK_OF_YEAR is the ISO week: weeks run Monday to Sunday, and week 1 is the week holding the year's first Thursday,
+so 1-3 Jan can be in week 52 or 53 of the year before (1-3 Jan 2027 are in week 53) and 29-31 Dec in week 1 of the
+year after. YEAR is the calendar year, so the YEAR and the WEEK_OF_YEAR of one date can belong to different years.
 CALENDAR_DATE is a date's day and month in one fixed year (the engine replaces the year with 0000), compared in
 calendar order from 1 Jan to 31 Dec, so the same day and month compare equal in every year. Date arithmetic is applied
 to the whole date before the year is dropped: `date_of_birth` CALENDAR_DATE − 10 DAYS is the day and month ten days
 before the birthday, whatever the year. A range of CALENDAR_DATEs that runs past 31 Dec (28 Dec ± 10 days: 18 Dec to
 7 Jan) is two ranges, from its start to 31 Dec and from 1 Jan to its end.
-A member date that is missing or cannot be parsed reads as -1 in every date part. A member date used inside a date
+A member date that is missing reads as -1 in every date part (YEAR, MONTH, DAY_OF_WEEK, ...) except DATE and
+CALENDAR_DATE, which read as empty, and empty comes before every date: for a member without the date, `h_bit_date` DATE `>=`
+that date holds and `<=` it fails. A member date used inside a date
 arithmetic block, for a member who has none, fails the offer for that transaction (a rules execution error: no rule
 of the offer rewards it); an `is not-null` condition on that date placed earlier in the same rule or filter stops the
 rule before it is reached.
@@ -228,6 +242,8 @@ payment, airport).
 - A number attribute (`h_bit_amount`, a counter, a balance) is a decimal: `h_bit_amount / 10` on 25 is 2.5.
 - Two numbers written without decimals are whole numbers, and their division drops the remainder: `100 / 3` is 33,
   `7 % 2` is 1. With a decimal point on either side the result keeps its decimals (`100 / 3.0`).
+- `%` on a decimal keeps its decimals: `h_bit_amount % 1` on 10.7 is 0.7, the part after the whole number, and
+  `h_bit_amount - h_bit_amount % 1` on 10.7 is 10. The toolbox has no rounding block.
 - Arithmetic blocks nest: the inner block is computed first, whatever its operator (no operator precedence between
   blocks).
 - Points credited are rounded half up to the program's point decimal scale (the tenant catalog gives it): at scale 2,

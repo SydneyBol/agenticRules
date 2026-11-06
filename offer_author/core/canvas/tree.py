@@ -13,7 +13,7 @@ from typing import Any
 
 from ...domain import Block, Problem
 from ..vocabulary import OFFER_COUNTER
-from .fields import CONDITIONS, counter_ref
+from .fields import CONDITIONS, counter_ref, field_text
 
 Holder = dict[str, Any] | list[Any] | None
 Located = tuple[Block, Holder, Any]
@@ -134,8 +134,14 @@ def _change(e: dict[str, Any], node: Block, holder: Any, key: Any) -> None:
         node["fields"] = {**(node.get("fields") or {}), **fields}
     if own.get("inputs"):
         node["inputs"] = {**(node.get("inputs") or {}), **own["inputs"]}
+    # a block's value is either its picked codes or its value field, never both: the XML writes the field as the value
+    # and the picked codes' labels, so a stale one left by an edit made them disagree (2026-11-05 X07: value "",
+    # labels "Shopping,Spend"); what the edit gives wins
     if "picked" in e:
         node["picked"] = e["picked"]
+        (node.get("fields") or {}).pop("value", None)
+    elif "value" in fields and node.get("picked") not in (None, ""):
+        node["picked"] = field_text(node["fields"].pop("value"))
 
 
 def apply_edits(root: Block | list[Block], edits: list[Any] | None) -> Any:

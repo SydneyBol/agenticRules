@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import date, datetime
 from typing import Any, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from langchain_core.messages import HumanMessage, ToolMessage
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -35,7 +37,12 @@ class CaseBit(BaseModel):
 
     header: dict[str, Any] = Field(
         description="h_bit_date (ISO date-time in the program's own time zone, written without an offset, as Offer "
-        "Testing sends it; inside the offer's dates), h_bit_amount, h_location (a store code "
+        "Testing sends it). A test transaction can only be dated from the offer's start to its end date, and at most "
+        "12 months after today. The start is a date and time: when the description states no start date, the offer "
+        "starts at the moment it is saved, so a transaction dated earlier the same day is before the start too. "
+        "The engine refuses a transaction before the start for the offer (REWARD_OFFER_DOES_NOT_QUALIFY) and one more "
+        "than 12 months ahead outright (VALIDATION_FAILED), so such a transaction tests nothing. A member's own dates (birth, joining, "
+        "anniversary) can be any date. Then h_bit_amount, h_location (a store code "
         "from the catalog), h_bit_type when the activity is not Spend, and any other header attribute the offer reads. "
         "The engine processes each test transaction on its own h_bit_date, as a program sends a transaction when it "
         "happens: a segment's current date is that day"
@@ -124,15 +131,19 @@ PLANNED = (
     "inside and its outside value), every kind, and every remembered item before and after it is set. Each scenario "
     "lists in covers the plan ids it covers. Read every term as the plan's readings say."
 )
-MISSING = (
-    "These plan ids are not covered by any scenario: {ids}. Call write_cases again with only the scenarios that "
-    "cover them (the ones you wrote are kept)."
+MISSING = "These plan ids are not covered by any scenario: {ids}."
+UNDATED = (
+    "These scenarios have transactions dated where the engine refuses them, so they test nothing: {names}. A test "
+    "transaction can be dated from {start} to {end}; a member's own dates can be any date. Rewrite them inside these "
+    "dates."
 )
+AGAIN = "Call write_cases again with only these scenarios; the other scenarios you wrote are kept."
 KEPT = "Kept."
 
 
 def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]:
-    """One model turn writing the cases; with a plan, one more turn for the plan ids no scenario covers.
+    """One model turn writing the cases; one more turn for the plan ids no scenario covers and the scenarios dated
+    where a real test cannot post them (window), which are then written again; a scenario still undated is dropped.
 
     Returns:
         (the scenarios, or None when the turn wrote none that fit the schema; the turns' usage and time, and the
@@ -148,13 +159,27 @@ def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]
     usage = dict(turn.usage or {})
     scenarios = _scenarios(turn)
     info: dict[str, Any] = {}
-    if ctx.plan and scenarios is not None:
-        missing = _uncovered(ctx.plan, scenarios)
-        info["uncovered_first"] = missing
-        if missing:
+    start, end = window(ctx)
+    if scenarios is not None:
+        missing = _uncovered(ctx.plan, scenarios) if ctx.plan else []
+        undated = [i for i, s in enumerate(scenarios) if not _postable(s, start, end)]
+        if ctx.plan:
+            info["uncovered_first"] = missing
+        info["undated_first"] = len(undated)
+        if missing or undated:
             # every call of the turn gets its result, or the next request is refused (2026-11-05 X01: two
-            # write_cases calls in one turn, one result, Bedrock 400); the uncovered ids go in the first
-            told = MISSING.format(ids=", ".join(missing))
+            # write_cases calls in one turn, one result, Bedrock 400); what to write again goes in the first
+            told = " ".join(
+                [
+                    *([MISSING.format(ids=", ".join(missing))] if missing else []),
+                    *(
+                        [UNDATED.format(names="; ".join(scenarios[i].get("what", "") for i in undated), start=start, end=end)]
+                        if undated
+                        else []
+                    ),
+                    AGAIN,
+                ]
+            )
             messages += [
                 turn.message,
                 *(
@@ -166,12 +191,55 @@ def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]
             for k, v in (more.usage or {}).items():
                 usage[k] = usage.get(k, 0) + (v or 0)
             added = _scenarios(more)
-            scenarios += added or []
-            info["uncovered"] = _uncovered(ctx.plan, scenarios)
+            scenarios = [s for i, s in enumerate(scenarios) if i not in undated] + (added or [])
+            if ctx.plan:
+                info["uncovered"] = _uncovered(ctx.plan, scenarios)
+        # a scenario a real test cannot post is dropped: Offer Testing would refuse it
+        dropped = [s for s in scenarios if not _postable(s, start, end)]
+        scenarios = [s for s in scenarios if _postable(s, start, end)]
+        if dropped:
+            info["dropped_undated"] = [s.get("what", "") for s in dropped]
     info = {"s": round(time.time() - t0, 1), "usage": usage, **info}
     if not scenarios:
         return None, info
     return scenarios, info
+
+
+def window(ctx: RunContext) -> tuple[str, str]:
+    """The dates any test transaction can carry: from now, in the program's time zone (an offer starts when it is
+    saved, or later), to 12 months after today (later is refused outright)."""
+    cat = ctx.run.catalog
+    try:
+        tz = ZoneInfo(cat.timezone) if getattr(cat, "timezone", None) else None
+    except (ZoneInfoNotFoundError, ValueError):
+        tz = None
+    pinned = getattr(cat, "today", None)  # fixtures pin the catalog's date
+    now = datetime.fromisoformat(pinned) if pinned else datetime.now(tz).replace(tzinfo=None, microsecond=0)
+    today = now.date()
+    try:
+        last = today.replace(year=today.year + 1)
+    except ValueError:  # 29 Feb
+        last = date(today.year + 1, 2, 28)
+    # Offer Main's own dates are not read here: the build run sets them while the cases are written
+    return now.isoformat(timespec="seconds"), f"{last.isoformat()}T23:59:59"
+
+
+def _at(day: str, time_of_day: str) -> str:
+    """An ISO date or date-time as YYYY-MM-DDTHH:MM:SS (a bare day gets the given time)."""
+    s = str(day)
+    return (s + time_of_day)[:19] if len(s) <= 10 else s[:19]
+
+
+def _postable(scenario: dict[str, Any], start: str, end: str) -> bool:
+    """Every transaction of the scenario is dated where a real test can post it."""
+    for bit in scenario.get("bits") or []:
+        d = (bit.get("header") or {}).get("h_bit_date")
+        if d is None:
+            continue
+        d = _at(d, "T00:00:00")
+        if not start <= d <= end:
+            return False
+    return True
 
 
 def _scenarios(turn: Any) -> list[dict[str, Any]] | None:
