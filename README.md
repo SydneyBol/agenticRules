@@ -13,8 +13,8 @@ offer-xml-server --tenant devintbf2 --sponsor 1 --account 9 --tag BASE
 Contents:
 [Quick start](#quick-start) · [Using the agent](#using-the-agent) · [How it runs](#how-it-runs) ·
 [What the model reads](#what-the-model-reads) · [Settings](#settings) · [Reading a run](#reading-a-run) ·
-[Layout](#layout) · [Outside this repo](#outside-this-repo) · [Development](#development) ·
-[Troubleshooting](#troubleshooting)
+[Layout](#layout) · [Outside this repo](#outside-this-repo) · [Replacing Pulsar](#replacing-pulsar) ·
+[Development](#development) · [Troubleshooting](#troubleshooting)
 
 ## Quick start
 
@@ -445,6 +445,93 @@ To dump a new tenant's catalog:
    ```bash
    cd ~/Documents/Gravty/offer-xml-generator-dev/harness/ui/hosted && node tenant-catalog.mjs --tenant=<tenant> --sponsor=<id> --account=<id>
    ```
+
+## Replacing Pulsar
+
+This service replaces Pulsar's **offer flow** only. The gravty-ui wizard keeps calling the same paths, so no UI change
+is needed: only where those paths are routed changes.
+
+### Where Pulsar runs today
+
+- **App:** Pulsar is part of the `ai-develop` Flask app (`app.py`, `Dockerfile`: `flask run` on port 5679), next to
+  other AI features.
+- **Routing:** gravty-ui calls `<tenant host>/ai/pulsar/...`. The host is the bolapi host without `bolapi/`
+  (`offer.service.ts`, `member-segments.service.ts`, `offerAi.service.ts`).
+- **Pulsar's own checks:**
+  - it reads the program from the caller's JWT (`program_id`);
+  - it checks the `pulsar` feature toggle (`configuration.offer`) on every call;
+  - it keeps each screen's prompt in S3, at `<program_id>/gpt/prompts/<offer_id>/<stage>`.
+- **Nightly RAG rebuild:**
+  - a data-store lambda collects launched reward offers and their prompts;
+  - a Batch job turns them into few-shot examples;
+  - `POST /ai/pulsar/refresh-cache` reloads them (`~/Documents/Gravty/PulsarRAG-Review.md`).
+
+### What moves and what stays
+
+| `ai-develop` route (file under `apis/flask_apis/pulsar/`) | After the switch |
+|---|---|
+| `POST /ai/pulsar/offer/rules` (`rules/offer_prompt.py`) | this service |
+| `POST /ai/pulsar/segment/rules` (`rules/segment_rules.py`) | this service |
+| `POST /ai/pulsar/offer/metadata` (`generate_offer_metadata.py`) | this service |
+| `GET /ai/pulsar/<offer_id>/prompt/<stage>` (`get_offer_prompts.py`), offer stages: `offermain`, `offersegmentation`, `offerrules`, `offerpreview` | this service |
+| `POST /ai/pulsar/<id>/prompt/<stage>` (`store_offer_prompts.py`), the same offer stages | this service |
+| `POST /ai/pulsar/<id>/prompt/sms` and `…/email` (same file) | **stays** in `ai-develop`: SMS and email templates |
+| `POST /ai/pulsar/refresh-cache`, the nightly data-store lambda and Batch job | retired: earlier offers come from `offer-harvest` (`OFFER_AUTHOR_HISTORY`) |
+| `POST /prompt/upload` (`rules/upload_file.py`, fine-tuning files) | retired with the fine-tuned model; gravty-ui does not call it |
+| `/ai/pulsar/enable`, `sms-email-template`, `image/*`, `imagine/*`, `quicsight/topics`, `qsq`, `members/summary`, `<offer_id>/preview`, `benchmark*` | **stay** in `ai-develop`; unrelated to offer generation |
+
+The prompt routes carry both offer stages and `sms`/`email`. The routing rule must therefore match the stage, not just
+the path prefix.
+
+### Gaps to close before production
+
+The service runs today as a QA deployment: one tenant per process, a saved catalog, and state in memory. Close these
+first, each with its own change and tests:
+
+| # | Gap | Today | Needed |
+|---|---|---|---|
+| 1 | Tenant from the request | `--tenant/--sponsor/--account` at startup; one catalog per process | read `program_id` from the JWT as Pulsar does, and the sponsor and account per request |
+| 2 | Live catalog | `service.main` reads catalog dumps (`OFFER_AUTHOR_CATALOGS`) | wire `core/tenant/catalog.py BolapiCatalogSource` (written and tested, cached 15 min per key) with the caller's JWT |
+| 3 | Feature toggle | not checked by the service; the UI hides the popups when it is off | check the `pulsar` toggle (`configuration.offer`) per call, as Pulsar does |
+| 4 | Prompt storage | `JobStore.prompts`, in memory: lost on restart, not shared between workers | persist it. Either keep Pulsar's S3 keys (`<program_id>/gpt/prompts/<offer_id>/<stage>`), so prompts saved before the switch still show, or use a store of your own |
+| 5 | Jobs | `JobStore.jobs`, in memory, per process | one worker per tenant with sticky routing, or a shared job store (Redis/DynamoDB) for more than one worker |
+| 6 | Server | Flask's development server (`app.run`) | a production WSGI server (gunicorn with threads) |
+| 7 | LLM call limit | `ai/budget.py`: a file ledger with a hard limit of 3500 calls, shared per machine, never reset | a development guard only: replace it with a per-tenant rate limit or quota and alerting before production |
+| 8 | Bedrock access | an SSO profile (`AWS_PROFILE`) | the workload's IAM role with `bedrock:InvokeModel*` on the Sonnet 5.5 inference profile in us-west-2, plus the Cohere embed model if earlier offers are on |
+| 9 | Earlier offers | `offer-harvest` run by hand into `OFFER_AUTHOR_HISTORY` | a scheduled harvest per tenant: once from Pulsar's S3 data store (`--pulsar`), then from saved offers (`--saved`) |
+| 10 | Engine check | optional; needs the verifier, compile server and ng serve | decide whether production runs it (`OFFER_AUTHOR_VERIFIER_URL`). Without it the rules are checked by code only, and the engine check runs in QA |
+
+### The switch, one tenant at a time
+
+1. **Deploy** this service with gaps 1–8 closed. Add the health check `GET /ai/offer-author/health` and the Bedrock
+   IAM role.
+2. **Seed earlier offers.** Copy the tenant's Pulsar data store and run:
+
+   ```bash
+   offer-harvest --tenant <t> --pulsar <copy of S3 <program>/gpt/data_store>
+   ```
+
+   This keeps the reference offers Pulsar had.
+3. **Route.** In the ingress or load balancer in front of `ai-develop`, send these to this service, ahead of the
+   `/ai/` rule:
+   - `POST /ai/pulsar/offer/rules`
+   - `POST /ai/pulsar/segment/rules`
+   - `POST /ai/pulsar/offer/metadata`
+   - `GET|POST /ai/pulsar/<id>/prompt/(offermain|offersegmentation|offerrules|offerpreview)`
+
+   Start with one QA tenant, scoped by host.
+4. **Check on that tenant.** Run the `createRealisticOffers` skill or the hosted QA run:
+   - create an offer by prompt;
+   - check that Offer Main, Select Members and Offer Rules are each filled;
+   - save, and run Offer Testing.
+
+   The `pulsar job` log line shows each job's status and time. Latency target: 25–40 s per offer (p95).
+5. **Widen** the routing tenant by tenant.
+6. **Roll back** by removing the routing rule: Pulsar is untouched and answers again at once. Prompts saved by this
+   service are lost to Pulsar unless gap 4 kept Pulsar's S3 keys.
+7. **Retire** once every tenant is switched. Delete the offer-flow routes listed above from `ai-develop`, the nightly
+   data-store lambda and Batch job, the RAG store, and the OpenAI secret if nothing else uses it. Keep the routes
+   marked **stays**.
 
 ## Development
 
