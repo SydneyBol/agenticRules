@@ -219,7 +219,9 @@ def test_prompt_is_knowledge_and_catalog_without_example_offers(fixture_catalog)
     assert (
         "# Seeded blueprints" not in static and "# Saved member segments" not in static and "Counters: [" not in static
     )
-    assert "<block" not in static and '"mutation"' not in static and len(static) < 50000
+    # 50000 until 2026-11-09, when the points debits and third parties (BlocklyEngineKnowledgeAudit.md B4, B5) took the
+    # static prompt to ~52k; it is cached, so the size costs a cache write per hour, not latency per offer
+    assert "<block" not in static and '"mutation"' not in static and len(static) < 55000
     assert "Tenant catalog" in cat and "h_location" in cat
     assert all(b.get("cache_control") for b in blocks[1:])
 

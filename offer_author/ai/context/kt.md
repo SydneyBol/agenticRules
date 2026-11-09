@@ -121,11 +121,30 @@ attribute 0, a date part -1).
   block: a number, an attribute, arithmetic on them (`h_bit_amount * 2`).
 - Assign Privilege: issues the privilege product (its usage policy, how many, validity dates).
 - Update Attribute: changes a counter (section 5), at once.
-- Redeem / Reset / Return / Expire Points: debit, zero, return or expire points.
+- Redeem Points (`take_points`): takes the quantity from the member's balance in that loyalty account. The quantity is
+  rounded down to the point decimal scale (12.349 takes 12.34). The balance it takes from includes points credited
+  earlier in the same BIT. When the balance is lower than the quantity, the whole BIT fails
+  (INSUFFICIENT_ACCOUNT_BALANCE): nothing of it is saved, not even rewards or counter updates of rules that ran before.
+- Reset Points (`reset_points`): sets the member's balance in that account to 0, including points credited earlier in
+  the same BIT.
+- Return Points (`return_points`): takes the quantity back from that account, first from the points still pending from
+  the original BIT the transaction refers to, then from the balance. It is rounded down like Redeem Points.
+- Expire Points (`expire_points`): expires the member's points in that account carrying the chosen reward tags (or all
+  tags). It has no quantity: the points expired are those the tags hold.
 - Assign Sweepstakes, Assign Play & Win Reward: issue those rewards.
 
-**Third-party conditions.** A condition on a third party the member does not have (family head, referrer, companion,
-employee, corporate, institution, transferee) skips that rule; the BIT is not failed.
+**Third parties.** Another member linked to the BIT's member:
+- `ACTIVITY_REFERRER`, `TRANSFEREE`, `EMPLOYEE`: named on the BIT itself (`activity_referrer`,
+  `transferee_member_id`, `h_employee_id`).
+- `ENROLLMENT_REFERRER`, `FAMILY_HEAD`, `COMPANION`, `CORPORATE`, `INSTITUTION`: linked in the member's own profile.
+
+The third-party action block (`action_third_party`) acts on that member, not on the BIT's member:
+- its Reward Points, Assign Privilege and Update Attribute go to the third party;
+- Transfer Points moves the quantity from the BIT's member's account to the third party's.
+
+When the member has no such third party, the third-party action is skipped and the rest of the BIT runs as usual.
+A condition that reads a third party's attribute (OBJECT third party) is different: for a member with no such third
+party, the whole BIT fails (RULES_EXECUTION_ERROR) and nothing of it is saved.
 
 **Filling the blocks.** The block reference lists every field; these carry the logic, and the screen keeps a value
 only in the field it belongs to:
@@ -153,6 +172,14 @@ only in the field it belongs to:
   account credited (an account id from the catalog); `REWARD_TAGS` = one of that account's reward tags.
 - Assign Privilege: `action_type` give_privilege; `SELECTED_PRIVILEGE` (a privilege id from the catalog),
   `PRIVILEGE_USAGEPOLICY` (its usage policy), `PRIVILEGE_QUANTITY` (how many, a value block).
+- Redeem Points and Return Points: `action_type` take_points / return_points, `LOYALTY_ACCOUNT` (the account) and
+  `FORMULA` (the quantity, a value block). Reset Points: `action_type` reset_points and `LOYALTY_ACCOUNT`, with no
+  quantity.
+- Expire Points: `action_type` expire_points; `SELECTED_EXPIRE_LOYALTY_ACC` (the account); `SELECTED_EXP_OPERATOR`
+  (how the tags are chosen); the tags in `value`, comma-separated, or `ALL-TAGS`.
+- Third-party action (`action_third_party`): `third_parties_dropdown` (who), then the same `action_type` and fields as
+  the action block: give_points with `LOYALTY_ACCOUNT`, `REWARD_TAGS` and `FORMULA`. Transfer Points instead has
+  `Transfer_P_L` (the account) and the quantity in `TransferPoints`.
 - Update Attribute: `action_type` update_attribute; `mta_attribute` = the counter's name (declared in counters);
   `action_operator` = INCREMENT_BY, DECREMENT_BY, SET or RESET (RESET_ALL for a vector counter); `RHS_INPUT_VALUE` =
   the value block (none for RESET). `mta_type_value` is the counter's level (MA_O, MA_A): the tools fill it from the
