@@ -219,12 +219,16 @@ def _level_before_attribute(f: Fields) -> Fields:
     return _put(rest, "attribute_level", f["attribute_level"], "OBJECT" if "OBJECT" in f else None)
 
 
+REWARD_ACTIONS = ("action", "action_third_party")  # blocks whose give_points needs a loyalty account and reward tag
+
+
 def fill(node: Block, catalog: Catalog | None = None, counters: Counters | None = None) -> Fields:
     """The block's fields with those the model may leave out, filled as the screen would have them.
 
     - a condition (if_generic_adaptive, activity_criteria): OBJECT and attribute_level (_fill_condition);
-    - give_points: LOYALTY_ACCOUNT, the catalog's offer_account, and REWARD_TAGS, that account's reward tag
-      (the configured one, or its only one), when the model chose none;
+    - give_points (action, action_third_party): LOYALTY_ACCOUNT, the catalog's offer_account, and REWARD_TAGS, that
+      account's reward tag (the configured one, or its only one), when the model chose none; the screen otherwise
+      keeps its first account (2026-11-09 F1: a referrer bonus credited account 102);
     - update_attribute: mta_type_value, the level of the counter it updates.
 
     A field the model gave is never changed.
@@ -233,7 +237,7 @@ def fill(node: Block, catalog: Catalog | None = None, counters: Counters | None 
     counters, inputs = counters or {}, node.get("inputs") or {}
     if t in CONDITIONS:
         return _fill_condition(f, catalog, counters)
-    if t == "action" and f.get("action_type") == "give_points" and catalog is not None:
+    if t in REWARD_ACTIONS and f.get("action_type") == "give_points" and catalog is not None:
         if "LOYALTY_ACCOUNT" not in f and "LOYALTY_ACCOUNT" not in inputs and catalog.offer_account:
             f = _put(f, "LOYALTY_ACCOUNT", str(catalog.offer_account), "action_type")
         tag = catalog.reward_tag(f.get("LOYALTY_ACCOUNT"))  # the chosen account's

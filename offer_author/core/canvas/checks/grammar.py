@@ -269,12 +269,12 @@ def codes(block: ET.Element, catalog: Catalog | None) -> list[Problem]:
     return out + _account_codes(block, own, catalog)
 
 
-ACCOUNT_FIELDS = ("LOYALTY_ACCOUNT", "SELECTED_EXPIRE_LOYALTY_ACC")  # the loyalty account dropdowns
+ACCOUNT_FIELDS = ("LOYALTY_ACCOUNT", "SELECTED_EXPIRE_LOYALTY_ACC", "Transfer_P_L")  # the loyalty account dropdowns
 
 
 def _account_codes(block: ET.Element, own: dict[str | None, str | None], catalog: Catalog) -> list[Problem]:
     """The loyalty account and reward tag dropdowns (actions, currency converter) against the sponsor's accounts."""
-    if block.get("type") not in ("action", "currency_converter") or not catalog.loyalty_accounts:
+    if block.get("type") not in ("action", "action_third_party", "currency_converter") or not catalog.loyalty_accounts:
         return []
     out = []
     ids = [a["id"] for a in catalog.loyalty_accounts]

@@ -961,6 +961,14 @@ def test_every_loyalty_account_dropdown_is_the_models_choice_and_checked(fixture
     assert 'names none: 7 "STARS" (the sponsor\'s own account)' in text
     plain = fill({"type": "action", "fields": {"action_type": "give_points"}}, cat)
     assert plain["LOYALTY_ACCOUNT"] == "7" and plain["REWARD_TAGS"] == "PROMO"
+    # the third-party block too (2026-11-09 F1: left empty, the screen kept its first account, 102, for the referrer)
+    third = {
+        "type": "action_third_party",
+        "fields": {"third_parties_dropdown": "ENROLLMENT_REFERRER", "action_type": "give_points"},
+    }
+    tf = fill(third, cat)
+    assert tf["LOYALTY_ACCOUNT"] == "7" and tf["REWARD_TAGS"] == "PROMO"
+    assert list(tf)[:3] == ["third_parties_dropdown", "action_type", "LOYALTY_ACCOUNT"]  # where the screen keeps it
     assert "names none: 1 " in prompt.catalog_text(fixture_catalog)  # no own account: the configured one
     # the model's account is kept, and the tag comes from that account
     node = {"type": "action", "fields": {"action_type": "give_points", "LOYALTY_ACCOUNT": "7"}}

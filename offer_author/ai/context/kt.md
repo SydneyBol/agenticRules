@@ -275,9 +275,9 @@ payment, airport).
   blocks).
 - Points credited are rounded half up to the program's point decimal scale (the tenant catalog gives it): at scale 2,
   2.5 points stay 2.5 and 3.333 become 3.33; at scale 0, 2.5 would be 3.
-- A rate per currency unit ("N points per $1", "per AED 1") is the amount times N: a part of a unit earns its share,
-  credited at the point decimal scale (12.50 at 10 per $1 is 125). Only a rate stated per full or whole unit ("per full
-  $10") counts whole units.
+- A rate per one currency unit ("N points per $1", "per AED 1") is the amount times N: a part of a unit earns its
+  share, credited at the point decimal scale (12.50 at 10 per $1 is 125). A rate per more than one unit ("1 point per
+  AED 10", "per full $10") counts whole units of it: AED 255 at 1 point per AED 10 is 25.
 - Date arithmetic: `+` / `-` N MONTHS keeps the day of the month, or the month's last day when it has fewer days
   (31 Jan + 1 MONTHS is 28 Feb). Snap to MONTH is the month's last day, snap to YEAR 31 Dec.
 

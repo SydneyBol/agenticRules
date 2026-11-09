@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from ....domain import BlockRef, Problem
 from ...vocabulary import CATALOG_OBJECT, COUNTER_LEVELS
-from ..fields import CONDITIONS, data_type, fill
+from ..fields import CONDITIONS, REWARD_ACTIONS, data_type, fill
 from ..reference import picks_by_operator
 from ..tree import nodes
 
@@ -258,7 +258,7 @@ def unfilled(root: Any, catalog: Catalog | None = None, counters: dict[str, Any]
         elif t in CONDITIONS and ("OBJECT" not in f or (f["OBJECT"] == "member" and "attribute_level" not in f)):
             out.append(Problem.of("unknown_condition_attribute", block, name=name))
         elif (
-            t == "action"
+            t in REWARD_ACTIONS
             and f.get("action_type") == "give_points"
             and catalog is not None
             and "REWARD_TAGS" not in f
