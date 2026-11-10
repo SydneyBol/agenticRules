@@ -380,17 +380,32 @@ def rules_context(om: dict[str, Any], segment: dict[str, Any] | None = None) -> 
     )
 
 
+def _airport_line(catalog: Catalog, code: str, attrs: dict[str, Any]) -> str:
+    """One active airport: its code and its own value of each airport attribute rules read (a code with its label)."""
+    own = []
+    for a in catalog.attributes.get("airport", {}).values():
+        if a.code in attrs:
+            label = (a.values or {}).get(str(attrs[a.code]))
+            own.append(
+                f"{a.code}={attrs[a.code]}" + (f" ({label})" if label and str(label) != str(attrs[a.code]) else "")
+            )
+    return " | ".join([code, ", ".join(own)] if own else [code])
+
+
 def _airports_text(catalog: Catalog) -> list[str]:
     """The program's airports and airport pairs, and the header fields a transaction names its airports by."""
     airports, pairs = catalog.reference.get("airports") or {}, catalog.reference.get("airport_pairs") or {}
     if not airports:
         return []
     out = [
-        "\n## The program's airports (a transaction names its origin and destination airports by code in the header "
-        "fields h_origin_airport and h_destination_airport; the airport and airport pair attributes are read from "
-        "them)",
-        ", ".join(airports) if len(airports) <= INLINE_VALUES else f"{len(airports)} airports, not listed",
+        "\n## The program's active airports (a transaction names its origin and destination airports by code in the "
+        "header fields h_origin_airport and h_destination_airport; the airport and airport pair attributes are read "
+        "from them)  (code | its own value of each airport attribute)",
     ]
+    if len(airports) <= INLINE_VALUES:
+        out += [_airport_line(catalog, code, attrs) for code, attrs in airports.items()]
+    else:
+        out.append(f"{len(airports)} airports, not listed")
     if pairs:
         out.append("Airport pairs (origin-destination | distance):")
         out += [f"{k} | {v.get('distance')}" for k, v in list(pairs.items())[:INLINE_VALUES]]

@@ -13,6 +13,7 @@ from typing import Any
 
 from ...domain import Block, Composed, CounterDecl, LooseBlock, Problem, Result, ToolInput, located, renamed
 from ..canvas.build import to_xml
+from ..canvas.checks.airports import airport_notes
 from ..canvas.checks.counters import counter_problems
 from ..canvas.checks.grammar import ROOTS, check, detach
 from ..canvas.checks.screen_fields import unfilled
@@ -198,6 +199,8 @@ class Canvases:
             return {"ok": False, "problems": [Problem.of("not_a_block_tree", error=str(e))]}
         self.trees[canvas] = tops
         written = Composed(xml, [], counters, self._loose(canvas, tops, moved))
+        if airports := airport_notes(xml, self.catalog):  # facts beside the problems: they hold no finish back
+            noted["airports"] = airports
         return {**self._check(canvas, tops, written, paths, xids), **noted}
 
     def pending(self) -> list[Problem]:

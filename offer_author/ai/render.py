@@ -239,6 +239,12 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     "segment_prompt_without_segment": lambda f: "Offer Main's segment_prompt names who the offer is for, but the "
     "segment canvas has no conditions: the Select Members screen builds its segment from that prompt and gets none. "
     "Either the segment holds those members, or segment_prompt is empty (every member)",
+    "no_active_airport": lambda f: (
+        f"no active airport of the program has {f['attribute']} "
+        + ", ".join(str(v) for v in f["values"])
+        + (f" (the {f['side']} airport condition)" if f.get("side") else "")
+        + f"; the active airports that have a value of it: {', '.join(f['active']) or 'none'}"
+    ),
     # catalog lookups (core/catalog.py)
     "not_a_catalog_attribute": lambda f: f"{f['attribute']} is not a catalog attribute",
     "no_value_list": lambda f: f"{f['attribute']} has no value list",

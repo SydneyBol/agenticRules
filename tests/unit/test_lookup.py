@@ -271,3 +271,70 @@ def test_an_airport_value_that_is_not_a_code_is_a_compose_problem(airline):
     assert codes("190") == []
     (bad,) = codes("Bengaluru")
     assert bad.code == "values_not_codes" and set(bad.fact("closest")) == {"131", "190"}
+
+
+def test_the_catalog_lists_each_active_airport_with_its_own_values(airline):
+    """2026-11-10 live L04: "North zone" and "South zone" were built as BLR and VAR. Both are in the North zone; the
+    test-case writer, which reads the same catalog text, had the airports' codes only and guessed."""
+    text = catalog_text(airline)
+    assert "## The program's active airports" in text
+    blr = next(ln for ln in text.splitlines() if ln.startswith("BLR | "))
+    for own in (
+        "city=190 (Bengaluru)",
+        "country=6 (India)",
+        "zone=start (North)",
+        "airport_name=BLR (Bengaluru Airport)",
+    ):
+        assert own in blr
+    assert "bags_count=10" in blr  # the tenant's own airport attribute, with no label to add
+    zrh = next(ln for ln in text.splitlines() if ln.startswith("ZRH | "))
+    assert "city=254 (Zürich)" in zrh and "zone=" not in zrh  # an airport without a zone has none to show
+    assert not any(ln.startswith("HYD | ") for ln in text.splitlines())  # inactive
+
+
+def _travel_to(side_value, operators="in", attribute="airport_code"):
+    """A rules canvas: Travel activities whose destination airport has the value earn 250 points."""
+    airport = {"type": "activity_criteria", "OBJECT": "airport", "airporttypes": "destination", "attribute": attribute}
+    action = {"type": "action", "action_type": "give_points", "FORMULA": {"type": "static_value", "value": "250"}}
+    return {
+        "type": "offer_generic",
+        "activities": [
+            {
+                "type": "activity",
+                "ACTIVITY_CRITERIA": [
+                    {
+                        "type": "activity_criteria",
+                        "OBJECT": "activity",
+                        "attribute": "h_bit_type",
+                        "operators": "==",
+                        "value": "Travel",
+                    },
+                    {**airport, "operators": operators, ("value" if operators == "==" else "picked"): side_value},
+                ],
+                "RULES": [{"type": "rule", "IDENTIFIER": "Travel bonus", "ACTION": [action]}],
+            }
+        ],
+    }
+
+
+def test_a_compose_says_when_no_active_airport_has_the_value(airline):
+    """2026-11-10 live L05: "arriving in Hyderabad" became destination airport HYD, an inactive airport, as a finished
+    draft with no question. The value is in the screen's list, so it is no problem; the airport setup knows more."""
+    from offer_author.core.run import Run
+
+    run = Run(airline, None, None, None)
+    r = run.compose({"canvas": "rules", "blocks": _travel_to("HYD"), "counters": []})
+    assert r["ok"] and r["problems"] == [] and run.canvases.pending() == []  # a fact: it holds no finish back
+    assert said(r["airports"]) == [
+        "no active airport of the program has airport_code HYD (the destination airport condition); "
+        "the active airports that have a value of it: BLR, VAR, ZRH"
+    ]
+    mixed = run.compose({"canvas": "rules", "blocks": _travel_to("BLR,HYD"), "counters": []})
+    assert [p.fact("values") for p in mixed["airports"]] == [("HYD",)]
+    assert "airports" not in run.compose({"canvas": "rules", "blocks": _travel_to("BLR"), "counters": []})
+    # country 255 is the second "India": in the list, and no airport is in it
+    india = run.compose({"canvas": "rules", "blocks": _travel_to("6,255", attribute="country"), "counters": []})
+    assert [p.fact("values") for p in india["airports"]] == [("255",)]
+    # the airports carry no `state` (bolapi sends `region`): nothing is known, so nothing is said
+    state = run.compose({"canvas": "rules", "blocks": _travel_to("93", "==", "state"), "counters": []})
+    assert state["ok"] and "airports" not in state
