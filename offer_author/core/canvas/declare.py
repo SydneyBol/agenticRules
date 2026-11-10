@@ -16,11 +16,10 @@ from __future__ import annotations
 from typing import Any
 
 from ...domain import Block, CounterDecl, Problem
-from ..vocabulary import ACTIVITY_COUNTER, OFFER_COUNTER
+from ..vocabulary import DECLARED_LEVELS, OFFER_COUNTER
 from .fields import CONDITIONS
 from .tree import nodes
 
-LEVELS = (OFFER_COUNTER, ACTIVITY_COUNTER)  # the levels the upload creates counters at
 NUMERIC_UPDATES = ("INCREMENT_BY", "DECREMENT_BY")
 
 
@@ -70,7 +69,7 @@ def _uses(tops: list[Block], catalog: Any) -> dict[str, list[tuple[str | None, s
             out.setdefault(str(f["mta_attribute"]), []).append((f.get("mta_type_value"), f.get("action_operator")))
         elif t in CONDITIONS and f.get("attribute") and not _catalog_attr(catalog, f):
             level = f.get("attribute_level")
-            if level in LEVELS or (level is None and f.get("OBJECT") in (None, "member")):
+            if level in DECLARED_LEVELS or (level is None and f.get("OBJECT") in (None, "member")):
                 out.setdefault(str(f["attribute"]), []).append((level, None))
     return out
 
@@ -86,7 +85,7 @@ def _catalog_attr(catalog: Any, f: dict[str, Any]) -> bool:
 def _from_use(name: str, uses: list[tuple[str | None, str | None]]) -> CounterDecl | None:
     """A NUMBER counter at the one level its uses state, when one update raises or lowers it; else None."""
     levels = {lv for lv, _ in uses if lv}
-    if len(levels) != 1 or not levels <= set(LEVELS):
+    if len(levels) != 1 or not levels <= set(DECLARED_LEVELS):
         return None
     if not any(op in NUMERIC_UPDATES for _, op in uses):
         return None

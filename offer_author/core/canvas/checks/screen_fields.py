@@ -251,7 +251,7 @@ def unfilled(root: Any, catalog: Catalog | None = None, counters: dict[str, Any]
         out += _shape(n, f, catalog, block, name)
         if t in CONDITIONS and (form := _operator_form(n, f, _attr_type(t, f, catalog, counters))):
             out.append(Problem.of(form[0], block, name=name, **form[1]))
-        if t == "rule" and not (n.get("inputs") or {}).get("ACTION"):
+        if t in TAGGED and not (n.get("inputs") or {}).get("ACTION"):
             out.append(Problem.of("rule_without_action", block, name=f.get("IDENTIFIER")))
         elif t == SEGMENT_CONDITION and "attr_level" not in f:
             out.append(Problem.of("segment_condition_without_level", block, name=name))

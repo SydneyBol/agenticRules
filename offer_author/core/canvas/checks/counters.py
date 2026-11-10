@@ -10,10 +10,8 @@ import xml.etree.ElementTree as ET
 
 from ....domain import CounterDecl, Problem
 from ...tenant.existing_counters import Guard
-from ...vocabulary import ACTIVITY_COUNTER, OFFER_COUNTER
+from ...vocabulary import DECLARED_LEVELS, OFFER_COUNTER
 from ..fields import counter_ref
-
-DECLARED_LEVELS = (OFFER_COUNTER, ACTIVITY_COUNTER)  # the levels whose counters the upload creates from `counters`
 
 
 def counter_problems(xml: str, counters: list[CounterDecl], guard: Guard | None) -> list[Problem]:

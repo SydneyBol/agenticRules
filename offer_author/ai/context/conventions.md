@@ -11,8 +11,9 @@ description leaves open takes its plain reading, recorded as an assumption.
 - "Nx points": points = the measure x N in total (not N extra on top). Record that as an assumption.
 - "N bonus points", "N extra points", "N additional points": N on top of what the program already gives, i.e. this
   offer's own award is N (the base earning is not part of the offer). "Nx bonus" / "N times bonus" is the measure x N.
-- "N points per X spent", "N points for every X": N for each whole X of the measure (AED 25 at "1 point per AED 10" is
-  2 points). Record that as an assumption when X is more than 1.
+- "N points per X spent", "N points for every X": when X is more than 1, N for each whole X of the measure
+  (AED 25 at "1 point per AED 10" is 2 points), recorded as an assumption; when X is 1, the amount times N, a part of
+  a unit earning its share.
 - An offer gives only what it describes: a transaction that does not qualify earns nothing from this offer (the
   program's base earning is not part of the offer).
 - "reaches X", "hits X", "once the total is X": the transaction that brings the total to X or more qualifies.

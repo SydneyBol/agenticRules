@@ -26,7 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from ..core.run import Run
 from ..core.settings import Settings
-from ..core.vocabulary import COUNTER_LEVELS, OFFER_MAIN_FORM
+from ..core.vocabulary import DECLARED_LEVELS, OFFER_MAIN_FORM
 from ..domain import Result, ToolInput
 from . import render
 
@@ -77,8 +77,8 @@ class Counter(BaseModel):
     """An offer or activity counter the blocks refer to."""
 
     name: str
-    level: Literal[tuple(COUNTER_LEVELS)] | None = None  # type: ignore[valid-type]
-    data_type: Literal["NUMBER", "TEXT", "DATE", "BOOLEAN"]
+    level: Literal[tuple(DECLARED_LEVELS)] | None = None  # type: ignore[valid-type]
+    data_type: Literal["NUMBER", "TEXT"]
     counter_type: Literal["REGULAR", "VECTOR"]
     target_type: str | None = None
     namespace: str | None = Field(None, description="VECTOR only: the attribute it counts per (e.g. h_location)")
@@ -307,7 +307,11 @@ def _given(fields: dict[str, Any]) -> ToolInput:
 
 def content(result: Result) -> str:
     """A result as the tool message carries it to the model."""
-    return json.dumps(result)[:MAX_RESULT_CHARS]
+    text = json.dumps(result)
+    if len(text) <= MAX_RESULT_CHARS:
+        return text
+    cut = {"ok": result.get("ok"), "truncated": True, "note": "result too long: only its start is given"}
+    return json.dumps({**cut, "start": text[: MAX_RESULT_CHARS // 2]})
 
 
 def _call(ctx: RunContext, method: Callable[[ToolInput], Result], fields: dict[str, Any]) -> tuple[str, Done]:

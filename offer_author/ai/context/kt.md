@@ -198,7 +198,7 @@ third parties.
 | `MA_P` | Program-level member profile: tier, dates of birth and joining, gender, ... |
 | `MA_O` | Offer counter: belongs to this member and this offer, kept from BIT to BIT |
 | `MA_A` | Activity counter: lives for one BIT only, starts empty on every BIT |
-| `MA_T` / `MA_TO` | Tier attributes / tier counters |
+| `MA_T` / `MA_TO` | Tier attributes / tier counters, which belong to a tier class, not to an offer |
 | `MA_S`, `MP_S`, `MR_S` | Analytics, personalization and retention scores written back to the member |
 | `MA_CA`, `MA_CC`, `MA_SP` | Bank account, cobranded card, subscription |
 

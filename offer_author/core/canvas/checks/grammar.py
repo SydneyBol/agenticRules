@@ -258,7 +258,7 @@ def codes(block: ET.Element, catalog: Catalog | None) -> list[Problem]:
         if owner:  # the screen finds no such attribute under this OBJECT and loads the condition empty
             out.append(Problem.of("attribute_not_of_object", attribute=attr, object=obj, owner=owner))
     own = {f.get("name"): f.text for f in block if _tag(f) == "field"}  # this block's own dropdowns, not nested ones
-    if block.get("type") == "action" and m.get("attribute_type_input") == "give_privilege":
+    if block.get("type") in ("action", "action_third_party") and m.get("attribute_type_input") == "give_privilege":
         pid = own.get("SELECTED_PRIVILEGE")
         if pid and str(pid) not in catalog.privileges:
             out.append(Problem.of("privilege_not_in_catalog", id=pid))

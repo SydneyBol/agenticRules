@@ -60,7 +60,7 @@ the names the block reference lists:
   and REWARD_TAGS (the account the catalog names as filled when none is named, and its reward tag); the levels come
   from `counters`.
 - counters: declare once, beside the tree, every counter the blocks refer to, offer (MA_O) and activity (MA_A) alike:
-  {"name", "data_type" NUMBER|TEXT|DATE|BOOLEAN, "counter_type" REGULAR|VECTOR, "target_type"?, "namespace"? (VECTOR:
+  {"name", "data_type" NUMBER|TEXT, "counter_type" REGULAR|VECTOR, "target_type"?, "namespace"? (VECTOR:
   what it counts per, e.g. h_location), "level" MA_O|MA_A}. The rules screen creates them on upload.
 You never write the canvas file yourself: the tools write it from your fields, picked codes and counters as the
 screen does; the manager uploads it in the stock screen, which makes it into the offer the engine runs.

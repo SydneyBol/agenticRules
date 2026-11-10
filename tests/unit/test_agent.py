@@ -1041,3 +1041,62 @@ def test_a_text_counter_compared_with_a_block_under_equals_is_a_problem(fixture_
     assert "text_compared_with_block" in codes(cond("not_match", block_rhs), text)
     assert codes(cond("doesn't match", block_rhs), text) == ["operator_not_a_code"]
     assert "text_compared_with_block" not in codes(cond("==", block_rhs), {"Flag": {"data_type": "NUMBER"}})
+
+
+def test_a_tool_result_over_the_limit_is_still_json():
+    """2026-11-10 review: a long result was cut in the middle, so the model read broken JSON."""
+    small = {"ok": True, "problems": ["x"]}
+    assert json.loads(tools.content(small)) == small
+    big = {"ok": False, "problems": ['a "quoted" problem'] * (tools.MAX_RESULT_CHARS // 10)}
+    cut = json.loads(tools.content(big))
+    assert cut["ok"] is False and cut["truncated"] is True
+    assert json.dumps(big).startswith(cut["start"]) and len(tools.content(big)) < len(json.dumps(big))
+
+
+@pytest.mark.parametrize("kind", ["rule", "rule_line", "payment_rule"])
+def test_every_rule_block_without_an_action_is_a_problem(kind, fixture_catalog):
+    """2026-11-10 review: only `rule` was checked; a line rule or payment rule with no action passed."""
+    empty = [{"type": kind, "id": "r1", "fields": {"IDENTIFIER": "Line bonus"}, "inputs": {}}]
+    got = [p for p in screen_fields.unfilled(empty, fixture_catalog, {}) if p.code == "rule_without_action"]
+    assert [(p.block.type, p.fact("name")) for p in got] == [(kind, "Line bonus")]
+    acting = [dict(empty[0], inputs={"ACTION": [{"type": "action", "id": "a1", "fields": {}}]})]
+    assert "rule_without_action" not in [p.code for p in screen_fields.unfilled(acting, fixture_catalog, {})]
+
+
+@pytest.mark.parametrize("kind", ["action", "action_third_party"])
+def test_a_privilege_and_its_usage_policy_are_checked_on_both_action_blocks(kind, fixture_catalog):
+    """2026-11-10 review: the third-party action's privilege and usage policy were not looked up in the catalog."""
+    import dataclasses
+    import xml.etree.ElementTree as ET
+
+    cat = dataclasses.replace(
+        fixture_catalog, privileges={"501": {"id": "501", "name": "Coffee", "usage_policies": [{"id": "31"}]}}
+    )
+
+    def codes(privilege, policy):
+        fields = {"action_type": "give_privilege", "SELECTED_PRIVILEGE": privilege, "PRIVILEGE_USAGEPOLICY": policy}
+        x = "".join(f'<field name="{k}">{v}</field>' for k, v in fields.items())
+        ns = check.NS[1:-1]
+        block = (
+            f'<block xmlns="{ns}" type="{kind}"><mutation attribute_type_input="give_privilege"></mutation>{x}</block>'
+        )
+        return [p.code for p in check.codes(ET.fromstring(block), cat)]
+
+    assert codes("501", "31") == []
+    assert codes("999", "31") == ["privilege_not_in_catalog"]
+    assert codes("501", "77") == ["usage_policy_not_of_privilege"]
+
+
+def test_a_counter_is_declared_as_a_number_or_text_at_offer_or_activity_level():
+    """2026-11-10 review: the schema let the model declare DATE and BOOLEAN counters and a tier counter (MA_TO), which
+    the knowledge it reads rules out and the tools neither create nor check."""
+    from pydantic import ValidationError
+
+    ok = {"name": "Visits", "data_type": "NUMBER", "counter_type": "REGULAR"}
+    for level in (None, "MA_O", "MA_A"):
+        assert tools.Counter(**ok, level=level).level == level
+    assert tools.Counter(**dict(ok, data_type="TEXT")).data_type == "TEXT"
+    for bad in ({"data_type": "DATE"}, {"data_type": "BOOLEAN"}, {"level": "MA_TO"}):
+        with pytest.raises(ValidationError):
+            tools.Counter(**dict(ok, **bad))
+    assert '"data_type" NUMBER|TEXT,' in prompt.SYSTEM and "BOOLEAN" not in prompt.SYSTEM  # what the model is told

@@ -24,6 +24,8 @@ OFFER_COUNTER = "MA_O"  # an offer counter: persists per member across transacti
 ACTIVITY_COUNTER = "MA_A"  # an activity-level value: one transaction only
 TIER_COUNTER = "MA_TO"
 COUNTER_LEVELS = (OFFER_COUNTER, ACTIVITY_COUNTER, TIER_COUNTER)
+# the levels an offer declares counters at and the upload creates them at (a tier counter belongs to its tier class)
+DECLARED_LEVELS = (OFFER_COUNTER, ACTIVITY_COUNTER)
 MEMBER_ATTRIBUTE = "MA_P"  # a member profile attribute (the attribute library)
 ATTRIBUTE_LEVELS = (
     None,
