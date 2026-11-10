@@ -131,7 +131,7 @@ class Catalog:
 
     # ------------------------------------------------------------ lookups
     def attr(self, obj: str, code: str) -> Attribute | None:
-        """One attribute of an object (activity, member, product), or None."""
+        """One attribute of an object (activity, member, product, airport, airport_pair), or None."""
         return self.attributes.get(obj, {}).get(code)
 
     @property
@@ -170,6 +170,21 @@ class Catalog:
         vals = self.values_of(obj, code)
         return list(vals), [f"{lab} ({c})" for c, lab in vals.items()]
 
+    def airports_with(self, obj: str, code: str) -> dict[str, list[str]] | None:
+        """Per value of an airport attribute, the program's active airports that have it.
+
+        The airport setup is where an airport gets its city, country, zone and its own attributes: a value no airport
+        has matches no transaction, and of two values with one name (two cities "Abu Dhabi") it tells which one the
+        airports are in. None for another object's attribute, or one no airport carries.
+        """
+        if obj != "airport":
+            return None
+        out: dict[str, list[str]] = {}
+        for airport, attrs in (self.reference.get("airports") or {}).items():
+            if code in attrs:
+                out.setdefault(str(attrs[code]), []).append(airport)
+        return out or None
+
     def lookup(self, obj: str, code: str, text: str, k: int = 8, search: Search | None = None) -> Result:
         """The catalog codes closest to the manager's words, with facts for the model to judge by (no verdicts).
 
@@ -179,8 +194,10 @@ class Catalog:
         reported. With a search (value_search.py), the words ("flights") also find values by meaning ("Fly"): see
         _searched. Without one, or when it fails, the words alone rank.
 
+        A value of an airport attribute also names the airports that have it (airports_with).
+
         Args:
-            obj: activity, member or product.
+            obj: activity, member, product, airport or airport_pair.
             code: The attribute.
             text: The manager's words for one value.
             k: Candidates shown, at most (words only).
@@ -188,7 +205,7 @@ class Catalog:
 
         Returns:
             {attribute, query, total_values, candidates, tied?, same_label?, words_in_no_value?}, or {error: Problem}
-            when the attribute has no value list.
+            when the attribute has no value list. A candidate is {code, label, score, lacks?, airports?}.
         """
         vals = self.values_of(obj, code)
         if not vals:
@@ -215,12 +232,14 @@ class Catalog:
             key=lambda t: (-t[0], t[2], t[1]),
         )
         top = [t for t in scored[:k] if t[0] > 0.2]
+        at = self.airports_with(obj, code)
         return {
             "attribute": f"{obj}.{code}",
             "query": text,
             "total_values": len(vals),
             "candidates": [
-                {"code": c, "label": lab, "score": sc, **({"lacks": miss} if miss else {})} for sc, c, lab, miss in top
+                {"code": c, "label": lab, "score": sc, **({"lacks": miss} if miss else {}), **_airports(at, c)}
+                for sc, c, lab, miss in top
             ],
             **_lookup_facts(top, qw - set(df)),
         }
@@ -250,11 +269,14 @@ class Catalog:
         scored = sorted(zip(scores, pool, strict=True), key=lambda t: -t[0])[:SHOWN]
         top: list[Scored] = [(sc, codes[i], vals[codes[i]], []) for sc, i in scored]
         vocab = {w for d in docs for w in norm(d).split()}
+        at = self.airports_with(obj, code)
         return {
             "attribute": f"{obj}.{code}",
             "query": text,
             "total_values": len(docs),
-            "candidates": [{"code": c, "label": lab, "score": float(f"{sc:.3g}")} for sc, c, lab, _ in top],
+            "candidates": [
+                {"code": c, "label": lab, "score": float(f"{sc:.3g}"), **_airports(at, c)} for sc, c, lab, _ in top
+            ],
             **_lookup_facts(top, set(norm(text).split()) - vocab, close=lambda a, b: _odds(a) - _odds(b) <= TIE_ODDS),
         }
 
@@ -589,6 +611,11 @@ def _odds(p: float) -> float:
     """A probability's log-odds (kept off 0 and 1)."""
     p = min(max(p, 1e-9), 1 - 1e-9)
     return math.log(p / (1 - p))
+
+
+def _airports(at: dict[str, list[str]] | None, code: str) -> dict[str, list[str]]:
+    """A candidate's `airports` fact: the airports that have the value (none is a fact too), or nothing to add."""
+    return {} if at is None else {"airports": at.get(code, [])}
 
 
 def _lookup_facts(

@@ -199,3 +199,72 @@ def test_close_cross_encoder_scores_are_tied(devintam1_catalog):
         "activity", "h_bit_type", "a night out", search=Scored({"FLIGHT": 0.5, "DINING": 0.45})
     )
     assert r["tied"] == ["FLIGHT", "DINING"]
+
+
+@pytest.fixture(scope="module")
+def airline():
+    """devintbf2 as saved: 8 airports (3 active), their attribute library and the city, state and country lists."""
+    from offer_author.core.tenant.catalog import Catalog
+    from tests.paths import CATALOGS
+
+    return Catalog.from_bolapi_dumps(os.path.join(CATALOGS, "devintbf2", "bolapi"), "devintbf2", 1, "9", "BASE")
+
+
+def test_airport_values_are_looked_up_and_name_the_airports_that_have_them(airline):
+    """2026-11-10 review (3.3 item 4): the catalog text said "332 values, not listed: find codes with lookup_values"
+    for airport.city, and the tool took activity, member or product only. The program has two cities named
+    Bengaluru and two countries named India; the airport setup tells which one the airports are in."""
+    from pydantic import ValidationError
+
+    from offer_author.ai import tools
+
+    assert "city | City | LOV | 332 values, not listed: find codes with lookup_values" in catalog_text(airline)
+    for obj in ("airport", "airport_pair"):
+        assert tools.LookupValues(object=obj, attribute="city", text="Bengaluru").object == obj
+    with pytest.raises(ValidationError):
+        tools.LookupValues(object="location", attribute="city", text="Bengaluru")
+    city = airline.lookup("airport", "city", "Bengaluru")
+    assert {c["code"]: c["airports"] for c in city["candidates"]} == {"131": [], "190": ["BLR"]}
+    assert city["same_label"] == [["131", "190"]]
+    country = airline.lookup("airport", "country", "India")
+    assert {c["code"]: c["airports"] for c in country["candidates"]} == {"255": [], "6": ["BLR", "VAR"]}
+    name = airline.lookup("airport", "airport_name", "Zurich")["candidates"][0]
+    assert (name["code"], name["airports"]) == ("ZRH", ["ZRH"])
+    # an inactive airport is in the screen's list and in no transaction's data
+    assert {c["code"]: c["airports"] for c in airline.lookup("airport", "airport_code", "HYD")["candidates"]} == {
+        "HYD": []
+    }
+    # other objects' values carry no such fact; an attribute without a value list still says so
+    assert "airports" not in airline.lookup("member", "tier_class", "Gold")["candidates"][0]
+    assert said([airline.lookup("airport", "zone", "start")["error"]]) == ["airport.zone has no value list"]
+    # the same fact when the values are found by meaning and scored by the cross-encoder
+    found = airline.lookup("airport", "city", "Bangalore", search=FakeSearch(near="(190)", best="(190)"))
+    assert found["candidates"][0] == {"code": "190", "label": "Bengaluru", "score": 0.9, "airports": ["BLR"]}
+
+
+def test_an_airport_lookup_is_a_tool_call_like_any_other(airline):
+    look = ("lookup_values", {"object": "airport", "attribute": "city", "text": "Bengaluru"})
+    llm = ScriptedLLM([[look], [finish(blocking_questions=["test"])]])
+    res = generate("Double points on flights from Bengaluru", airline, llm)
+    assert res["diagnostics"]["lookups"][0] == {"attribute": "airport.city", "text": "Bengaluru", "top": "131"}
+    answer = json.loads(llm.calls[-1][2]["content"][0]["content"])
+    assert [c for c in answer["candidates"] if c["airports"]] == [
+        {"code": "190", "label": "Bengaluru", "score": 1.0, "airports": ["BLR"]}
+    ]
+
+
+def test_an_airport_value_that_is_not_a_code_is_a_compose_problem(airline):
+    import xml.etree.ElementTree as ET
+
+    from offer_author.core.canvas.checks import grammar
+
+    def codes(value):
+        block = (
+            f'<block xmlns="{grammar.NS[1:-1]}" type="if_generic"><mutation object="airport" attribute="city" '
+            f'operators="==" value="{value}"></mutation></block>'
+        )
+        return grammar.codes(ET.fromstring(block), airline)
+
+    assert codes("190") == []
+    (bad,) = codes("Bengaluru")
+    assert bad.code == "values_not_codes" and set(bad.fact("closest")) == {"131", "190"}
