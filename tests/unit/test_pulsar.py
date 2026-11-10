@@ -121,6 +121,46 @@ def test_no_draft_is_an_error_message_the_popup_shows(fixture_catalog):
     assert "Can't build 'friends' spend'" in msg and "Try: reward the referrer" in msg
 
 
+HYDERABAD = {
+    "phrase": "arriving in Hyderabad",
+    "reason": "HYD is not an active airport",
+    "alternative": "Activate HYD as a program airport",
+}
+
+
+@pytest.mark.parametrize(
+    "said,shown",
+    [
+        ({"blocking_questions": ["Downtown Store or Downtown Outlet?"]}, "Downtown Store or Downtown Outlet?"),
+        (
+            {"unsupported": [HYDERABAD]},
+            "Can't build 'arriving in Hyderabad': HYD is not an active airport Try: Activate HYD as a program airport",
+        ),
+    ],
+)
+def test_rules_the_model_asked_about_or_reported_are_not_handed_out(said, shown, fixture_catalog, logged):
+    """2026-11-10 (live L05): the model reported "arriving in Hyderabad" as not buildable and still composed a rule on
+    every other destination. The answer is the XML alone, so the popup got it as a finished draft. Rules built beside
+    a question or a report now stay back, and the popup shows what the model said."""
+    llm = ScriptedLLM([[MAIN, EARN], [finish(readback="2x at Downtown", **said)]])
+    cl = client_for(llm, fixture_catalog)
+    r = rules_req(cl)
+    assert r.status_code == 422 and r.get_json() == {"error": {"message": shown}}
+    n = logged("rules", 777)
+    assert n["held_back"] is True and n["readback"] == "2x at Downtown"  # the log keeps what was built and said
+    # the rules screen opening for that offer loads empty, as with no rules: the popup can generate again
+    assert rules_req(cl, regenerate="false", slash="/").get_json() == {"xml": ""}
+    assert len(llm.calls) == 2  # the same run answered both: no second generation
+
+
+def test_an_assumption_alone_holds_nothing_back(fixture_catalog, logged):
+    """An assumption is the model's reading, not a question: the draft is handed out, and the log has no held_back."""
+    r = rules_req(client_for(ScriptedLLM(RUN), fixture_catalog))
+    assert r.status_code == 200 and r.get_json()["xml"]
+    n = logged("rules", 777)
+    assert n["assumptions"] and "held_back" not in n
+
+
 def test_model_outage_is_503_with_message(fixture_catalog):
     from offer_author.ai.model import LLMError
 

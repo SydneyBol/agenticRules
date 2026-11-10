@@ -75,8 +75,20 @@ FALLBACK = {
 }
 
 
+def held_back(res: Res, part: str) -> bool:
+    """Whether a part that was built is still not handed to its screen.
+
+    The model asked something about it, or reported a phrase of it as not buildable. The answer to a screen is the
+    canvas alone, so a canvas returned beside either would reach the manager as a finished one with the question or
+    the report unseen (2026-11-10: "arriving in Hyderabad", no active airport there, came back as a rule on every
+    other destination). Its questions and reports are the message instead (error_message).
+    """
+    v = part_view(res, part)
+    return res.get("status") != "error" and bool(v["blocking_questions"] or v["unsupported"])
+
+
 def error_message(res: Res, part: str) -> str:
-    """Why that part was not built, in its own items."""
+    """Why that part was not built, or is held back (held_back), in its own items."""
     if res["status"] == "error":
         return res.get("message") or "The rule generator failed. Please try again."
     v = part_view(res, part)
@@ -106,6 +118,8 @@ def notes(res: Res, part: str) -> Res:
         if report:  # the reasons worded, as the log is read
             report = dict(report, renamed=[dict(r, why=_worded(r["why"])) for r in report.get("renamed") or []])
         out.update(readback=res.get("readback"), counter_report=report)
+    if part != "offer_main" and res.get(part) and held_back(res, part):
+        out["held_back"] = True  # built, and not handed to the screen
     if res.get("status") == "error":
         out["message"] = res.get("message")
     return out

@@ -12,7 +12,8 @@
 
 /offer/metadata answers as soon as the offer run has set Offer Main, the prompt stages show the segment and rules
 prompts it wrote, and /segment/rules and /offer/rules hand out its canvases (runs.py); each answer carries only its own
-part (payloads.py).
+part (payloads.py). A canvas the model asked about, or reported a phrase of as not buildable, is not handed out: its
+screen gets those as the error message (payloads.held_back).
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ from flask import Blueprint, Response, jsonify, request
 from ...core.settings import Settings
 from . import jobs
 from .jobs import JobStore
-from .payloads import error_message, notes, offer_main_metadata, xml_answer
+from .payloads import error_message, held_back, notes, offer_main_metadata, xml_answer
 from .runs import CatalogFor, CountersFor, Runs
 
 log = logging.getLogger("offer_author.pulsar")
@@ -49,9 +50,13 @@ def _traced(offer_id: Any, part: str, res: dict[str, Any]) -> None:
 
 
 def _rules_reply(res: dict[str, Any], body: dict[str, Any]) -> Reply:
-    """A rules run's answer: the XML with its rule id (the offer's id, as Pulsar gives it), or why there is none."""
+    """A rules run's answer: the XML with its rule id (the offer's id, as Pulsar gives it), or why there is none.
+
+    None also when the rules were built and the model asked about them or reported a phrase as not buildable
+    (payloads.held_back): the popup then shows those, as it shows why nothing was built.
+    """
     _traced(body.get("id"), "rules", res)
-    if res.get("rules"):
+    if res.get("rules") and not held_back(res, "rules"):
         return jsonify(xml_answer(res["rules"]["xml"], str(body.get("id", f"offer_{uuid.uuid4()}")).strip()))
     return _err(error_message(res, "rules"), 503 if res["status"] == "error" else 422)
 
@@ -83,7 +88,7 @@ class _Routes:
             return jsonify({"xml": ""})
         job.wait(jobs.WAIT_CACHED_S)
         res = self.runs.deliver(job, body, prompt, auth) if job.state == "done" else None
-        if not (res and res.get("rules")):
+        if not (res and res.get("rules")) or held_back(res, "rules"):
             return jsonify({"xml": ""})  # the screen then loads normally; the popup can regenerate
         return _rules_reply(res, body)
 
@@ -148,7 +153,7 @@ class _Routes:
             return jsonify({"result": "Generating"})
         r = job.result
         _traced(body.get("id"), "segment", r)
-        if r.get("segment"):
+        if r.get("segment") and not held_back(r, "segment"):
             return jsonify(xml_answer(r["segment"]["xml"], body.get("rule_id")))
         status = 503 if r.get("status") == "error" else 422
         return jsonify({"error": {"code": "SEGMENT_NOT_BUILT", "message": error_message(r, "segment")}}), status

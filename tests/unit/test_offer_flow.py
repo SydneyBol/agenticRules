@@ -126,7 +126,7 @@ def test_metadata_without_offer_main_says_why(fixture_catalog):
 def test_each_screen_gets_only_its_own_part(fixture_catalog, logged):
     """Metadata answers for the whole offer; the segment and rules answers are the XML only, and each logs only its
     own part's assumptions, questions and unsupported items (no Offer Main settings in the rules). A question about
-    the segment leaves the rules a draft."""
+    the segment leaves the rules a draft, and holds the segment back: its screen gets the question (2026-11-10)."""
     fin = finish(
         readback="Bronze members earn 2x at Downtown",
         segment_name="Bronze members",
@@ -152,9 +152,13 @@ def test_each_screen_gets_only_its_own_part(fixture_catalog, logged):
     )
     s = cl.post(
         "/ai/pulsar/segment/rules", json={"prompt": "Bronze members", "sponsor_id": 10, "id": 9, "type": "reward"}
-    ).get_json()
+    )
     n = logged("segment", 9)
-    assert s["xml"] and n["status"] == "needs_input" and n["assumptions"] == ["Bronze is the tier class BRONZE."]
+    assert s.status_code == 422 and s.get_json()["error"] == {
+        "code": "SEGMENT_NOT_BUILT",
+        "message": "Bronze tier or Bronze test tier?",
+    }
+    assert n["status"] == "needs_input" and n["held_back"] and n["assumptions"] == ["Bronze is the tier class BRONZE."]
     assert n["blocking_questions"] == ["Bronze tier or Bronze test tier?"]
 
 
