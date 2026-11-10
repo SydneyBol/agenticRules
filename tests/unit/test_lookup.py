@@ -234,9 +234,12 @@ def test_airport_values_are_looked_up_and_name_the_airports_that_have_them(airli
     assert {c["code"]: c["airports"] for c in airline.lookup("airport", "airport_code", "HYD")["candidates"]} == {
         "HYD": []
     }
+    # a lookup type's values (read since 2026-11-10): the manager's "North" zone is the code `start`
+    zone = airline.lookup("airport", "zone", "North")["candidates"][0]
+    assert zone == {"code": "start", "label": "North", "score": 1.0, "airports": ["BLR", "VAR"]}
     # other objects' values carry no such fact; an attribute without a value list still says so
     assert "airports" not in airline.lookup("member", "tier_class", "Gold")["candidates"][0]
-    assert said([airline.lookup("airport", "zone", "start")["error"]]) == ["airport.zone has no value list"]
+    assert said([airline.lookup("airport", "latitude", "13")["error"]]) == ["airport.latitude has no value list"]
     # the same fact when the values are found by meaning and scored by the cross-encoder
     found = airline.lookup("airport", "city", "Bangalore", search=FakeSearch(near="(190)", best="(190)"))
     assert found["candidates"][0] == {"code": "190", "label": "Bengaluru", "score": 0.9, "airports": ["BLR"]}

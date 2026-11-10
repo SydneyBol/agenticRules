@@ -22,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
+from urllib.parse import quote, unquote
 
 from ...domain import Problem, Result
 from ..vocabulary import ACTIVITY_TYPE
@@ -404,6 +405,8 @@ class Catalog:
                 resp["tags:" + f[len("extra_tags") : -5]] = body(f[:-5])
             elif f.startswith("lov_"):
                 resp["lov:" + f[4:-5]] = body(f[:-5])
+            elif f.startswith("lookup_") and "lookup:" + unquote(f[7:-5]) not in resp:
+                resp["lookup:" + unquote(f[7:-5])] = body(f[:-5])  # every lookup type the dump saved
             elif f.startswith("award_conversion"):
                 resp["award_conversion:" + f[len("award_conversion") : -5]] = body(f[:-5])
         for name in ("airports", "airport_pairs", "feature_toggles"):
@@ -467,6 +470,7 @@ class BolapiCatalogSource:
     ) -> Catalog:
         """The tenant's catalog read again with the caller's JWT, cached in place of the one before."""
         key = (tenant, sponsor_id, str(account_id))
+        reqs = self.requests(sponsor_id, account_id)
 
         def fetch(name: str, rel: str) -> Any:
             r = self.http.get(self.base + rel, headers={"Authorization": authorization or ""})
@@ -476,14 +480,15 @@ class BolapiCatalogSource:
                 if (
                     name in OPTIONAL
                     or name.startswith("lov:")
+                    or (name.startswith("lookup:") and name not in reqs)
                     or (name.startswith("tags:") and name != f"tags:{account_id}")
                 ):
-                    # the catalog is complete without it (another account's tags: that account lists none)
+                    # the catalog is complete without it (another account's tags: that account lists none; an
+                    # attribute's own lookup type: that attribute has no value list)
                     return None
                 raise
             return r.json()
 
-        reqs = self.requests(sponsor_id, account_id)
         with ThreadPoolExecutor(6) as pool:  # 17 GETs at once instead of one after another (a miss is user-visible)
             resp = dict(zip(reqs, pool.map(fetch, reqs, reqs.values()), strict=True))
             # every other reward account's tags: an offer may award to any of them (the give_points dropdown)
@@ -491,6 +496,7 @@ class BolapiCatalogSource:
             las = las.get("loyalty_accounts", []) if isinstance(las, dict) else las or []
             more = {f"tags:{a['id']}": TAGS.format(a["id"]) for a in las if f"tags:{a['id']}" not in resp}
             more.update(lov_requests(resp))  # the table-backed LOVs' rows (optional)
+            more.update(lookup_requests(resp))  # the attributes' other lookup types (optional)
             resp.update(zip(more, pool.map(fetch, more, more.values()), strict=True))
         cat = Catalog.from_bolapi(tenant, sponsor_id, account_id, resp, default_tag)
         self._cache[key] = (time.time(), cat)
@@ -701,6 +707,29 @@ def lov_requests(responses: dict[str, Any]) -> dict[str, str]:
             rel = url[len("/api/v1/") :]
             out["lov:" + name] = rel + ("&" if "?" in rel else "?") + "page_size=1000"
     return out
+
+
+def lookup_requests(responses: dict[str, Any]) -> dict[str, str]:
+    """The GETs for the lookup types the attributes use and the answers do not hold: {"lookup:<TYPE>": path}.
+
+    A LOOKUP attribute's values are its lookup type's rows (gender, currency, an airport's zone, a tenant's own
+    types); only the attributes rules may use are read for.
+    """
+    used = {
+        str(a["lookup_type"])
+        for name, body in responses.items()
+        if name.endswith("_attributes")
+        for a in _rows(body)
+        if a.get("data_type") == "LOOKUP"
+        and a.get("lookup_type") not in (None, "None", "")
+        and a.get("enabled", True)
+        and a.get("available_for_rules", True)
+    }
+    return {
+        f"lookup:{t}": f"lookups/?type={quote(t, safe='')}&active=True&page_size=1000"
+        for t in sorted(used)
+        if f"lookup:{t}" not in responses
+    }
 
 
 def _attributes(
