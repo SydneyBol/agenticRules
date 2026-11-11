@@ -220,7 +220,7 @@ class Canvases:
 
     def _checks(self, xml: str, counters: list[CounterDecl], canvas: str) -> list[Problem]:
         """Block grammar and catalog codes, and the counters against the offer's."""
-        return check(xml, self.catalog, canvas=canvas) + counter_problems(xml, counters, self.guard)
+        return check(xml, self.catalog, canvas=canvas) + counter_problems(xml, counters, self.guard, self.catalog)
 
     def _baseline(self, canvas: str, root: Block) -> set[Problem]:
         """Problems of the starting canvas (the saved rules, or an empty root), which are not the model's.

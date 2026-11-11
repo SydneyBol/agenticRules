@@ -11,7 +11,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from ....domain import BlockRef, Problem
-from ...vocabulary import CATALOG_OBJECT, COUNTER_LEVELS
+from ...vocabulary import CATALOG_OBJECT, COUNTER_LEVELS, MEMBER_ATTRIBUTE
 from ..fields import CONDITIONS, REWARD_ACTIONS, data_type, fill
 from ..reference import picks_by_operator
 from ..tree import nodes
@@ -152,7 +152,33 @@ def _shape(n: Any, f: dict[str, Any], catalog: Catalog | None, block: BlockRef, 
     attr = f.get("ATTRIBUTE")
     if t == "activity_attribute" and catalog is not None and attr and catalog.attr("activity", str(attr)) is None:
         out.append(Problem.of("not_a_transaction_attribute", block, name=attr))
+    picks = _picked_attribute(t, f)
+    if picks and catalog is not None and picks[1] and not form and catalog.active(picks[0], str(picks[1])) is False:
+        out.append(Problem.of("attribute_not_in_catalog", block, object=picks[0], attribute=picks[1]))
     return out
+
+
+AIRPORT_PAIR_VALUES = ("award_price", "distance_flown", "reward_price")  # airport_attribute's own options
+
+
+def _picked_attribute(t: str | None, f: dict[str, Any]) -> tuple[str, Any] | None:
+    """The attribute list of the screen a value or action block picks from, and the code it names.
+
+    Each of these dropdowns is filled with the list's active attributes only (block-definition.service.ts
+    getAttributesTuple, getUpdatableAttributesTuple), so the screen leaves any other code unset. A condition's
+    attribute is checked with its values (grammar.codes), activity_attribute above, a counter with the counters.
+    """
+    if t == "member_attribute" and f.get("ATTRIBUTE_TYPE") == MEMBER_ATTRIBUTE:
+        return "member", f.get("ATTRIBUTE")
+    if t == "product_attribute" and f.get("ATTRIBUTE_PRODUCTS") == "products_attrs":
+        return "product", f.get("ATTRIBUTE")
+    if t in ("payment_attribute", "if_payment_attribute"):
+        return "payment_method", f.get("payment_attribute")
+    if t == "airport_attribute" and f.get("airportpair_attribute") not in AIRPORT_PAIR_VALUES:
+        return "airport_pair", f.get("airportpair_attribute")
+    if t in ("action", "action_third_party") and f.get("mta_type_value") == MEMBER_ATTRIBUTE:
+        return "member", f.get("mta_attribute")  # update_attribute on a member's own attribute
+    return None
 
 
 def _operator_form(n: Any, f: dict[str, Any], typ: str | None) -> Form | None:

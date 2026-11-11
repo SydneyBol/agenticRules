@@ -7,24 +7,32 @@ the upload's match by name would be right.
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from typing import TYPE_CHECKING
 
 from ....domain import CounterDecl, Problem
 from ...tenant.existing_counters import Guard
 from ...vocabulary import DECLARED_LEVELS, OFFER_COUNTER
 from ..fields import counter_ref
 
+if TYPE_CHECKING:
+    from ...tenant.catalog import Catalog
 
-def counter_problems(xml: str, counters: list[CounterDecl], guard: Guard | None) -> list[Problem]:
+
+def counter_problems(
+    xml: str, counters: list[CounterDecl], guard: Guard | None, catalog: Catalog | None = None
+) -> list[Problem]:
     """Checks a canvas's counter declarations.
 
     Every offer or activity counter the blocks refer to is declared once, at the level the blocks use it (the screen
     looks a counter up in its own level's list and leaves the field empty when it is not there), a VECTOR counter
-    says what it counts per, and a name that already exists on the offer is reused only when the upload's match by
-    name would be right (counters.Guard).
+    says what it counts per, an attribute its entity level lists (the counter popup offers the active member or
+    transaction attributes only; an upload creates the counter with whatever the XML names), and a name that already
+    exists on the offer is reused only when the upload's match by name would be right (counters.Guard).
 
     Args:
         xml: The written canvas.
         counters: The counters the model declared.
+        catalog: The tenant catalog (what a counter counts per is checked only with one).
         guard: The offer's existing counters, or None when they are not known.
 
     Returns:
@@ -37,6 +45,9 @@ def counter_problems(xml: str, counters: list[CounterDecl], guard: Guard | None)
     for c in counters:
         if c.get("counter_type") == "VECTOR" and not c.get("namespace"):
             out.append(Problem.of("vector_without_namespace", name=c.get("name")))
+        per = "member" if (c.get("entity_level") or "Activity") == "Member" else "activity"
+        if catalog is not None and c.get("namespace") and catalog.active(per, str(c["namespace"])) is False:
+            out.append(Problem.of("namespace_not_in_catalog", name=c.get("name"), namespace=c["namespace"], object=per))
         spec = (
             c.get("name"),
             c.get("data_type"),

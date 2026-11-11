@@ -254,9 +254,12 @@ def codes(block: ET.Element, catalog: Catalog | None) -> list[Problem]:
     cobj = CATALOG_OBJECT.get(obj or "")
     out = _value_codes(catalog, cobj, obj, attr, m) if cobj and attr and level in ATTRIBUTE_LEVELS else []
     if obj and attr and not cobj and obj != "member":  # location, sponsor: their own attribute lists
-        owner = next((o for o, c in CATALOG_OBJECT.items() if catalog.attr(c, attr)), None)
+        listed = catalog.active(obj, attr)  # None: the catalog was not given that object's list
+        owner = None if listed else next((o for o, c in CATALOG_OBJECT.items() if catalog.attr(c, attr)), None)
         if owner:  # the screen finds no such attribute under this OBJECT and loads the condition empty
             out.append(Problem.of("attribute_not_of_object", attribute=attr, object=obj, owner=owner))
+        elif listed is False:  # not in that object's own list: not active for rules, or no such attribute
+            out.append(Problem.of("attribute_not_in_catalog", object=obj, attribute=attr))
     own = {f.get("name"): f.text for f in block if _tag(f) == "field"}  # this block's own dropdowns, not nested ones
     if block.get("type") in ("action", "action_third_party") and m.get("attribute_type_input") == "give_privilege":
         pid = own.get("SELECTED_PRIVILEGE")

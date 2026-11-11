@@ -33,6 +33,9 @@ OBJECTS = ("activity", "member", "product")
 # the airline objects: a BIT's origin and destination airports (module AIRPORT) and their pair (AIRPORT_DISTANCE);
 # a program without them lists none
 AIRLINE_OBJECTS = {"airport": "AIRPORT", "airport_pair": "AIRPORT_DISTANCE"}
+# the rules screen's other attribute lists (its list name -> bolapi's custom module): the model is not shown them; the
+# catalog holds their active codes so that a block naming one is checked like any other
+SCREEN_LISTS = {"sponsor": "SPONSOR", "location": "SPONSORLOCATION", "payment_method": "PAYMENT_METHOD"}
 POOL, SHOWN = 25, 15  # lookup with a search: BM25's best 25 and the embeddings' best 25, the cross-encoder's best 15
 TIE_ODDS = 0.5  # cross-encoder scores tie when their log-odds are this close (odds within ~1.6x), at any confidence
 # value lists longer than this are not written into the prompt; the model finds codes with lookup_values instead
@@ -100,6 +103,8 @@ class Catalog:
         today: The tenant's date (fixtures pin it).
         timezone: The program's time zone (dates are read in it), when known.
         point_decimal_scale: The decimals points are kept at, when known.
+        listed: The active codes of the rules screen's other attribute lists (SCREEN_LISTS), for checks only: list
+            name -> codes; a list the catalog was not given is absent.
         reference: The program data a transaction reads in the engine, for the engine check's mocked runs (never shown
             to the model): airports {code: attributes}, airport_pairs {"ORIG-DEST": {distance, ...}},
             conversion_rates {"<account>_<currency>_AWARD": rate}, features {toggle: on}.
@@ -118,6 +123,7 @@ class Catalog:
     timezone: str | None = None
     point_decimal_scale: int | None = None
     reference: dict[str, Any] = field(default_factory=dict)
+    listed: dict[str, frozenset[str]] = field(default_factory=dict)
 
     def link_activity_types(self) -> Catalog:
         """Makes the activity types the values of the activity attribute h_bit_type (lookup BIT_TYPE).
@@ -134,6 +140,28 @@ class Catalog:
     def attr(self, obj: str, code: str) -> Attribute | None:
         """One attribute of an object (activity, member, product, airport, airport_pair), or None."""
         return self.attributes.get(obj, {}).get(code)
+
+    def active(self, lst: str, code: str) -> bool | None:
+        """Whether the rules screen offers that attribute in that list of its.
+
+        bolapi marks an attribute enabled and available for rules, and the screen lists no other
+        (block-definition.service.ts getAttributesTuple); the catalog keeps only those (usable).
+
+        Args:
+            lst: activity, member, product, airport or airport_pair (the lists the model reads), or sponsor, location
+                or payment_method (SCREEN_LISTS; the payment list also has the transaction's payment attributes).
+            code: The attribute's code.
+
+        Returns:
+            None when the catalog does not hold that list.
+        """
+        if lst == "payment_method":
+            a = self.attr("activity", code)
+            if a is not None and a.payment_level:
+                return True
+        if lst in self.listed:
+            return code in self.listed[lst]
+        return code in self.attributes[lst] if lst in self.attributes and lst not in SCREEN_LISTS else None
 
     @property
     def offer_account(self) -> str | None:
@@ -329,6 +357,9 @@ class Catalog:
         for obj in AIRLINE_OBJECTS:
             if responses.get(f"{obj}_attributes"):
                 cat.attributes[obj] = _attributes(responses[f"{obj}_attributes"], lookups, locations, lovs)
+        for name in SCREEN_LISTS:
+            if responses.get(f"list:{name}") is not None:
+                cat.listed[name] = frozenset(x["name"] for x in _rows(responses[f"list:{name}"]) if usable(x))
         cat.activity_types = lookups.get("BIT_TYPE", {})
         program = next(iter(_rows(responses.get("programs"))), {})
         cat.timezone, cat.point_decimal_scale = program.get("timezone"), program.get("point_decimal_scale")
@@ -398,6 +429,7 @@ class Catalog:
             "programs": "programs",
             "locations": f"extra_locations{sponsor_id}",
             **{f"{obj}_attributes": f"custom_{module}" for obj, module in AIRLINE_OBJECTS.items()},
+            **{f"list:{name}": f"custom_{module}" for name, module in SCREEN_LISTS.items()},
         }
         resp.update({k: body(f) for k, f in optional.items() if os.path.exists(os.path.join(directory, f + ".json"))})
         for f in os.listdir(directory):
@@ -440,6 +472,7 @@ class BolapiCatalogSource:
             "member_attributes": "attributelibrary/member/?all=True",
             "product_attributes": "attributelibrary/custom/?module_type=PRODUCT",
             **{f"{o}_attributes": f"attributelibrary/custom/?module_type={m}" for o, m in AIRLINE_OBJECTS.items()},
+            **{f"list:{n}": f"attributelibrary/custom/?module_type={m}" for n, m in SCREEN_LISTS.items()},
             "airports": "airlines/airports/?page_size=1000",  # the engine check's reference data (optional)
             "airport_pairs": "airlines/airports-distance/?page_size=1000",
             "sponsor_loyalty_accounts": f"sponsors/loyaltyaccounts/?sponsor_id={sponsor_id}&offer_type=reward",
@@ -489,7 +522,7 @@ class BolapiCatalogSource:
                 raise
             return r.json()
 
-        with ThreadPoolExecutor(6) as pool:  # 17 GETs at once instead of one after another (a miss is user-visible)
+        with ThreadPoolExecutor(6) as pool:  # 20 GETs at once instead of one after another (a miss is user-visible)
             resp = dict(zip(reqs, pool.map(fetch, reqs, reqs.values()), strict=True))
             # every other reward account's tags: an offer may award to any of them (the give_points dropdown)
             las = resp.get("sponsor_loyalty_accounts")
@@ -504,7 +537,13 @@ class BolapiCatalogSource:
 
 
 OPTIONAL = frozenset(
-    {"programs", "airports", "airport_pairs", *(f"{o}_attributes" for o in AIRLINE_OBJECTS)}
+    {
+        "programs",
+        "airports",
+        "airport_pairs",
+        *(f"{o}_attributes" for o in AIRLINE_OBJECTS),
+        *(f"list:{n}" for n in SCREEN_LISTS),
+    }
 )  # catalog GETs whose failure leaves their facts unknown instead of failing it
 TAGS = "loyaltyaccounts/{}/tags/?active=true&page_size=1000"  # an account's reward tags
 
@@ -686,6 +725,17 @@ def _value_lists(
 PERSONAL_LOVS = ("MEMBER", "USER")  # LOVs listing people: not codes a rule names, and personal data
 
 
+def usable(row: dict[str, Any]) -> bool:
+    """Whether bolapi marks an attribute active for rules: enabled and available for rules.
+
+    The two flags of bolapi's attribute models (program/models.py AbstractAttribute, CustomAbstractAttribute; every
+    attribute serializer returns both). The stock screen lists an attribute only when both are true
+    (block-definition.service.ts getAttributesTuple: `available_for_rules && enabled`), so a row without one is not
+    listed either. bolapi allows available_for_rules only on a rule_selectable attribute, so that flag adds nothing.
+    """
+    return bool(row.get("enabled") and row.get("available_for_rules"))
+
+
 def lov_requests(responses: dict[str, Any]) -> dict[str, str]:
     """The GETs for the table-backed LOVs the attributes use: {"lov:<NAME>": path under /bolapi/v1/}.
 
@@ -697,7 +747,7 @@ def lov_requests(responses: dict[str, Any]) -> dict[str, str]:
         for name, body in responses.items()
         if name.endswith("_attributes")
         for a in _rows(body)
-        if a.get("data_type") == "LOV"
+        if a.get("data_type") == "LOV" and usable(a)
     }
     out = {}
     for x in _rows(responses.get("lovs")):
@@ -720,10 +770,7 @@ def lookup_requests(responses: dict[str, Any]) -> dict[str, str]:
         for name, body in responses.items()
         if name.endswith("_attributes")
         for a in _rows(body)
-        if a.get("data_type") == "LOOKUP"
-        and a.get("lookup_type") not in (None, "None", "")
-        and a.get("enabled", True)
-        and a.get("available_for_rules", True)
+        if a.get("data_type") == "LOOKUP" and a.get("lookup_type") not in (None, "None", "") and usable(a)
     }
     return {
         f"lookup:{t}": f"lookups/?type={quote(t, safe='')}&active=True&page_size=1000"
@@ -735,10 +782,10 @@ def lookup_requests(responses: dict[str, Any]) -> dict[str, str]:
 def _attributes(
     body: Any, lookups: dict[str, dict[str, str]], locations: dict[str, str], lovs: dict[str, dict[str, str]]
 ) -> dict[str, Attribute]:
-    """The attributes rules may use (enabled, available for rules, not BOOL), with their value lists."""
+    """The attributes rules may use (usable, not BOOL), with their value lists."""
     out = {}
     for x in _rows(body):
-        if not (x.get("enabled", True) and x.get("available_for_rules", True)) or x["data_type"] == "BOOL":
+        if not usable(x) or x["data_type"] == "BOOL":
             continue
         lt = x.get("lookup_type") if x.get("lookup_type") not in (None, "None", "") else None
         values = (

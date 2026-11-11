@@ -151,7 +151,8 @@ WORDING: dict[str, Callable[[Facts], str]] = {
         f"{list(f['accepts'])}"
     ),
     "cannot_follow": lambda f: f"{f['type']} cannot follow {f['previous']} in {f['parent']}.{f['input']}",
-    "attribute_not_in_catalog": lambda f: f"{f['object']} attribute {f['attribute']!r} is not in the tenant catalog",
+    "attribute_not_in_catalog": lambda f: f"{f['object']} attribute {f['attribute']!r} is not in the tenant catalog: "
+    "the catalog has the attributes that are active for rules, and the screen lists no other",
     "values_not_codes": _values_not_codes,
     "privilege_not_in_catalog": lambda f: f"privilege {f['id']!r} is not in the catalog",
     "usage_policy_not_of_privilege": lambda f: (
@@ -183,6 +184,8 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     # counters (core/run/canvases.py, core/counters.py)
     "counter_declared_twice": lambda f: f"counter '{f['name']}' is declared twice",
     "vector_without_namespace": lambda f: f"counter '{f['name']}' is VECTOR: give its namespace",
+    "namespace_not_in_catalog": lambda f: f"counter '{f['name']}' counts per {f['namespace']!r}, which is not a "
+    f"{f['object']} attribute in the tenant catalog: a VECTOR counter counts per an attribute that is active for rules",
     "counter_taken": lambda f: (
         f"counter '{f['name']}' already exists on this offer and {text(f['why'])}: use another name"
     ),

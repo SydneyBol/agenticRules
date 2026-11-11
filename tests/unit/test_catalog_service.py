@@ -164,7 +164,8 @@ def test_every_lookup_type_the_attributes_use_is_read():
     attributes use about 35 more (gender, currency, an airport's zone), each left without a value list."""
     from offer_author.core.tenant.catalog import lookup_requests
 
-    attr = lambda name, kind, lt, **kw: {"name": name, "data_type": kind, "lookup_type": lt, **kw}
+    flags = {"enabled": True, "available_for_rules": True}  # bolapi returns both on every attribute
+    attr = lambda name, kind, lt, **kw: {"name": name, "data_type": kind, "lookup_type": lt, **flags, **kw}
     responses = {
         "member_attributes": [
             attr("gender", "LOOKUP", "GENDER"),

@@ -115,13 +115,14 @@ def test_the_live_catalog_reads_bolapi_in_parallel_and_builds_the_same_catalog(f
                 inflight[0] -= 1
                 seen.append(url)
             if "attributelibrary" in url:
-                return R([{"name": "h_bit_amount", "data_type": "NUMBER"}])
+                row = {"name": "h_bit_amount", "data_type": "NUMBER", "enabled": True, "available_for_rules": True}
+                return R([row])
             if "loyaltyaccounts/?" in url:
                 return R([{"id": 9, "loyalty_currency": "Points"}])
             return R([])
 
     cat = BolapiCatalogSource("https://t.example", http=Http()).get("t", 1, 9, "JWT x")
-    assert len(seen) == 17 and peak[0] > 1  # all seventeen read, several at once
+    assert len(seen) == 20 and peak[0] > 1  # all twenty read, several at once
     assert cat.attr("activity", "h_bit_amount").type == "NUMBER" and cat.loyalty_accounts[0]["id"] == "9"
     json.dumps(catalog_text(cat))
 
