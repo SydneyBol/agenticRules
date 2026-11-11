@@ -39,9 +39,10 @@ AIRLINE_OBJECTS = {"airport": "AIRPORT", "airport_pair": "AIRPORT_DISTANCE"}
 # catalog holds their active codes so that a block naming one is checked like any other
 SCREEN_LISTS = {"sponsor": "SPONSOR", "location": "SPONSORLOCATION", "payment_method": "PAYMENT_METHOD"}
 # The screen's member-level attribute lists and its pickers (blockly-http.service.ts getAttributesLOV,
-# getSubscriptionPlans, getPartnerPrograms, getSweepstakesList, getPlayWinSetups; the card list), held as their active
-# codes for the checks (the model is not shown them yet: AttributeListCoverage-Plan.md step 2). A list that was not
-# read, or whose feature the program has off, is not held, and a canvas may name nothing from it (Catalog.holds).
+# getSubscriptionPlans, getPartnerPrograms, getSweepstakesList, getPlayWinSetups; the card list), active rows only. An
+# attribute list becomes an object of `attributes` (shown and looked up like the member's), a picker a list of
+# `pickers`; both are held as their codes for the checks (`listed`). A list that was not read, or whose feature the
+# program has off, is not held, and a canvas may name nothing from it (Catalog.holds).
 LEVEL_READS = {
     **{
         name: f"attributelibrary/custom/?module_type={module}"
@@ -60,7 +61,8 @@ LEVEL_READS = {
     "sweepstakes": "sweepstakes/?trim=true&status=ACTIVE&page_size=300",
     "play_win": "play-win/?status=active&page_size=300",
 }
-LEVEL_ATTRIBUTES = frozenset(n for n, path in LEVEL_READS.items() if path.startswith("attributelibrary/"))
+LEVEL_OBJECTS = tuple(n for n, path in LEVEL_READS.items() if path.startswith("attributelibrary/"))
+LEVEL_ATTRIBUTES = frozenset(LEVEL_OBJECTS)
 # a saved dump's file for each (tenant-catalog.mjs); older dumps hold some pickers as the LOV of the same table
 LEVEL_FILES = {
     **{n: "custom_" + LEVEL_READS[n].rsplit("=", 1)[1] for n in LEVEL_ATTRIBUTES},
@@ -143,8 +145,11 @@ class Catalog:
         today: The tenant's date (fixtures pin it).
         timezone: The program's time zone (dates are read in it), when known.
         point_decimal_scale: The decimals points are kept at, when known.
-        listed: The active codes of the rules screen's other attribute lists (SCREEN_LISTS), for checks only: list
-            name -> codes; a list the catalog was not given is absent.
+        listed: The active codes of the rules screen's other attribute lists (SCREEN_LISTS, for checks only) and of
+            the member-level lists and pickers (LEVEL_READS): list name -> codes; a list the catalog was not given is
+            absent.
+        pickers: The screen's pickers that were read (cards, subscription plans, partner programmes, sweepstakes,
+            play & win setups): list name -> {id: name}, live rows only.
         reference: The program data a transaction reads in the engine, for the engine check's mocked runs (never shown
             to the model): airports {code: attributes}, airport_pairs {"ORIG-DEST": {distance, ...}},
             conversion_rates {"<account>_<currency>_AWARD": rate}, features {toggle: on}.
@@ -164,6 +169,7 @@ class Catalog:
     point_decimal_scale: int | None = None
     reference: dict[str, Any] = field(default_factory=dict)
     listed: dict[str, frozenset[str]] = field(default_factory=dict)
+    pickers: dict[str, dict[str, str]] = field(default_factory=dict)
 
     def link_activity_types(self) -> Catalog:
         """Makes the activity types the values of the activity attribute h_bit_type (lookup BIT_TYPE).
@@ -178,7 +184,7 @@ class Catalog:
 
     # ------------------------------------------------------------ lookups
     def attr(self, obj: str, code: str) -> Attribute | None:
-        """One attribute of an object (activity, member, product, airport, airport_pair), or None."""
+        """One attribute of an object (activity, member, product, an airline object, a member-level list), or None."""
         return self.attributes.get(obj, {}).get(code)
 
     def holds(self, lst: str) -> bool:
@@ -212,6 +218,24 @@ class Catalog:
         if lst in self.listed:
             return code in self.listed[lst]
         return code in self.attributes[lst] if lst in self.attributes and lst not in SCREEN_LISTS else None
+
+    def _screen_lists(
+        self,
+        responses: dict[str, Any],
+        lookups: dict[str, dict[str, str]],
+        locations: dict[str, str],
+        lovs: dict[str, dict[str, str]],
+    ) -> None:
+        """Takes in the screen's other lists that were read: `listed`, `pickers` and the member-level `attributes`."""
+        for name in SCREEN_LISTS:
+            if responses.get(f"list:{name}") is not None:
+                self.listed[name] = frozenset(x["name"] for x in _rows(responses[f"list:{name}"]) if usable(x))
+        for name, rows in _level_lists(responses, _reference(responses).get("features")).items():
+            self.listed[name] = frozenset(rows)
+            if name not in LEVEL_ATTRIBUTES:
+                self.pickers[name] = rows
+            elif rows:  # its usable attributes with their value lists (not BOOL, as for the member)
+                self.attributes[name] = _attributes(responses[f"list:{name}"], lookups, locations, lovs)
 
     @property
     def offer_account(self) -> str | None:
@@ -407,10 +431,7 @@ class Catalog:
         for obj in AIRLINE_OBJECTS:
             if responses.get(f"{obj}_attributes"):
                 cat.attributes[obj] = _attributes(responses[f"{obj}_attributes"], lookups, locations, lovs)
-        for name in SCREEN_LISTS:
-            if responses.get(f"list:{name}") is not None:
-                cat.listed[name] = frozenset(x["name"] for x in _rows(responses[f"list:{name}"]) if usable(x))
-        cat.listed.update(_level_lists(responses, _reference(responses).get("features")))
+        cat._screen_lists(responses, lookups, locations, lovs)
         cat.activity_types = lookups.get("BIT_TYPE", {})
         program = next(iter(_rows(responses.get("programs"))), {})
         cat.timezone, cat.point_decimal_scale = program.get("timezone"), program.get("point_decimal_scale")
@@ -675,27 +696,30 @@ def _reference(responses: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _level_lists(responses: dict[str, Any], features: dict[str, bool] | None) -> dict[str, frozenset[str]]:
-    """The member-level lists and pickers that were read, as their active codes (LEVEL_READS).
+def _level_lists(responses: dict[str, Any], features: dict[str, bool] | None) -> dict[str, dict[str, str]]:
+    """The member-level lists and pickers that were read, as their active codes with their names (LEVEL_READS).
 
-    An attribute list keeps the names of the usable attributes; a picker (cards, plans, programmes, sweepstakes, play &
-    win setups) the ids of its live rows. A list whose feature the program has off holds nothing, as the screen loads
-    none (block-definition.service.ts getAllAttributesLov); with no switches known, what was read is kept.
+    An attribute list keeps its usable attributes (name -> visible name); a picker (cards, plans, programmes,
+    sweepstakes, play & win setups) its live rows (id -> name). A list whose feature the program has off holds nothing,
+    as the screen loads none (block-definition.service.ts getAllAttributesLov); with no switches known, what was read
+    is kept.
     """
-    out: dict[str, frozenset[str]] = {}
+    out: dict[str, dict[str, str]] = {}
     for name in LEVEL_READS:
         feature = LEVEL_FEATURES.get(name)
         if feature and features is not None and not features.get(feature):
-            out[name] = frozenset()
+            out[name] = {}
             continue
         body = responses.get(f"list:{name}")
         if body is None:
             continue
         rows = _rows(body)
         if name in LEVEL_ATTRIBUTES:
-            out[name] = frozenset(x["name"] for x in rows if usable(x))
+            out[name] = {x["name"]: x.get("visible_name") or x["name"] for x in rows if usable(x)}
         else:
-            out[name] = frozenset(str(x["id"]) for x in rows if x.get("id") is not None and live(x))
+            out[name] = {
+                str(x["id"]): str(x.get("name") or x["id"]) for x in rows if x.get("id") is not None and live(x)
+            }
     return out
 
 
@@ -857,19 +881,24 @@ def usable(row: dict[str, Any]) -> bool:
     return bool(row.get("enabled") and row.get("available_for_rules"))
 
 
+def _attribute_rows(responses: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every usable attribute row in bolapi's answers: the objects' lists and the member-level lists."""
+    return [
+        a
+        for name, body in responses.items()
+        if name.endswith("_attributes") or name.removeprefix("list:") in LEVEL_ATTRIBUTES
+        for a in _rows(body)
+        if usable(a)
+    ]
+
+
 def lov_requests(responses: dict[str, Any]) -> dict[str, str]:
     """The GETs for the table-backed LOVs the attributes use: {"lov:<NAME>": path under /bolapi/v1/}.
 
     Only LOVs whose api_url needs no parameter (a sponsor's stores and an account's tags are read already), and none
     that lists people.
     """
-    used = {
-        a.get("lookup_type")
-        for name, body in responses.items()
-        if name.endswith("_attributes")
-        for a in _rows(body)
-        if a.get("data_type") == "LOV" and usable(a)
-    }
+    used = {a.get("lookup_type") for a in _attribute_rows(responses) if a.get("data_type") == "LOV"}
     out = {}
     for x in _rows(responses.get("lovs")):
         url, name = x.get("api_url") or "", str(x.get("name"))
@@ -888,10 +917,8 @@ def lookup_requests(responses: dict[str, Any]) -> dict[str, str]:
     """
     used = {
         str(a["lookup_type"])
-        for name, body in responses.items()
-        if name.endswith("_attributes")
-        for a in _rows(body)
-        if a.get("data_type") == "LOOKUP" and a.get("lookup_type") not in (None, "None", "") and usable(a)
+        for a in _attribute_rows(responses)
+        if a.get("data_type") == "LOOKUP" and a.get("lookup_type") not in (None, "None", "")
     }
     return {
         f"lookup:{t}": f"lookups/?type={quote(t, safe='')}&active=True&page_size=1000"

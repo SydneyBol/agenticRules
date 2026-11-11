@@ -21,7 +21,7 @@ from textwrap import indent
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from ..core.tenant.catalog import AIRLINE_OBJECTS, INLINE_ACTIVITY_TYPES, INLINE_VALUES, OBJECTS
+from ..core.tenant.catalog import AIRLINE_OBJECTS, INLINE_ACTIVITY_TYPES, INLINE_VALUES, LEVEL_OBJECTS, OBJECTS
 from ..core.tenant.existing_counters import normalize
 from ..core.vocabulary import ACTIVITY_TYPE
 
@@ -380,6 +380,25 @@ def rules_context(om: dict[str, Any], segment: dict[str, Any] | None = None) -> 
     )
 
 
+# the member-level lists and the screen's pickers as the catalog text heads them: what the rows are, not when to use
+# them
+LEVEL_SECTIONS = {
+    "card": "COBRANDED CARD attributes (attribute level MA_CC: of a cobranded card the member holds)",
+    "bank_account": "BANK ACCOUNT attributes (attribute level MA_CA: of a bank account the member holds)",
+    "subscription": "SUBSCRIPTION attributes (attribute level MA_SP: of the member's subscription to a plan)",
+    "analytics": "ANALYTICS attributes (attribute level MA_S: written back to the member by analytics)",
+    "product_offer": "PRODUCT OFFER CONTEXT attributes (ProductOrOfferContext product_offer_attributes)",
+    "partner": "PARTNER MEMBERSHIP attributes (attribute level MA_PP: of the member's partner programme membership)",
+}
+PICKER_SECTIONS = {
+    "card_list": "The program's active cobranded cards (card id | name)",
+    "subscription_plan": "The program's active subscription plans (plan id | name)",
+    "partner_program": "The program's active partner programmes (programme id | name)",
+    "sweepstakes": "The program's active sweepstakes (id | name)",
+    "play_win": "The program's active play & win setups (id | name)",
+}
+
+
 def _airport_line(catalog: Catalog, code: str, attrs: dict[str, Any]) -> str:
     """One active airport: its code and its own value of each airport attribute rules read (a code with its label)."""
     own = []
@@ -444,7 +463,8 @@ def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = I
         "airport": "AIRPORT attributes (OBJECT airport; airporttypes origin / destination: the BIT's airport)",
         "airport_pair": "AIRPORT PAIR attributes (OBJECT airport_pair: the BIT's origin to destination pair)",
     }
-    for obj in (*OBJECTS, *(o for o in AIRLINE_OBJECTS if catalog.attributes.get(o))):
+    names.update(LEVEL_SECTIONS)
+    for obj in (*OBJECTS, *(o for o in (*AIRLINE_OBJECTS, *LEVEL_OBJECTS) if catalog.attributes.get(o))):
         out.append(f"\n## {names[obj]}  (code | label | type [| values])")
         for a in catalog.attributes.get(obj, {}).values():
             line = f"{a.code} | {a.label} | {a.type}" + (" (payment)" if a.payment_level else "")
@@ -452,9 +472,18 @@ def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = I
                 if len(a.values) <= INLINE_VALUES:
                     line += " | " + ", ".join(f"{k}={v}" for k, v in a.values.items())
                 else:
-                    line += f" | {len(a.values)} values, not listed: find codes with lookup_values"
+                    line += f" | {len(a.values)} values, not listed: find codes with lookup_values" + (
+                        f" ({obj}, {a.code})" if obj in LEVEL_OBJECTS else ""
+                    )
             out.append(line)
     out += _airports_text(catalog)
+    for name, title in PICKER_SECTIONS.items():
+        rows = catalog.pickers.get(name)
+        if rows and len(rows) <= INLINE_VALUES:
+            out.append(f"\n## {title}")
+            out += [f"{k} | {v}" for k, v in rows.items()]
+        elif rows:
+            out.append(f"\n## {title}: {len(rows)}, not listed")
     if len(catalog.activity_types) <= inline_types:
         out.append(
             "\n## Activity types (h_bit_type values)\n"

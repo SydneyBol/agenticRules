@@ -17,7 +17,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from ..vocabulary import TRANSACTION_FIELDS
+from ..vocabulary import LIST_PLACES, TRANSACTION_FIELDS
 from .catalog import bm25, norm
 
 if TYPE_CHECKING:
@@ -42,7 +42,13 @@ class _Doc:
 
 
 def where(obj: str, a: Attribute) -> str:
-    """Where the attribute sits: the transaction's header, a line, a payment, the member's profile, a product."""
+    """Where the attribute sits.
+
+    The transaction's header, a line or a payment; the member's profile; a product; a member-level list (a cobranded
+    card, a bank account, a subscription, ...).
+    """
+    if obj in LIST_PLACES:
+        return LIST_PLACES[obj]
     if obj == "member":
         return "member profile (MA_P)"
     if obj == "product":

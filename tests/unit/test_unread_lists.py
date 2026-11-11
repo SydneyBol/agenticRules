@@ -1,15 +1,29 @@
 """What a canvas may name from the screen's member-level lists and pickers (2026-11-11, AttributeListCoverage-Plan.md
-steps 0 and 1). The catalog reads the card, bank account, subscription, analytics, product offer and partner lists and
+steps 0 to 2). The catalog reads the card, bank account, subscription, analytics, product offer and partner lists and
 the card, plan, programme, sweepstakes and play & win pickers, active rows only. A list it has no reader for
-(individualization, retention), did not read, or whose feature the program has off, gives nothing to name."""
+(individualization, retention), did not read, or whose feature the program has off, gives nothing to name. The model is shown what is held (step 2): the attribute lists as objects of the catalog text
+and of lookup_values, the pickers as id and name."""
 
 import json
 import os
 
 import pytest
 
+from offer_author.ai.prompt import catalog_text
+from offer_author.ai.tools import LookupValues
 from offer_author.core.run import Run
-from offer_author.core.tenant.catalog import LEVEL_READS, UNREAD_LISTS, Catalog, _rows, live, usable
+from offer_author.core.tenant import attribute_search
+from offer_author.core.tenant.catalog import (
+    LEVEL_OBJECTS,
+    LEVEL_READS,
+    UNREAD_LISTS,
+    Catalog,
+    _rows,
+    live,
+    lookup_requests,
+    lov_requests,
+    usable,
+)
 from offer_author.core.vocabulary import ACTION_LISTS, CONDITION_CODES, LEVEL_LISTS, OBJECT_LISTS, PRODUCT_LISTS
 from tests.paths import CATALOGS
 from tests.support import said, saved_segment
@@ -78,7 +92,6 @@ def test_the_lists_hold_active_rows_only_and_a_feature_off_holds_nothing(cat):
     assert cat.listed["partner"] == cat.listed["partner_program"] == frozenset()  # partner_program_management is off
     assert not cat.holds("sweepstakes")  # not in the saved dump: not read
     assert all(not cat.holds(lst) for lst in UNREAD_LISTS)
-    assert "card" not in cat.attributes  # held for checks; the model is not shown them yet (step 2)
 
 
 def test_a_saved_dump_without_a_picker_holds_none_of_it():
@@ -175,3 +188,52 @@ def test_a_third_partys_condition_reads_the_member_list(cat):
     assert _said(cat, third("age"))[0]
     ok, text = _said(cat, third("no_such"))
     assert not ok and "no_such" in text and "not in the tenant catalog" in text
+
+
+def test_the_model_is_shown_the_lists_that_are_held(cat):
+    text = catalog_text(cat)
+    for lst, module in (
+        ("card", "COBRAND_CARD"),
+        ("bank_account", "COBRAND_ACCOUNT"),
+        ("subscription", "SUBSCRIPTION"),
+    ):
+        rows = {x["name"]: x for x in _raw("custom_" + module)}
+        shown = set(cat.attributes[lst])
+        assert shown and all(usable(rows[c]) and rows[c]["data_type"] != "BOOL" for c in shown)
+        assert shown == {c for c in cat.listed[lst] if rows[c]["data_type"] != "BOOL"}  # as for the member: no BOOL
+    assert "## COBRANDED CARD attributes (attribute level MA_CC" in text
+    assert "plan_status | Plan Status | LOOKUP | ACTIVE=Active" in text
+    assert "## PRODUCT OFFER CONTEXT attributes" in text and "sku | Stock Keeping Unit | TEXT" in text
+    assert "## The program's active cobranded cards (card id | name)\n2 | Supra Co-Branded Card" in text
+    assert "## The program's active subscription plans (plan id | name)" in text and "\n3 | Silver" in text
+    # nothing for a list that holds nothing (partner: the switch is off; play & win: no active setup) or was not read
+    assert "PARTNER MEMBERSHIP attributes" not in text and "partner" not in cat.attributes
+    assert not any(f"The program's active {x}" in text for x in ("partner programmes", "play & win", "sweepstakes"))
+    assert attribute_search.where("card", cat.attr("card", "closing_date")) == "cobranded card (MA_CC)"
+
+
+def test_a_dump_without_the_pickers_shows_the_attributes_and_no_card_or_plan():
+    am1 = Catalog.from_bolapi_dumps(os.path.join(CATALOGS, "devintam1", "bolapi"), "devintam1", 1, "12", "BASE")
+    text = catalog_text(am1)
+    assert "## COBRANDED CARD attributes" in text and "cobranded cards (card id" not in text and not am1.pickers
+
+
+def test_lookup_values_reads_a_member_level_list(cat):
+    assert set(LEVEL_OBJECTS) <= set(LookupValues.model_json_schema()["properties"]["object"]["enum"])
+    r = Run(cat, None).lookup_values({"object": "subscription", "attribute": "plan_status", "text": "cancelled"})
+    assert r["candidates"][0]["code"] == "CANCELLED"
+    r = Run(cat, None).lookup_values({"object": "card", "attribute": "card_lookup", "text": "platinum"})
+    assert r["candidates"][0]["code"] == "NAJM_PLT"
+
+
+def test_a_refresh_reads_the_value_lists_of_the_member_level_attributes():
+    flags = {"enabled": True, "available_for_rules": True}
+    rows = [
+        {"name": "plan_status", "data_type": "LOOKUP", "lookup_type": "PLAN_STATUS", **flags},
+        {"name": "auto_renewal", "data_type": "LOV", "lookup_type": "AUTO_RENEWAL_LIST", **flags},
+        {"name": "old", "data_type": "LOOKUP", "lookup_type": "OLD_TYPE", **flags, "enabled": False},
+    ]
+    lovs = [{"name": "AUTO_RENEWAL_LIST", "api_url": "/api/v1/auto-renewal/", "code": "id"}]
+    resp = {"list:subscription": rows, "list:sponsor": rows[2:], "lovs": lovs}
+    assert set(lookup_requests(resp)) == {"lookup:PLAN_STATUS"}  # not an inactive attribute's, not a check-only list's
+    assert set(lov_requests(resp)) == {"lov:AUTO_RENEWAL_LIST"}

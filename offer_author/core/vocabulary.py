@@ -33,12 +33,22 @@ LEVEL_LISTS = {
     "MR_S": "retention",
     "MA_PP": "partner",
 }
+# where the attributes of a member-level list sit, as they are shown (the catalog text, the attribute search)
+LIST_PLACES = {
+    "card": "cobranded card (MA_CC)",
+    "bank_account": "bank account (MA_CA)",
+    "subscription": "subscription (MA_SP)",
+    "analytics": "analytics write-back (MA_S)",
+    "partner": "partner membership (MA_PP)",
+    "product_offer": "product offer context",
+}
 OBJECT_LISTS = {o: o for o in ("activity", "airport", "airport_pair", "location", "sponsor")}
 PRODUCT_LISTS = {"products_attrs": "product", "product_offer_attributes": "product_offer"}  # product_cluster: none
 # Where a member level keeps its codes when it has a picker (gravty-blockly if-generic.block.ts,
-# member-attributes.block.ts, member-attribute-segment.block.ts): (field, list) pairs. A condition on the rules screen picks a card, plan or
-# programme and keeps the attribute in `attribute`; the segment screen keeps it in selected_*_attribute. A level not
-# named keeps its attribute in `attribute` (a condition) or `ATTRIBUTE` (a value block).
+# member-attributes.block.ts, member-attribute-segment.block.ts): (field, list) pairs. A condition on the rules screen
+# picks a card, plan or programme and keeps the attribute in `attribute`; the segment screen keeps it in
+# selected_*_attribute. A level not named keeps its attribute in `attribute` (a condition) or `ATTRIBUTE` (a value
+# block).
 CONDITION_CODES = {
     "MA_CC": (
         ("card_setup_id", "card_list"),
