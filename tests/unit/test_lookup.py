@@ -230,10 +230,8 @@ def test_airport_values_are_looked_up_and_name_the_airports_that_have_them(airli
     assert {c["code"]: c["airports"] for c in country["candidates"]} == {"255": [], "6": ["BLR", "VAR"]}
     name = airline.lookup("airport", "airport_name", "Zurich")["candidates"][0]
     assert (name["code"], name["airports"]) == ("ZRH", ["ZRH"])
-    # an inactive airport is in the screen's list and in no transaction's data
-    assert {c["code"]: c["airports"] for c in airline.lookup("airport", "airport_code", "HYD")["candidates"]} == {
-        "HYD": []
-    }
+    # an inactive airport is not loaded (2026-11-11): the screen asks for the airport list with active=true
+    assert "HYD" not in {c["code"] for c in airline.lookup("airport", "airport_code", "HYD").get("candidates") or []}
     # a lookup type's values (read since 2026-11-10): the manager's "North" zone is the code `start`
     zone = airline.lookup("airport", "zone", "North")["candidates"][0]
     assert zone == {"code": "start", "label": "North", "score": 1.0, "airports": ["BLR", "VAR"]}
@@ -319,18 +317,14 @@ def _travel_to(side_value, operators="in", attribute="airport_code"):
 
 def test_a_compose_says_when_no_active_airport_has_the_value(airline):
     """2026-11-10 live L05: "arriving in Hyderabad" became destination airport HYD, an inactive airport, as a finished
-    draft with no question. The value is in the screen's list, so it is no problem; the airport setup knows more."""
+    draft with no question. Since 2026-11-11 an inactive airport is not loaded, so HYD is a code the list does not have
+    (the screen asks for airports with active=true). A live value no active airport has still gets the note."""
     from offer_author.core.run import Run
 
     run = Run(airline, None, None, None)
-    r = run.compose({"canvas": "rules", "blocks": _travel_to("HYD"), "counters": []})
-    assert r["ok"] and r["problems"] == [] and run.canvases.pending() == []  # a fact: it holds no finish back
-    assert said(r["airports"]) == [
-        "no active airport of the program has airport_code HYD (the destination airport condition); "
-        "the active airports that have a value of it: BLR, VAR, ZRH"
-    ]
-    mixed = run.compose({"canvas": "rules", "blocks": _travel_to("BLR,HYD"), "counters": []})
-    assert [p.fact("values") for p in mixed["airports"]] == [("HYD",)]
+    for value in ("HYD", "BLR,HYD"):
+        r = run.compose({"canvas": "rules", "blocks": _travel_to(value), "counters": []})
+        assert not r["ok"] and "values_not_codes" in json.dumps(r, default=str) and "HYD" in json.dumps(r, default=str)
     assert "airports" not in run.compose({"canvas": "rules", "blocks": _travel_to("BLR"), "counters": []})
     # country 255 is the second "India": in the list, and no airport is in it
     india = run.compose({"canvas": "rules", "blocks": _travel_to("6,255", attribute="country"), "counters": []})

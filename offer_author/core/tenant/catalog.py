@@ -20,9 +20,11 @@ from collections import Counter
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.parse import quote, unquote
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ...domain import Problem, Result
 from ..vocabulary import ACTIVITY_TYPE
@@ -364,7 +366,7 @@ class Catalog:
         program = next(iter(_rows(responses.get("programs"))), {})
         cat.timezone, cat.point_decimal_scale = program.get("timezone"), program.get("point_decimal_scale")
         for t in sorted(_rows(responses.get("tiers")), key=lambda t: t.get("tier_rank") or 0):
-            if t.get("active", True) and t.get("tier_class_code"):
+            if live(t) and t.get("tier_class_code"):
                 # the dropdown stores tier_code
                 cat.tiers.setdefault(t["tier_class_code"], {})[t.get("tier_code") or t["name"]] = t["name"]
         tags = {
@@ -385,11 +387,12 @@ class Catalog:
             for a in las
             if a.get("status", "Active") == "Active"
         ]
+        today = cat.today or _program_today(cat.timezone)
         for p in _rows(responses["privilege_products"]):
+            if not live(p) or str(p.get("active_end") or "9999")[:10] < today:
+                continue  # the screen asks for privileges still active today (min_active_end)
             # the screen's default policy first
-            pols = sorted(
-                (u for u in p.get("usage_policy") or [] if u.get("active", True)), key=lambda u: not u.get("default")
-            )
+            pols = sorted((u for u in p.get("usage_policy") or [] if live(u)), key=lambda u: not u.get("default"))
             if pols and p.get("privilege_type") in ("Fixed-Product", "Fixed-Discount"):
                 cat.privileges[str(p["id"])] = {
                     "id": str(p["id"]),
@@ -687,17 +690,17 @@ def _lookup_facts(
 def _value_lists(
     responses: dict[str, Any],
 ) -> tuple[dict[str, dict[str, str]], dict[str, str], dict[str, dict[str, str]]]:
-    """The value lists in bolapi's answers.
+    """The value lists in bolapi's answers, without the rows no longer in use (live).
 
     Returns:
         (lookups {type: {code: name}}, locations {code: name}, LOVs that carry their values {name: {code: name}}).
     """
     lookups = {
-        name[7:]: {x["code"]: x.get("name") or x["code"] for x in _rows(body) if x.get("code")}
+        name[7:]: {x["code"]: x.get("name") or x["code"] for x in _rows(body) if x.get("code") and live(x)}
         for name, body in responses.items()
         if name.startswith("lookup:")
     }
-    locations = {x["location_code"]: x["location_name"] for x in _rows(responses.get("locations"))}
+    locations = {x["location_code"]: x["location_name"] for x in _rows(responses.get("locations")) if live(x)}
 
     def lov_value(x: dict[str, Any], m: Any) -> tuple[str, Any]:
         return (
@@ -707,7 +710,7 @@ def _value_lists(
         )
 
     lovs = {
-        x["name"]: dict(lov_value(x, m) for m in x["model"])
+        x["name"]: dict(lov_value(x, m) for m in x["model"] if live(m))
         for x in _rows(responses.get("lovs"))
         if x.get("name") and isinstance(x.get("model"), list)
     }  # e.g. BIT_CATEGORY
@@ -717,12 +720,42 @@ def _value_lists(
             lovs[x["name"]] = {
                 str(r[x["code"]]): r.get(x.get("display") or "name") or str(r[x["code"]])
                 for r in rows
-                if r.get(x["code"]) not in (None, "")
+                if r.get(x["code"]) not in (None, "") and live(r)
             }
     return lookups, locations, lovs
 
 
 PERSONAL_LOVS = ("MEMBER", "USER")  # LOVs listing people: not codes a rule names, and personal data
+
+
+INACTIVE_STATUSES = frozenset(
+    {"inactive", "i", "terminated", "t", "suspended", "s", "expired", "deleted", "d"}
+)  # bolapi statuses of a row that is no longer in use (accounts Inactive; sponsors T, S; offers and privileges)
+
+
+def live(row: Any) -> bool:
+    """Whether a row of a bolapi list is in use: not `active: false`, not an inactive status.
+
+    Lookups, airports, payment methods and engagement rules mark it with `active`, loyalty accounts with
+    `status: Inactive`, sponsors with status T (terminated) or S (suspended), offers and privileges with expired,
+    terminated or suspended. The stock screen asks for most of these lists with active=true or the live statuses
+    (blockly-lov-registry.ts resolveLovApiUrl); a value that is no longer in use is never loaded here.
+    """
+    if not isinstance(row, dict):
+        return True
+    if row.get("active") is False or row.get("is_active") is False:
+        return False
+    status = row.get("status")
+    return not (isinstance(status, str) and status.strip().lower() in INACTIVE_STATUSES)
+
+
+def _program_today(timezone: str | None) -> str:
+    """Today's date in the program's time zone (UTC when unknown), as YYYY-MM-DD."""
+    try:
+        tz = ZoneInfo(timezone) if timezone else None
+    except (ZoneInfoNotFoundError, ValueError):
+        tz = None
+    return datetime.now(tz).strftime("%Y-%m-%d")
 
 
 def usable(row: dict[str, Any]) -> bool:

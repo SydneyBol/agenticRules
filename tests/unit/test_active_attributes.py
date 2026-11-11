@@ -147,3 +147,43 @@ def test_a_catalog_without_the_screens_other_lists_leaves_them_unchecked(fixture
     assert fixture_catalog.listed == {} and fixture_catalog.active("location", "x") is None
     x = _offer([_condition("location", "store_size")], _points(STATIC))
     assert "attribute_not_in_catalog" not in _codes(fixture_catalog, x)
+
+
+def test_no_value_list_holds_a_row_no_longer_in_use(cat):
+    """2026-11-11, the user: inactive must not be loaded. The table-backed lists kept their inactive rows: 5 of 8
+    airports (HYD), 10 of 31 payment methods, 42 of 100 loyalty accounts, 900 of 1000 sponsors (terminated)."""
+    from offer_author.core.tenant.catalog import live
+
+    assert not live({"active": False}) and not live({"status": "Inactive"}) and not live({"status": "T"})
+    assert live({"active": True}) and live({"status": "A"}) and live({"status": True}) and live("code")
+    for lov, (obj, code) in {
+        "AIRPORT_CODE_LIST": ("airport", "airport_code"),
+        "PAYMENT_METHOD_LIST": ("activity", "payment_method"),
+        "LOYALTY_ACCOUNT_LIST": ("activity", "h_from_loyalty_account"),
+        "SPONSOR_LIST": ("activity", "h_sponsor_id"),
+    }.items():
+        rows = _raw("lov_" + lov)
+        lists = {x["name"]: x for x in _rows(json.load(open(os.path.join(DUMP, "lovs.json")))["body"])}
+        key = lists[lov]["code"]
+        off = {str(r[key]) for r in rows if not live(r)}
+        assert off and not off & set(cat.attr(obj, code).values), lov
+        assert set(cat.attr(obj, code).values) == {str(r[key]) for r in rows if live(r)}, lov
+
+
+def test_a_privilege_whose_active_window_ended_is_not_loaded():
+    pol = [{"id": 9, "policy_name": "Default", "default": True, "active": True}]
+    prod = lambda i, **kw: {"id": i, "name": f"P{i}", "privilege_type": "Fixed-Product", "usage_policy": pol, **kw}
+    responses = {
+        "activity_attributes": [],
+        "member_attributes": [],
+        "product_attributes": [],
+        "sponsor_loyalty_accounts": [],
+        "privilege_products": [
+            prod(1, active_end="2099-01-01T00:00:00Z"),
+            prod(2, active_end="2020-01-01T00:00:00Z"),
+            prod(3),
+            prod(4, usage_policy=[dict(pol[0], active=False)]),
+        ],
+    }
+    cat = Catalog.from_bolapi("t", 1, 9, responses)
+    assert sorted(cat.privileges) == ["1", "3"]
