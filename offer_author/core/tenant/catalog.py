@@ -38,6 +38,22 @@ AIRLINE_OBJECTS = {"airport": "AIRPORT", "airport_pair": "AIRPORT_DISTANCE"}
 # the rules screen's other attribute lists (its list name -> bolapi's custom module): the model is not shown them; the
 # catalog holds their active codes so that a block naming one is checked like any other
 SCREEN_LISTS = {"sponsor": "SPONSOR", "location": "SPONSORLOCATION", "payment_method": "PAYMENT_METHOD"}
+# the screen's lists this catalog has no reader for (vocabulary.LEVEL_LISTS and the rest): nothing named from one can
+# be filled or checked, so a canvas may not name one (AttributeListCoverage-Plan.md step 0; a reader removes its name)
+UNREAD_LISTS = frozenset(
+    {
+        "card",
+        "bank_account",
+        "subscription",
+        "analytics",
+        "personalization",
+        "retention",
+        "partner",
+        "product_offer",
+        "sweepstakes",
+        "play_win",
+    }
+)
 POOL, SHOWN = 25, 15  # lookup with a search: BM25's best 25 and the embeddings' best 25, the cross-encoder's best 15
 TIE_ODDS = 0.5  # cross-encoder scores tie when their log-odds are this close (odds within ~1.6x), at any confidence
 # value lists longer than this are not written into the prompt; the model finds codes with lookup_values instead
@@ -142,6 +158,10 @@ class Catalog:
     def attr(self, obj: str, code: str) -> Attribute | None:
         """One attribute of an object (activity, member, product, airport, airport_pair), or None."""
         return self.attributes.get(obj, {}).get(code)
+
+    def holds(self, lst: str) -> bool:
+        """Whether the catalog reads that list of the screen at all (UNREAD_LISTS: it does not)."""
+        return lst not in UNREAD_LISTS
 
     def active(self, lst: str, code: str) -> bool | None:
         """Whether the rules screen offers that attribute in that list of its.

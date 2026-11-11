@@ -13,6 +13,17 @@ KNOWN = {
     "22_Target_member_per_points": "'6_balance' is not in the tenant catalog",  # account 6 is gone from devintam1
     "50_Static_segment": "an OR needs a condition in both OPERAND1 and OPERAND2",  # saved with one operand
 }
+# saved segments on a level whose list the catalog does not read yet (2026-11-11, AttributeListCoverage-Plan.md step 0):
+# refused for that alone until the list is loaded
+CARD, SUBSCRIPTION = "cobranded card attributes (MA_CC)", "subscription attributes (MA_SP)"
+UNREAD = {
+    **dict.fromkeys(("49_COBRAND", "54_city", "57_DOB"), CARD),
+    **dict.fromkeys(
+        ("59_tested", "60_tests", "61_testss", "63_testsed", "64_tst", "66_tsted", "68_testd", "70_teested",
+         "72_testedd", "73_testtt"),
+        SUBSCRIPTION,
+    ),
+}  # fmt: skip
 
 
 def seg(*conds):
@@ -37,7 +48,10 @@ def test_the_saved_segments_compose_clean(devintam1_catalog):
     for f in sorted(glob.glob(os.path.join(SEGMENTS, "*.xml"))):
         name = os.path.basename(f)[:-4]
         got = problems(devintam1_catalog, *saved_segment(name)["blocks"]["inputs"]["CONDITIONS"])
-        assert (len(got) == 1 and KNOWN[name] in got[0]) if name in KNOWN else got == [], (name, got)
+        if name in UNREAD:
+            assert got and all(f"the tenant catalog holds no {UNREAD[name]}" in p for p in got), (name, got)
+        else:
+            assert (len(got) == 1 and KNOWN[name] in got[0]) if name in KNOWN else got == [], (name, got)
 
 
 AGE = {"attr_level": "MA_P", "attribute": "age"}

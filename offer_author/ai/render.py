@@ -14,6 +14,21 @@ from ..domain import BlockRef, Problem
 Facts = Mapping[str, Any]
 
 
+# the screen's lists the catalog does not read (core.tenant.catalog.UNREAD_LISTS), as the manager names them
+UNREAD = {
+    "card": "cobranded card attributes (MA_CC)",
+    "bank_account": "bank account attributes (MA_CA)",
+    "subscription": "subscription attributes (MA_SP)",
+    "analytics": "analytics write-back attributes (MA_S)",
+    "personalization": "individualization attributes (MP_S)",
+    "retention": "retention scores (MR_S)",
+    "partner": "partner membership attributes (MA_PP)",
+    "product_offer": "product offer context attributes",
+    "sweepstakes": "sweepstakes",
+    "play_win": "play & win setups",
+}
+
+
 def block(ref: BlockRef | None, facts: Facts) -> str:
     """A block as problems name it: ``type#id``, then where it sits when known."""
     if ref is None:
@@ -184,6 +199,9 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     # counters (core/run/canvases.py, core/counters.py)
     "counter_declared_twice": lambda f: f"counter '{f['name']}' is declared twice",
     "vector_without_namespace": lambda f: f"counter '{f['name']}' is VECTOR: give its namespace",
+    "list_not_in_catalog": lambda f: f"the tenant catalog holds no {UNREAD.get(f['list'], f['list'])}"
+    + (f" ({f['name']!r} cannot be checked or filled)" if f.get("name") else "")
+    + ": no rule or segment can be built on them here",
     "namespace_not_in_catalog": lambda f: f"counter '{f['name']}' counts per {f['namespace']!r}, which is not a "
     f"{f['object']} attribute in the tenant catalog: a VECTOR counter counts per an attribute that is active for rules",
     "counter_taken": lambda f: (

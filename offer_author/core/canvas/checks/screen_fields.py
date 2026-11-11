@@ -11,7 +11,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from ....domain import BlockRef, Problem
-from ...vocabulary import CATALOG_OBJECT, COUNTER_LEVELS, MEMBER_ATTRIBUTE
+from ...vocabulary import ACTION_LISTS, CATALOG_OBJECT, COUNTER_LEVELS, LEVEL_LISTS, OBJECT_LISTS, PRODUCT_LISTS
 from ..fields import CONDITIONS, REWARD_ACTIONS, data_type, fill
 from ..reference import picks_by_operator
 from ..tree import nodes
@@ -152,33 +152,55 @@ def _shape(n: Any, f: dict[str, Any], catalog: Catalog | None, block: BlockRef, 
     attr = f.get("ATTRIBUTE")
     if t == "activity_attribute" and catalog is not None and attr and catalog.attr("activity", str(attr)) is None:
         out.append(Problem.of("not_a_transaction_attribute", block, name=attr))
-    picks = _picked_attribute(t, f)
-    if picks and catalog is not None and picks[1] and not form and catalog.active(picks[0], str(picks[1])) is False:
-        out.append(Problem.of("attribute_not_in_catalog", block, object=picks[0], attribute=picks[1]))
+    if (where := attribute_list(t, f)) and catalog is not None:
+        lst, code = where
+        if not catalog.holds(lst):
+            out.append(Problem.of("list_not_in_catalog", block, list=lst, name=code))
+        elif code and not form and not _codes_checked(t, f) and catalog.active(lst, str(code)) is False:
+            out.append(Problem.of("attribute_not_in_catalog", block, object=lst, attribute=code))
     return out
 
 
 AIRPORT_PAIR_VALUES = ("award_price", "distance_flown", "reward_price")  # airport_attribute's own options
+VALUE_BLOCKS = ("member_attribute", "targeting_member_attribute")  # value blocks that read a member level
 
 
-def _picked_attribute(t: str | None, f: dict[str, Any]) -> tuple[str, Any] | None:
-    """The attribute list of the screen a value or action block picks from, and the code it names.
+def attribute_list(t: str | None, f: dict[str, Any]) -> tuple[str, Any] | None:
+    """The screen's list a block picks its attribute (or sweepstake, play & win setup) from, and the code it names.
 
-    Each of these dropdowns is filled with the list's active attributes only (block-definition.service.ts
-    getAttributesTuple, getUpdatableAttributesTuple), so the screen leaves any other code unset. A condition's
-    attribute is checked with its values (grammar.codes), activity_attribute above, a counter with the counters.
+    Each list is the screen's own (vocabulary.LEVEL_LISTS and the rest); its dropdowns hold the list's active rows only
+    (block-definition.service.ts getAttributesTuple, getUpdatableAttributesTuple), so the screen leaves any other code
+    unset. None for what is not read from a list: counters, the tier programme, the airport pair block's own options.
     """
-    if t == "member_attribute" and f.get("ATTRIBUTE_TYPE") == MEMBER_ATTRIBUTE:
-        return "member", f.get("ATTRIBUTE")
-    if t == "product_attribute" and f.get("ATTRIBUTE_PRODUCTS") == "products_attrs":
-        return "product", f.get("ATTRIBUTE")
+    if t in CHECKED:  # rules and segment conditions (a segment condition reads as a member one: _as_condition)
+        obj = f.get("OBJECT") or ""
+        if obj in ("member", "third_party"):
+            lst = LEVEL_LISTS.get(f.get("attribute_level") or "")
+        elif obj == "products_attrs":
+            lst = PRODUCT_LISTS.get(f.get("ProductOrOfferContext") or "products_attrs")
+        else:
+            lst = OBJECT_LISTS.get(obj)
+        return (lst, f.get("attribute")) if lst else None
+    if t in VALUE_BLOCKS and (lst := LEVEL_LISTS.get(f.get("ATTRIBUTE_TYPE") or "")):
+        return lst, f.get("ATTRIBUTE")
+    if t == "product_attribute" and (lst := PRODUCT_LISTS.get(f.get("ATTRIBUTE_PRODUCTS") or "")):
+        return lst, f.get("ATTRIBUTE")
     if t in ("payment_attribute", "if_payment_attribute"):
         return "payment_method", f.get("payment_attribute")
     if t == "airport_attribute" and f.get("airportpair_attribute") not in AIRPORT_PAIR_VALUES:
         return "airport_pair", f.get("airportpair_attribute")
-    if t in ("action", "action_third_party") and f.get("mta_type_value") == MEMBER_ATTRIBUTE:
-        return "member", f.get("mta_attribute")  # update_attribute on a member's own attribute
+    if t in REWARD_ACTIONS and f.get("action_type") == "update_attribute":
+        lst = LEVEL_LISTS.get(f.get("mta_type_value") or "")  # an offer or activity counter: no list
+        return (lst, f.get("mta_attribute")) if lst else None
+    if t in REWARD_ACTIONS and f.get("action_type") in ACTION_LISTS:
+        lst, field = ACTION_LISTS[f["action_type"]]
+        return lst, f.get(field)
     return None
+
+
+def _codes_checked(t: str | None, f: dict[str, Any]) -> bool:
+    """A condition whose code grammar.codes checks, with its values: any but a third party's."""
+    return t in CHECKED and f.get("OBJECT") != "third_party"
 
 
 def _operator_form(n: Any, f: dict[str, Any], typ: str | None) -> Form | None:

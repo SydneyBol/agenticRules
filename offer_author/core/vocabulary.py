@@ -19,6 +19,27 @@ CATALOG_OBJECT = {
     "airport_pair": "airport_pair",
 }
 
+# The stock screen's attribute lists by what a block names (blockly-http.service.ts getAttributesLOV), as catalog list
+# names (Catalog.active, Catalog.holds). A member or third-party level; a condition's OBJECT; a product block's
+# ATTRIBUTE_PRODUCTS or a condition's ProductOrOfferContext; the actions that pick a sweepstake or a play & win setup.
+# Counters (MA_O, MA_A, MA_TO) and the tier programme (MA_T) are not attribute lists: they are checked on their own.
+LEVEL_LISTS = {
+    "MA_P": "member",
+    "MA_CC": "card",
+    "MA_CA": "bank_account",
+    "MA_SP": "subscription",
+    "MA_S": "analytics",
+    "MP_S": "personalization",
+    "MR_S": "retention",
+    "MA_PP": "partner",
+}
+OBJECT_LISTS = {o: o for o in ("activity", "airport", "airport_pair", "location", "sponsor")}
+PRODUCT_LISTS = {"products_attrs": "product", "product_offer_attributes": "product_offer"}  # product_cluster: none
+ACTION_LISTS = {
+    "assign_sweepstakes": ("sweepstakes", "sweepstakeid"),
+    "assign_play_win_reward": ("play_win", "playwinsetup"),
+}
+
 # attribute levels (block-definition.service.ts getAttributesTuple; thirdparty-action.block.ts)
 OFFER_COUNTER = "MA_O"  # an offer counter: persists per member across transactions (the UI's default level)
 ACTIVITY_COUNTER = "MA_A"  # an activity-level value: one transaction only

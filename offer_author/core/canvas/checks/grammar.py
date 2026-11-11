@@ -251,16 +251,18 @@ def codes(block: ET.Element, catalog: Catalog | None) -> list[Problem]:
     obj, level, attr = m.get("object"), m.get("attribute_level"), m.get("attribute")
     if obj is None and "attr_level" in m.attrib:  # a segment condition: a member attribute at attr_level
         obj, level = "member", m.get("attr_level")
-    cobj = CATALOG_OBJECT.get(obj or "")
+    own = {f.get("name"): f.text for f in block if _tag(f) == "field"}  # this block's own dropdowns, not nested ones
+    # a product condition reads the product's attributes; its offer context is another list (screen_fields)
+    product = own.get("ProductOrOfferContext") in (None, "", "products_attrs")
+    cobj = CATALOG_OBJECT.get(obj or "") if obj != "products_attrs" or product else None
     out = _value_codes(catalog, cobj, obj, attr, m) if cobj and attr and level in ATTRIBUTE_LEVELS else []
-    if obj and attr and not cobj and obj != "member":  # location, sponsor: their own attribute lists
+    if obj in ("location", "sponsor") and attr:  # their own attribute lists
         listed = catalog.active(obj, attr)  # None: the catalog was not given that object's list
         owner = None if listed else next((o for o, c in CATALOG_OBJECT.items() if catalog.attr(c, attr)), None)
         if owner:  # the screen finds no such attribute under this OBJECT and loads the condition empty
             out.append(Problem.of("attribute_not_of_object", attribute=attr, object=obj, owner=owner))
         elif listed is False:  # not in that object's own list: not active for rules, or no such attribute
             out.append(Problem.of("attribute_not_in_catalog", object=obj, attribute=attr))
-    own = {f.get("name"): f.text for f in block if _tag(f) == "field"}  # this block's own dropdowns, not nested ones
     if block.get("type") in ("action", "action_third_party") and m.get("attribute_type_input") == "give_privilege":
         pid = own.get("SELECTED_PRIVILEGE")
         if pid and str(pid) not in catalog.privileges:
