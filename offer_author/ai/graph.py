@@ -35,7 +35,7 @@ from ..core import verifier
 from ..core.run import Run, asks_or_reports, error_result, finish_blockers, notes_by_part
 from ..domain import Problem, Result, ToolInput
 from . import cases, render
-from .tools import SCHEMAS, TOOLS, Done, RunContext, content, done, schema_error, started_or_run
+from .tools import TOOLS, Done, RunContext, content, done, schema_error, schemas_for, started_or_run
 
 NUDGE = "Use the tools: compose, with finish in the compose that completes the offer."
 
@@ -79,7 +79,9 @@ def model(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, Any]:
     ctx = runtime.context
     t0 = time.time()
     on_tool = ctx.start if ctx.settings.early_tools else None
-    turn = ctx.llm.turn(ctx.system, cached(state["messages"]), tools=SCHEMAS, on_tool=on_tool)
+    turn = ctx.llm.turn(
+        ctx.system, cached(state["messages"]), tools=schemas_for(ctx.settings.rules_form), on_tool=on_tool
+    )
     ctx.invalid |= turn.invalid
     calls = turn.message.tool_calls
     ctx.start_lookups(calls)
@@ -295,18 +297,20 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
     ctx = runtime.context
     if state.get("result") or state.get("fin") is None or not state.get("cases"):
         why = "the run did not finish" if state.get("fin") is None or state.get("result") else "no test cases"
-        return {"verdict": {"skipped": why}}
+        # repair_asked is cleared on every way out: a repair that ran out of turns must not be sent round again
+        return {"verdict": {"skipped": why}, "repair_asked": False}
     body = verifier.request(ctx.run, state["cases"] or [])
     if body is None:
-        return {"verdict": {"skipped": "no rules"}}
+        return {"verdict": {"skipped": "no rules"}, "repair_asked": False}
     if reads := verifier.reads_without_test_data(body):
         # no case can give these a value, so every case expecting a reward would disagree and ask for a repair
-        return {"verdict": {"skipped": "the canvases read data a test case cannot give", "reads": reads}}
+        skipped = {"skipped": "the canvases read data a test case cannot give", "reads": reads}
+        return {"verdict": skipped, "repair_asked": False}
     t0 = time.time()
     try:
         report = verifier.verify(ctx.settings.verifier_url, body)
     except verifier.VerifierUnavailableError as e:
-        return {"verdict": {"error": str(e)[:300]}}
+        return {"verdict": {"error": str(e)[:300]}, "repair_asked": False}
     ctx.timing.tools_s["verify"] = round(ctx.timing.tools_s.get("verify", 0) + time.time() - t0, 2)
     n = int(state.get("repairs") or 0)
     verdict = {**verifier.verdict(report, n > 0), "repairs": n}

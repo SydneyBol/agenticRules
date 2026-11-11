@@ -94,6 +94,8 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     "def_is_several_blocks": lambda f: f"def '{f['name']}' is several blocks: use it in a statement list",
     "block_without_type": lambda f: f"{f['at']}: every block needs a type",
     "value_input_takes_one": lambda f: f"{f['at']}: value input {f['input']} takes exactly one block",
+    "dsl_line": lambda f: f"line {f['line']} cannot be read: {f['expected']}. The line: {f['text']}",
+    "dsl_rules_only": lambda f: "dsl lines describe the rules canvas; the segment takes blocks",
     "no_root": lambda f: "the tree must have exactly one root block (offer_generic)",
     # fields the screen would drop (core/tree.py unfilled)
     "codes_belong_in_picked": lambda f: (
@@ -262,6 +264,10 @@ WORDING: dict[str, Callable[[Facts], str]] = {
         f"{f['at']}: remove 'mutation'; give fields, picked codes and counters, the tools write the mutation"
     ),
     "not_a_block_tree": _not_a_block_tree,
+    "fix_with_lines": lambda f: (
+        "all the lines again with the named lines corrected (#L7 is line 7; a counter the lines use needs its "
+        'counter line), e.g. {"canvas": "' + f["canvas"] + '", "dsl": "..."}'
+    ),
     "fix_with_counters": lambda f: (
         'edits by block id, or the counters, e.g. {"canvas": "' + f["canvas"] + '", "counters": [...]}'
     ),

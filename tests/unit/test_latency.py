@@ -65,7 +65,7 @@ def test_warm_sends_the_runs_own_prefix_with_no_output(fixture_catalog):
     chat = Chat()
     usage = agent.warm(ChatLLM(model="x", chat=chat), fixture_catalog)
     ((messages, kw),) = chat.calls
-    assert kw == {"max_tokens": 0} and chat.tools == agent.SCHEMAS
+    assert kw == {"max_tokens": 0} and chat.tools == agent.schemas_for("json")
     assert messages[0].content == system_blocks(fixture_catalog)  # byte for byte what a run sends: the same cache entry
     assert usage["cache_creation_input_tokens"] == 9
     assert agent.warm(ScriptedLLM([]), fixture_catalog) is None  # a client without warm() is left alone

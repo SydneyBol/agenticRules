@@ -162,6 +162,11 @@ class Canvas(BaseModel):
     blocks: dict[str, Any] | None = Field(
         None, description="The block tree: one offer_generic (rules) or targeting_holder (segment) root"
     )
+    dsl: str | None = Field(
+        None,
+        description="The rules canvas as lines (the `dsl` section of the reference): every line of the canvas, one "
+        "statement per line. Instead of blocks, defs, counters and edits, for the rules canvas only",
+    )
     defs: dict[str, Any] | None = Field(
         None,
         description="Blocks used in more than one place, written once by name: "
@@ -402,15 +407,27 @@ def _schema(model: type[BaseModel]) -> dict[str, Any]:
     return clean(raw)
 
 
-def schemas() -> list[dict[str, Any]]:
-    """The tools as the chat model is given them (name, description, input schema), built from the tools themselves."""
-    return [
-        {"name": t.name, "description": t.description, "input_schema": _schema(t.args_schema)}  # type: ignore[arg-type]
-        for t in TOOLS
-    ]
+def schemas(rules_form: str = "json") -> list[dict[str, Any]]:
+    """The tools as the chat model is given them (name, description, input schema), built from the tools themselves.
+
+    compose takes the rules canvas as lines (`dsl`) only when the run writes it that way (Settings.rules_form).
+    """
+    out: list[dict[str, Any]] = []
+    for t in TOOLS:
+        schema = _schema(t.args_schema)  # type: ignore[arg-type]
+        if rules_form != "dsl":
+            schema.get("properties", {}).pop("dsl", None)
+        out.append({"name": t.name, "description": t.description, "input_schema": schema})
+    return out
 
 
 SCHEMAS = schemas()
+SCHEMAS_BY_FORM = {"json": SCHEMAS, "dsl": schemas("dsl")}
+
+
+def schemas_for(rules_form: str) -> list[dict[str, Any]]:
+    """The tool schemas of a run that writes the rules canvas in the given form."""
+    return SCHEMAS_BY_FORM.get(rules_form, SCHEMAS)
 
 
 def schema_error(error: ToolInvocationError) -> str:

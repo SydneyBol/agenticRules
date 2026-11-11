@@ -32,7 +32,7 @@ from . import graph
 from . import plan as plans
 from .model import LLMError
 from .prompt import intro, offer_main_context, system_blocks
-from .tools import SCHEMAS, RunContext
+from .tools import RunContext, schemas_for
 
 if TYPE_CHECKING:
     from ..core.tenant.catalog import Catalog
@@ -519,7 +519,7 @@ def warm(llm: Any, catalog: Catalog, account_id: Any = None, settings: Settings 
         return None
     warm_history(catalog, settings)
     warm_values(catalog, settings)
-    return llm.warm(_system(catalog, account_id, settings), SCHEMAS)
+    return llm.warm(_system(catalog, account_id, settings), schemas_for(settings.rules_form))
 
 
 def warm_history(catalog: Catalog, settings: Settings | None = None) -> None:
@@ -575,6 +575,7 @@ def _system(catalog: Catalog, account_id: Any, settings: Settings) -> list[dict[
         settings.cache_ttl,
         bool(settings.similar_offers and settings.history),
         settings.inline_activity_types,
+        settings.rules_form,
     )
 
 

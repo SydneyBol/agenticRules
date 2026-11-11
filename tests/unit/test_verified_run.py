@@ -426,3 +426,20 @@ def test_a_canvas_reading_what_no_case_can_give_is_not_sent_to_the_engine(fixtur
     check = res["diagnostics"]["verify"]
     assert res["status"] == "draft" and not sent and len(llm.calls) == 3  # no engine call, no repair turn
     assert check["skipped"] == "the canvases read data a test case cannot give" and check["reads"] == ["third_party"]
+
+
+def test_a_repair_that_runs_out_of_turns_ends_the_run_instead_of_being_sent_round_again(
+    fixture_catalog, verifier_calls
+):
+    # A03 live in dsl mode, 2026-11-11: the repair never gave a readable canvas, the check was skipped with the
+    # repair still asked for, and the graph went round until its step limit (GraphRecursionError, a 503)
+    sent, answers = verifier_calls
+    answers.append(BAD)
+    lines = 'rule_1 "Bonus", if activity h_bit_amount >= 100\nrule_1, give_points 50'
+    unreadable = [("compose", {"canvas": "rules", "dsl": 'rule_1 "Bonus", if activity h_bit_amount 100'})]
+    first = [("compose", {"canvas": "rules", "dsl": lines, "finish": FIN[1]})]
+    settings = Settings(**{**SETTINGS.__dict__, "rules_form": "dsl"})
+    res, llm, _ = run(fixture_catalog, [[offer_main()], first, *[unreadable] * 6], settings=settings)
+    assert res["status"] == "needs_input" and len(sent) == 1
+    assert len(llm.calls) == 2 + settings.verify_repair_turns
+    assert res["diagnostics"]["verify"]["skipped"] == "the run did not finish"

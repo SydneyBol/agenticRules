@@ -173,7 +173,11 @@ def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]
                 [
                     *([MISSING.format(ids=", ".join(missing))] if missing else []),
                     *(
-                        [UNDATED.format(names="; ".join(scenarios[i].get("what", "") for i in undated), start=start, end=end)]
+                        [
+                            UNDATED.format(
+                                names="; ".join(scenarios[i].get("what", "") for i in undated), start=start, end=end
+                            )
+                        ]
                         if undated
                         else []
                     ),
@@ -314,13 +318,20 @@ def mismatch_message(report: dict[str, Any], outlines: dict[str, dict[str, Any] 
         )
     problems = [p for part in (report.get("compile") or {}).values() for p in part or []]
     shown = "".join(
-        f"\n\nThe {c} canvas as you last composed it (block ids for edits):\n" + json.dumps(o, separators=(",", ":"))
+        f"\n\nThe {c} canvas as you last wrote it (lines):\n" + o["lines"]
+        if set(o) == {"lines"}
+        else f"\n\nThe {c} canvas as you last composed it (block ids for edits):\n"
+        + json.dumps(o, separators=(",", ":"))
         for c, o in (outlines or {}).items()
         if o
     )
+    by_lines = any(o and set(o) == {"lines"} for o in (outlines or {}).values())
     edits = (
-        "compose with edits by these block ids (only the blocks that change; the rest stay as they are), never the "
-        "whole tree again, with finish in the same compose"
+        "compose the rules again with dsl (all the lines, with the ones that change corrected) and finish in the "
+        "same compose"
+        if by_lines
+        else "compose with edits by these block ids (only the blocks that change; the rest stay as they are), never "
+        "the whole tree again, with finish in the same compose"
     )
     if not rows:  # nothing ran: the rules the screen made did not compile in the engine (2026-11-05 C03)
         return (

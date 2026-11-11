@@ -150,15 +150,16 @@ def system_text(history: bool = False) -> str:
     return SYSTEM + HISTORY_RULE if history else SYSTEM
 
 
-def static_prompt() -> str:
+def static_prompt(rules_form: str = "json") -> str:
     """The knowledge every run shares: block reference, how blocks run, usual readings.
 
-    Read per run (~5 ms), the same bytes each time, so it stays a prompt-cache hit.
+    Read per run (~5 ms), the same bytes each time, so it stays a prompt-cache hit. A run that writes the rules
+    canvas as lines (rules_form "dsl") gets the line form after it.
     """
-    return "\n\n".join(
-        Path(CONTEXT, n).read_text()
-        for n in ("block_reference.md", "block_reference_segment.md", "kt.md", "conventions.md")
-    )
+    names = ["block_reference.md", "block_reference_segment.md", "kt.md", "conventions.md"]
+    if rules_form == "dsl":
+        names.append("dsl.md")
+    return "\n\n".join(Path(CONTEXT, n).read_text() for n in names)
 
 
 def system_blocks(
@@ -167,6 +168,7 @@ def system_blocks(
     ttl: str = "1h",
     history: bool = False,
     inline_types: int = INLINE_ACTIVITY_TYPES,
+    rules_form: str = "json",
 ) -> list[dict[str, Any]]:
     """The system prompt: the instructions, the knowledge every tenant shares and this tenant's catalog, each cached.
 
@@ -176,6 +178,7 @@ def system_blocks(
         ttl: The cache lifetime, "1h" or "5m" (the conversation's own sliding cache point is 5 minutes, after these).
         history: Earlier offers may be shown in the request.
         inline_types: Activity types are listed up to this many; more are looked up.
+        rules_form: How the rules canvas is written, "json" or "dsl" (the line form is then part of the knowledge).
 
     Returns:
         The system content blocks.
@@ -183,7 +186,7 @@ def system_blocks(
     mark = {"type": "ephemeral", **({"ttl": ttl} if ttl != "5m" else {})}
     return [
         {"type": "text", "text": system_text(history)},
-        {"type": "text", "text": static_prompt(), "cache_control": mark},
+        {"type": "text", "text": static_prompt(rules_form), "cache_control": mark},
         {
             "type": "text",
             "text": "Tenant catalog:\n" + catalog_text(catalog, account_id, inline_types),

@@ -18,6 +18,7 @@ from ..canvas.checks.counters import counter_problems
 from ..canvas.checks.grammar import ROOTS, check, detach
 from ..canvas.checks.screen_fields import unfilled
 from ..canvas.declare import declare
+from ..canvas.dsl import DslError, from_lines
 from ..canvas.edit import Doc
 from ..canvas.tree import TreeError, apply_edits, compact, expand, inline, number
 from ..tenant.existing_counters import Guard
@@ -48,11 +49,11 @@ def _mutations(tree: Any, path: str = "") -> list[str]:
     return out
 
 
-def _notes(canvas: str, problems: list[Problem], already: set[Problem]) -> Result:
+def _notes(canvas: str, problems: list[Problem], already: set[Problem], lines: bool = False) -> Result:
     """What a compose reply adds: how to repair (only the blocks the problems name), the starting canvas's problems."""
     out: Result = {}
     if problems:
-        out["fix_with"] = Problem.of("fix_with_edits", canvas=canvas)
+        out["fix_with"] = Problem.of("fix_with_lines" if lines else "fix_with_edits", canvas=canvas)
     if already:
         out["already_on_the_canvas"] = sorted(already, key=repr)[:5]
     return out
@@ -101,6 +102,7 @@ class Canvases:
         self.rebuilt: set[str] = set()  # canvases sent as a whole new tree (the saved canvas no longer applies)
         self.base: dict[str, set[Problem]] = {}
         self.asked_loose: dict[str, set[str]] = {}  # ids of the loose blocks the model asked for, per canvas
+        self.lines: dict[str, str] = {}  # a canvas last composed from dsl lines: the lines as the model sent them
         self.doc, self.saved_counters = saved, []
         if saved is not None:
             view = saved.view()
@@ -129,6 +131,8 @@ class Canvases:
         tops = self.trees.get(canvas)
         if not tops:
             return None
+        if canvas in self.lines:  # written as lines: shown as lines, fixed by sending the lines again
+            return {"lines": self.lines[canvas]}
         counters = list(self.declared.get(canvas, {}).values()) or self.saved_counters
         return {"root": compact(tops[0], counters), "loose": [compact(t, counters) for t in tops[1:]]}
 
@@ -185,7 +189,9 @@ class Canvases:
                 return {
                     "ok": False,
                     "problems": missing,
-                    "fix_with": Problem.of("fix_with_counters", canvas=canvas),
+                    "fix_with": Problem.of(
+                        "fix_with_lines" if canvas in self.lines else "fix_with_counters", canvas=canvas
+                    ),
                     **noted,
                 }
             xml, paths, xids = (
@@ -254,12 +260,23 @@ class Canvases:
     def _start(self, canvas: str, x: ToolInput) -> tuple[list[Block], list[Any] | None]:
         """The top-level blocks and counters a call builds on.
 
-        A whole new tree, or edits and loose blocks on the canvas's last tree (the saved one at first, an empty
-        root when there is none).
+        A whole new tree (blocks, or dsl lines for the rules), or edits and loose blocks on the canvas's last tree
+        (the saved one at first, an empty root when there is none).
 
         Raises:
             TreeError: Nothing to compose, or edits with no tree to apply them to.
         """
+        if x.get("dsl") is not None:  # the rules as sub-prompt lines: compiled to the same tree `blocks` gives
+            if canvas != "rules":
+                raise TreeError(Problem.of("dsl_rules_only"))
+            try:
+                compiled, declared, _ = from_lines(str(x["dsl"]), self.catalog, ids=True)
+            except DslError as e:
+                raise TreeError(Problem.of("dsl_line", line=e.line, text=e.text, expected=e.expected)) from None
+            x = {**x, "blocks": compiled[0], "counters": x.get("counters") or declared}
+            self.lines[canvas] = str(x["dsl"])
+        elif x.get("blocks") is not None or x.get("edits") is not None:
+            self.lines.pop(canvas, None)
         if x.get("blocks") is not None:
             if canvas == "rules" and self.doc is not None:
                 self.rebuilt.add(canvas)  # a whole new tree replaces the saved canvas
@@ -288,7 +305,7 @@ class Canvases:
         return {
             "ok": not written.problems,
             "problems": written.problems,
-            **_notes(canvas, written.problems, base),
+            **_notes(canvas, written.problems, base, canvas in self.lines),
             **({"loose": written.loose} if written.loose else {}),
         }
 
