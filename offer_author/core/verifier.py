@@ -8,9 +8,13 @@ The cases' members are mocked in the request, as the stock Offer Testing mocks t
 from __future__ import annotations
 
 import json
+import re
 import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING, Any
+
+from .vocabulary import ATTRIBUTE_LEVELS, COUNTER_LEVELS
 
 if TYPE_CHECKING:
     from .run import Run
@@ -46,6 +50,46 @@ def request(run: Run, scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
         "reference": {k: v for k, v in cat.reference.items() if k != "features"},
         "program": {k: v for k, v in (("features", cat.reference.get("features")), ("timezone", cat.timezone)) if v},
     }
+
+
+# A test case states a transaction (header, lines, payments) and a member's profile (MA_P); the offer's counters
+# start empty and the program's airports come with the request. Nothing else a canvas reads can be given a value:
+# the check's member holds no card, bank account, subscription, partner membership, analytics value or tier, a store
+# and a sponsor have no attributes, and no third party exists (probed on the local verifier 2026-11-11: a condition
+# on any of them is never met, whatever the case says). A check of such a canvas disagrees with every case that
+# expects a reward.
+NO_TEST_DATA_OBJECTS = ("location", "sponsor", "third_party")
+LEVEL_ATTRIBUTES = ("attribute_level", "attr_level", "attribute_type_input")  # a block's member level, by block
+LEVEL = re.compile(r"M[A-Z]_[A-Z]{1,3}")  # a member level's code (an action keeps its type in attribute_type_input)
+
+
+def reads_without_test_data(body: dict[str, Any]) -> list[str]:
+    """What the request's canvases read that no test case can give a value: member levels and objects, sorted.
+
+    Read from the blocks' saved mutations (conditions and value blocks, rules and segment); a disabled block compiles
+    to nothing and is not counted.
+    """
+    found: set[str] = set()
+
+    def walk(el: ET.Element) -> None:
+        if el.get("disabled") == "true":
+            return
+        if el.tag.split("}")[-1] == "mutation":
+            if el.get("object") in NO_TEST_DATA_OBJECTS:
+                found.add(str(el.get("object")))
+            level = next((el.get(k) for k in LEVEL_ATTRIBUTES if el.get(k)), None)
+            if level and LEVEL.fullmatch(level) and level not in (*ATTRIBUTE_LEVELS, *COUNTER_LEVELS):
+                found.add(level)
+        for child in el:
+            walk(child)
+
+    for key in ("rules_xml", "segment_xml"):
+        if body.get(key):
+            try:
+                walk(ET.fromstring(body[key]))
+            except ET.ParseError:
+                continue
+    return sorted(found)
 
 
 def _saved(day: str | None, time_of_day: str) -> str | None:

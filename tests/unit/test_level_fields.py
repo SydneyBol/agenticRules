@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
+from offer_author.core import verifier
 from offer_author.core.run import Run
 from offer_author.core.tenant.catalog import Catalog
 from offer_author.core.vocabulary import ACTIVE_CARD_FIELDS, LEVEL_FIELD_ORDER, LEVEL_FIELDS
@@ -23,6 +24,7 @@ CARD = {**IF, "attribute_level": "MA_CC", "card_main_option": "9", "onlycard_sec
 ACTIVE = {**IF, "attribute_level": "MA_CC", "card_main_option": "ACTIVE_CARDS"}
 PLAN = {**IF, "attribute_level": "MA_SP", "selected_subscription_plan": "1"}
 SEGMENT_NUM = {"RHS_INPUT": {"type": "static_value", "fields": {"value": "3"}}}
+NOT_NULL = {"operators": "not_null"}
 
 
 @pytest.fixture(scope="module")
@@ -296,3 +298,48 @@ def test_the_knowledge_names_every_field_of_these_levels():
     fields |= {x[k] for x in ACTIVE_CARD_FIELDS.values() for k in ("operator", "value")} | set(LEVEL_FIELD_ORDER)
     assert not sorted(f for f in fields if f"`{f}`" not in kt)
     assert "needs none of them" in kt and "the card, subscription and partner" not in kt
+
+
+def _body(cat, *canvases):
+    run = Run(cat, None)
+    for c in canvases:
+        assert run.compose(c)["ok"]
+    return verifier.request(run, [])
+
+
+AGE = {**IF, "attribute_level": "MA_P", "attribute": "age", "operators": ">", "RHS_INPUT": NUM}
+COUNTED = {"type": "action", "action_type": "update_attribute", "mta_attribute": "Visits", "action_operator": "ADD"}
+COUNTED |= {"FORMULA": {"type": "static_value", "value": "1"}}
+
+
+def test_the_engine_check_is_skipped_for_what_no_test_case_can_give(cat):
+    """Step 4a. Probed on the local verifier 2026-11-11: a condition on a card, a plan, an analytics value, a tier, a
+    store or sponsor attribute or a third party is never met, whatever the case's member holds."""
+    reads = {
+        "MA_CC": _rules({**ACTIVE, "activecard_mainoperators": "==", "cardvalue": "9"}),
+        "MA_SP": _rules({**PLAN, "selected_subscription_attribute": "plan_status", "operators": "not_null"}),
+        "MA_S": _rules({**IF, "attribute_level": "MA_S", "attribute": "ethnical", "operators": ">", "RHS_INPUT": NUM}),
+        "location": _rules(
+            {"type": "if_generic_adaptive", "OBJECT": "location", "attribute": "contact_name"} | NOT_NULL
+        ),
+        "sponsor": _rules({"type": "if_generic_adaptive", "OBJECT": "sponsor", "attribute": "address"} | NOT_NULL),
+        "third_party": _rules(
+            {**AGE, "OBJECT": "third_party", "third_parties_dropdown": "FAMILY_HEAD", "attribute_level": "MA_P"}
+        ),
+    }
+    for read, canvas in reads.items():
+        assert verifier.reads_without_test_data(_body(cat, canvas)) == [read]
+    tier = _segment(attr_level="MA_T", tierslevel="test_tier", tiermainoption="name", operators="==")
+    tier["blocks"]["inputs"]["CONDITIONS"][0]["fields"]["tierlevelnamevalue"] = "tier_gold"
+    card = _segment(attr_level="MA_CC", card_setup_id="ACTIVE_CARDS", operators="==", value="9")
+    assert verifier.reads_without_test_data(_body(cat, _rules(AGE), tier)) == ["MA_T"]
+    assert verifier.reads_without_test_data(_body(cat, _rules(AGE), card)) == ["MA_CC"]
+
+
+def test_the_engine_check_still_runs_on_what_a_test_case_states(cat):
+    counted = _rules(AGE)
+    counted["counters"] = [{"name": "Visits", "data_type": "NUMBER", "counter_type": "REGULAR"}]
+    counted["blocks"]["activities"][0]["RULES"][0]["ACTION"].append(COUNTED)
+    age = _segment(attr_level="MA_P", attribute="age", operators=">", inputs=SEGMENT_NUM)
+    assert verifier.reads_without_test_data(_body(cat, counted, age)) == []
+    assert verifier.reads_without_test_data({"rules_xml": "<not xml", "segment_xml": None}) == []

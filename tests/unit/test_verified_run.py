@@ -410,3 +410,19 @@ def test_the_repair_shows_the_canvas_with_its_block_ids_and_asks_for_edits_with_
         and "with finish in the same compose" in text
     )
     assert len(llm.calls) == 3 and res["diagnostics"]["verify"]["repaired"] and res["status"] == "draft"
+
+
+def test_a_canvas_reading_what_no_case_can_give_is_not_sent_to_the_engine(fixture_catalog, verifier_calls):
+    """AttributeListCoverage-Plan.md step 4a: no repair turn on a check that could only disagree."""
+    sent, answers = verifier_calls
+    answers.append(BAD)
+    head = {"OBJECT": "third_party", "third_parties_dropdown": "FAMILY_HEAD", "attribute_level": "MA_P"}
+    cond = {"type": "if_generic_adaptive", **head, "attribute": "age", "operators": "not_null"}
+    points = {"type": "action", "action_type": "give_points", "FORMULA": {"type": "static_value", "value": "10"}}
+    rule = {"type": "rule", "IDENTIFIER": "R1", "CONDITION": [cond], "ACTION": [points]}
+    activity = {"type": "activity", "ACTIVITY_CRITERIA": [], "RULES": [rule]}
+    canvas = {"canvas": "rules", "counters": [], "blocks": {"type": "offer_generic", "activities": [activity]}}
+    res, llm, _ = run(fixture_catalog, [[offer_main()], [("compose", canvas)], [FIN]])
+    check = res["diagnostics"]["verify"]
+    assert res["status"] == "draft" and not sent and len(llm.calls) == 3  # no engine call, no repair turn
+    assert check["skipped"] == "the canvases read data a test case cannot give" and check["reads"] == ["third_party"]

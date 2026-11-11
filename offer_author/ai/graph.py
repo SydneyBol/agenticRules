@@ -299,6 +299,9 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
     body = verifier.request(ctx.run, state["cases"] or [])
     if body is None:
         return {"verdict": {"skipped": "no rules"}}
+    if reads := verifier.reads_without_test_data(body):
+        # no case can give these a value, so every case expecting a reward would disagree and ask for a repair
+        return {"verdict": {"skipped": "the canvases read data a test case cannot give", "reads": reads}}
     t0 = time.time()
     try:
         report = verifier.verify(ctx.settings.verifier_url, body)
