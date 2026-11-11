@@ -38,22 +38,44 @@ AIRLINE_OBJECTS = {"airport": "AIRPORT", "airport_pair": "AIRPORT_DISTANCE"}
 # the rules screen's other attribute lists (its list name -> bolapi's custom module): the model is not shown them; the
 # catalog holds their active codes so that a block naming one is checked like any other
 SCREEN_LISTS = {"sponsor": "SPONSOR", "location": "SPONSORLOCATION", "payment_method": "PAYMENT_METHOD"}
-# the screen's lists this catalog has no reader for (vocabulary.LEVEL_LISTS and the rest): nothing named from one can
-# be filled or checked, so a canvas may not name one (AttributeListCoverage-Plan.md step 0; a reader removes its name)
-UNREAD_LISTS = frozenset(
-    {
-        "card",
-        "bank_account",
-        "subscription",
-        "analytics",
-        "personalization",
-        "retention",
-        "partner",
-        "product_offer",
-        "sweepstakes",
-        "play_win",
-    }
-)
+# The screen's member-level attribute lists and its pickers (blockly-http.service.ts getAttributesLOV,
+# getSubscriptionPlans, getPartnerPrograms, getSweepstakesList, getPlayWinSetups; the card list), held as their active
+# codes for the checks (the model is not shown them yet: AttributeListCoverage-Plan.md step 2). A list that was not
+# read, or whose feature the program has off, is not held, and a canvas may name nothing from it (Catalog.holds).
+LEVEL_READS = {
+    **{
+        name: f"attributelibrary/custom/?module_type={module}"
+        for name, module in (
+            ("card", "COBRAND_CARD"),
+            ("bank_account", "COBRAND_ACCOUNT"),
+            ("subscription", "SUBSCRIPTION"),
+            ("analytics", "MEMBER_SEGMENTATION"),
+            ("product_offer", "PRODUCTOFFER"),
+            ("partner", "PARTNER_MEMBERSHIP"),
+        )
+    },
+    "card_list": "card-list/?page_size=1000",  # the screen asks for 60
+    "subscription_plan": "subscription-plans/?status=ACTIVE&page_size=3000",
+    "partner_program": "partner-programs/?status=ACTIVE&page_size=3000",
+    "sweepstakes": "sweepstakes/?trim=true&status=ACTIVE&page_size=300",
+    "play_win": "play-win/?status=active&page_size=300",
+}
+LEVEL_ATTRIBUTES = frozenset(n for n, path in LEVEL_READS.items() if path.startswith("attributelibrary/"))
+# a saved dump's file for each (tenant-catalog.mjs); older dumps hold some pickers as the LOV of the same table
+LEVEL_FILES = {
+    **{n: "custom_" + LEVEL_READS[n].rsplit("=", 1)[1] for n in LEVEL_ATTRIBUTES},
+    **{n: f"screen_{n}" for n in LEVEL_READS if n not in LEVEL_ATTRIBUTES},
+}
+LEVEL_LOV_FILES = {
+    "card_list": "lov_CARDS_LIST",
+    "subscription_plan": "lov_SUBSCRIPTION_PLAN_LIST",
+    "sweepstakes": "lov_SWEEPSTAKE_LIST",
+    "play_win": "lov_PLAY_WIN_SETUP_LIST",
+}
+LEVEL_FEATURES = {"partner": "partner_program_management", "partner_program": "partner_program_management"}
+# the screen's lists this catalog has no reader for: individualization (an individualized offer's own attributes) and
+# retention scores (the AI service). Nothing named from one can be filled or checked, so a canvas may not name one.
+UNREAD_LISTS = frozenset({"personalization", "retention"})
 POOL, SHOWN = 25, 15  # lookup with a search: BM25's best 25 and the embeddings' best 25, the cross-encoder's best 15
 TIE_ODDS = 0.5  # cross-encoder scores tie when their log-odds are this close (odds within ~1.6x), at any confidence
 # value lists longer than this are not written into the prompt; the model finds codes with lookup_values instead
@@ -160,8 +182,14 @@ class Catalog:
         return self.attributes.get(obj, {}).get(code)
 
     def holds(self, lst: str) -> bool:
-        """Whether the catalog reads that list of the screen at all (UNREAD_LISTS: it does not)."""
-        return lst not in UNREAD_LISTS
+        """Whether a canvas may name something from that list of the screen.
+
+        Not a list the catalog has no reader for (UNREAD_LISTS), nor a member-level list or picker it did not read
+        (LEVEL_READS: not answered, or the program's feature is off). The other lists are always taken as held.
+        """
+        if lst in UNREAD_LISTS:
+            return False
+        return lst in self.listed if lst in LEVEL_READS else True
 
     def active(self, lst: str, code: str) -> bool | None:
         """Whether the rules screen offers that attribute in that list of its.
@@ -382,6 +410,7 @@ class Catalog:
         for name in SCREEN_LISTS:
             if responses.get(f"list:{name}") is not None:
                 cat.listed[name] = frozenset(x["name"] for x in _rows(responses[f"list:{name}"]) if usable(x))
+        cat.listed.update(_level_lists(responses, _reference(responses).get("features")))
         cat.activity_types = lookups.get("BIT_TYPE", {})
         program = next(iter(_rows(responses.get("programs"))), {})
         cat.timezone, cat.point_decimal_scale = program.get("timezone"), program.get("point_decimal_scale")
@@ -433,6 +462,14 @@ class Catalog:
             with open(os.path.join(directory, name + ".json")) as f:
                 return json.load(f)["body"]
 
+        def answered(name: str) -> bool:
+            """Saved, and bolapi answered it (the dump saves a refused call with its status too)."""
+            path = os.path.join(directory, name + ".json")
+            if not os.path.exists(path):
+                return False
+            with open(path) as f:
+                return 200 <= int(json.load(f).get("status") or 200) < 300
+
         resp = {
             k: body(k)
             for k in (
@@ -453,8 +490,12 @@ class Catalog:
             "locations": f"extra_locations{sponsor_id}",
             **{f"{obj}_attributes": f"custom_{module}" for obj, module in AIRLINE_OBJECTS.items()},
             **{f"list:{name}": f"custom_{module}" for name, module in SCREEN_LISTS.items()},
+            **{f"list:{name}": LEVEL_FILES[name] for name in LEVEL_READS},
         }
-        resp.update({k: body(f) for k, f in optional.items() if os.path.exists(os.path.join(directory, f + ".json"))})
+        resp.update({k: body(f) for k, f in optional.items() if answered(f)})
+        for name, f in LEVEL_LOV_FILES.items():
+            if f"list:{name}" not in resp and answered(f):
+                resp[f"list:{name}"] = body(f)
         for f in os.listdir(directory):
             if f.startswith("extra_tags"):
                 resp["tags:" + f[len("extra_tags") : -5]] = body(f[:-5])
@@ -496,6 +537,7 @@ class BolapiCatalogSource:
             "product_attributes": "attributelibrary/custom/?module_type=PRODUCT",
             **{f"{o}_attributes": f"attributelibrary/custom/?module_type={m}" for o, m in AIRLINE_OBJECTS.items()},
             **{f"list:{n}": f"attributelibrary/custom/?module_type={m}" for n, m in SCREEN_LISTS.items()},
+            **{f"list:{n}": path for n, path in LEVEL_READS.items()},
             "airports": "airlines/airports/?page_size=1000",  # the engine check's reference data (optional)
             "airport_pairs": "airlines/airports-distance/?page_size=1000",
             "sponsor_loyalty_accounts": f"sponsors/loyaltyaccounts/?sponsor_id={sponsor_id}&offer_type=reward",
@@ -545,7 +587,7 @@ class BolapiCatalogSource:
                 raise
             return r.json()
 
-        with ThreadPoolExecutor(6) as pool:  # 20 GETs at once instead of one after another (a miss is user-visible)
+        with ThreadPoolExecutor(6) as pool:  # 31 GETs at once instead of one after another (a miss is user-visible)
             resp = dict(zip(reqs, pool.map(fetch, reqs, reqs.values()), strict=True))
             # every other reward account's tags: an offer may award to any of them (the give_points dropdown)
             las = resp.get("sponsor_loyalty_accounts")
@@ -566,6 +608,7 @@ OPTIONAL = frozenset(
         "airport_pairs",
         *(f"{o}_attributes" for o in AIRLINE_OBJECTS),
         *(f"list:{n}" for n in SCREEN_LISTS),
+        *(f"list:{n}" for n in LEVEL_READS),
     }
 )  # catalog GETs whose failure leaves their facts unknown instead of failing it
 TAGS = "loyaltyaccounts/{}/tags/?active=true&page_size=1000"  # an account's reward tags
@@ -629,6 +672,30 @@ def _reference(responses: dict[str, Any]) -> dict[str, Any]:
     for k, v in (("airports", airports), ("airport_pairs", pairs), ("conversion_rates", rates), ("features", features)):
         if v:
             out[k] = v
+    return out
+
+
+def _level_lists(responses: dict[str, Any], features: dict[str, bool] | None) -> dict[str, frozenset[str]]:
+    """The member-level lists and pickers that were read, as their active codes (LEVEL_READS).
+
+    An attribute list keeps the names of the usable attributes; a picker (cards, plans, programmes, sweepstakes, play &
+    win setups) the ids of its live rows. A list whose feature the program has off holds nothing, as the screen loads
+    none (block-definition.service.ts getAllAttributesLov); with no switches known, what was read is kept.
+    """
+    out: dict[str, frozenset[str]] = {}
+    for name in LEVEL_READS:
+        feature = LEVEL_FEATURES.get(name)
+        if feature and features is not None and not features.get(feature):
+            out[name] = frozenset()
+            continue
+        body = responses.get(f"list:{name}")
+        if body is None:
+            continue
+        rows = _rows(body)
+        if name in LEVEL_ATTRIBUTES:
+            out[name] = frozenset(x["name"] for x in rows if usable(x))
+        else:
+            out[name] = frozenset(str(x["id"]) for x in rows if x.get("id") is not None and live(x))
     return out
 
 
@@ -756,14 +823,15 @@ INACTIVE_STATUSES = frozenset(
 def live(row: Any) -> bool:
     """Whether a row of a bolapi list is in use: not `active: false`, not an inactive status.
 
-    Lookups, airports, payment methods and engagement rules mark it with `active`, loyalty accounts with
+    Lookups, airports, payment methods and engagement rules mark it with `active`, cards with `status: false`,
+    loyalty accounts with
     `status: Inactive`, sponsors with status T (terminated) or S (suspended), offers and privileges with expired,
     terminated or suspended. The stock screen asks for most of these lists with active=true or the live statuses
     (blockly-lov-registry.ts resolveLovApiUrl); a value that is no longer in use is never loaded here.
     """
     if not isinstance(row, dict):
         return True
-    if row.get("active") is False or row.get("is_active") is False:
+    if row.get("active") is False or row.get("is_active") is False or row.get("status") is False:
         return False
     status = row.get("status")
     return not (isinstance(status, str) and status.strip().lower() in INACTIVE_STATUSES)

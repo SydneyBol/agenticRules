@@ -35,6 +35,47 @@ LEVEL_LISTS = {
 }
 OBJECT_LISTS = {o: o for o in ("activity", "airport", "airport_pair", "location", "sponsor")}
 PRODUCT_LISTS = {"products_attrs": "product", "product_offer_attributes": "product_offer"}  # product_cluster: none
+# Where a member level keeps its codes when it has a picker (gravty-blockly if-generic.block.ts,
+# member-attributes.block.ts, member-attribute-segment.block.ts): (field, list) pairs. A condition on the rules screen picks a card, plan or
+# programme and keeps the attribute in `attribute`; the segment screen keeps it in selected_*_attribute. A level not
+# named keeps its attribute in `attribute` (a condition) or `ATTRIBUTE` (a value block).
+CONDITION_CODES = {
+    "MA_CC": (
+        ("card_setup_id", "card_list"),
+        ("card_main_option", "card_list"),
+        ("cardvalue", "card_list"),
+        ("selected_card_attribute", "card"),
+        ("attribute", "card"),
+    ),
+    "MA_CA": (("selected_bank_attribute", "bank_account"), ("attribute", "bank_account")),
+    "MA_SP": (
+        ("selected_subscription_plan", "subscription_plan"),
+        ("selected_subscription_attribute", "subscription"),
+        ("attribute", "subscription"),
+    ),
+    "MA_PP": (
+        ("selected_partner_program", "partner_program"),
+        ("selected_partner_program_attribute", "partner"),
+        ("attribute", "partner"),
+    ),
+}
+VALUE_CODES = {
+    "MA_CC": (("ATTRIBUTE", "card_list"), ("selected_card_attribute_targeted", "card"), ("cardattribute", "card")),
+    "MA_SP": (
+        ("selected_subscription_plan", "subscription_plan"),
+        ("selected_subscription_attribute", "subscription"),
+        ("ATTRIBUTE", "subscription"),
+    ),
+    "MA_PP": (
+        ("selected_partner_program", "partner_program"),
+        ("selected_partner_program_attribute", "partner"),
+        ("ATTRIBUTE", "partner"),
+    ),
+}
+# what those fields hold that is not a code: unset, and the card condition's "the member's active cards" (whose
+# compared values are then card ids: CARD_VALUES)
+NOT_CODES = ("", "null", "None", "undefined", "ACTIVE_CARDS")
+ACTIVE_CARDS = "ACTIVE_CARDS"
 ACTION_LISTS = {
     "assign_sweepstakes": ("sweepstakes", "sweepstakeid"),
     "assign_play_win_reward": ("play_win", "playwinsetup"),

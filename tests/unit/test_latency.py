@@ -122,7 +122,7 @@ def test_the_live_catalog_reads_bolapi_in_parallel_and_builds_the_same_catalog(f
             return R([])
 
     cat = BolapiCatalogSource("https://t.example", http=Http()).get("t", 1, 9, "JWT x")
-    assert len(seen) == 20 and peak[0] > 1  # all twenty read, several at once
+    assert len(seen) == 31 and peak[0] > 1  # all thirty-one read, several at once
     assert cat.attr("activity", "h_bit_amount").type == "NUMBER" and cat.loyalty_accounts[0]["id"] == "9"
     json.dumps(catalog_text(cat))
 

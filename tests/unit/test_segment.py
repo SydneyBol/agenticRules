@@ -2,6 +2,7 @@
 tenant catalog (attributes, codes, tier programme), and an OR needs both sides."""
 
 import glob
+import json
 import os
 
 import pytest
@@ -13,9 +14,10 @@ KNOWN = {
     "22_Target_member_per_points": "'6_balance' is not in the tenant catalog",  # account 6 is gone from devintam1
     "50_Static_segment": "an OR needs a condition in both OPERAND1 and OPERAND2",  # saved with one operand
 }
-# saved segments on a level whose list the catalog does not read yet (2026-11-11, AttributeListCoverage-Plan.md step 0):
-# refused for that alone until the list is loaded
-CARD, SUBSCRIPTION = "cobranded card attributes (MA_CC)", "subscription attributes (MA_SP)"
+# saved segments on a cobranded card or a subscription plan: devintam1's dump holds neither its card list nor its plan
+# list, so they are refused for that alone there (AttributeListCoverage-Plan.md step 1; they compose clean on a tenant
+# that has those lists: test_card_and_subscription_segments_compose_clean_where_the_lists_are_held)
+CARD, SUBSCRIPTION = "cobranded cards", "subscription plans"
 UNREAD = {
     **dict.fromkeys(("49_COBRAND", "54_city", "57_DOB"), CARD),
     **dict.fromkeys(
@@ -192,3 +194,25 @@ def test_a_check_where_nothing_ran_tells_the_build_the_rules_do_not_compile():
         {"ok": False, "scenarios": [{"scenario": 0, "error": "x"}], "mismatches": [], "compile": {}}
     )
     assert "do not compile in the engine" in told and "no problem" in told and "rule " not in told
+
+
+@pytest.fixture(scope="module")
+def devintbf2_catalog():
+    from offer_author.core.tenant.catalog import Catalog
+    from tests.paths import CATALOGS
+
+    return Catalog.from_bolapi_dumps(os.path.join(CATALOGS, "devintbf2", "bolapi"), "devintbf2", 1, "9", "BASE")
+
+
+def test_card_and_subscription_segments_compose_clean_where_the_lists_are_held(devintbf2_catalog):
+    """2026-11-11 step 1: the 13 saved segments on cards and subscriptions are the oracle for which field holds which
+    code. devintbf2 has plan 1 and the subscription attributes they use; its cards are 2, 4, 6, 9, ... (devintam1's
+    card 1 is not one of them), so the card segments are read again with devintbf2's own cards."""
+    for name, level in UNREAD.items():
+        conds = saved_segment(name)["blocks"]["inputs"]["CONDITIONS"]
+        if level == CARD:
+            assert "'1' is not one of the program's active cobranded cards" in problems(devintbf2_catalog, *conds)[0]
+            text = json.dumps(conds).replace('"card_setup_id": "1"', '"card_setup_id": "9"')
+            conds = json.loads(text.replace('"1,9"', '"9,2"'))
+        got = [p for p in problems(devintbf2_catalog, *conds) if "tierslevel" not in p]  # 57_DOB: devintam1's tiers
+        assert got == [], (name, got)

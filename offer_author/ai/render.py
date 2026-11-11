@@ -14,8 +14,11 @@ from ..domain import BlockRef, Problem
 Facts = Mapping[str, Any]
 
 
-# the screen's lists the catalog does not read (core.tenant.catalog.UNREAD_LISTS), as the manager names them
+# the screen's lists a block names from (core.vocabulary LEVEL_LISTS and the rest), as the manager names them
 UNREAD = {
+    "card_list": "cobranded cards",
+    "subscription_plan": "subscription plans",
+    "partner_program": "partner programmes",
     "card": "cobranded card attributes (MA_CC)",
     "bank_account": "bank account attributes (MA_CA)",
     "subscription": "subscription attributes (MA_SP)",
@@ -202,6 +205,8 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     "list_not_in_catalog": lambda f: f"the tenant catalog holds no {UNREAD.get(f['list'], f['list'])}"
     + (f" ({f['name']!r} cannot be checked or filled)" if f.get("name") else "")
     + ": no rule or segment can be built on them here",
+    "code_not_in_catalog": lambda f: f"{f['id']!r} is not one of the program's active "
+    f"{UNREAD.get(f['list'], f['list'])}",
     "namespace_not_in_catalog": lambda f: f"counter '{f['name']}' counts per {f['namespace']!r}, which is not a "
     f"{f['object']} attribute in the tenant catalog: a VECTOR counter counts per an attribute that is active for rules",
     "counter_taken": lambda f: (

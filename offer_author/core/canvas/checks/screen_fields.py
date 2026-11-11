@@ -11,7 +11,18 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from ....domain import BlockRef, Problem
-from ...vocabulary import ACTION_LISTS, CATALOG_OBJECT, COUNTER_LEVELS, LEVEL_LISTS, OBJECT_LISTS, PRODUCT_LISTS
+from ...vocabulary import (
+    ACTION_LISTS,
+    ACTIVE_CARDS,
+    CATALOG_OBJECT,
+    CONDITION_CODES,
+    COUNTER_LEVELS,
+    LEVEL_LISTS,
+    NOT_CODES,
+    OBJECT_LISTS,
+    PRODUCT_LISTS,
+    VALUE_CODES,
+)
 from ..fields import CONDITIONS, REWARD_ACTIONS, data_type, fill
 from ..reference import picks_by_operator
 from ..tree import nodes
@@ -152,55 +163,104 @@ def _shape(n: Any, f: dict[str, Any], catalog: Catalog | None, block: BlockRef, 
     attr = f.get("ATTRIBUTE")
     if t == "activity_attribute" and catalog is not None and attr and catalog.attr("activity", str(attr)) is None:
         out.append(Problem.of("not_a_transaction_attribute", block, name=attr))
-    if (where := attribute_list(t, f)) and catalog is not None:
-        lst, code = where
-        if not catalog.holds(lst):
-            out.append(Problem.of("list_not_in_catalog", block, list=lst, name=code))
-        elif code and not form and not _codes_checked(t, f) and catalog.active(lst, str(code)) is False:
-            out.append(Problem.of("attribute_not_in_catalog", block, object=lst, attribute=code))
+    if catalog is not None:
+        out += _list_codes(t, f, n.get("picked"), catalog, block, quiet=bool(form))
     return out
 
+
+def _list_codes(
+    t: str | None, f: dict[str, Any], picked: Any, catalog: Catalog, block: BlockRef, quiet: bool
+) -> list[Problem]:
+    """The codes a block names from the screen's lists, against the catalog.
+
+    A list it may not name from (list_not_in_catalog, once per list), and a code its list does not have
+    (attribute_not_in_catalog for an attribute, code_not_in_catalog for a card, plan, programme, sweepstake or play &
+    win setup).
+    """
+    out, refused = [], set()
+    for lst, code in named_codes(t, f, picked):
+        if not catalog.holds(lst):
+            if lst not in refused:
+                refused.add(lst)
+                out.append(Problem.of("list_not_in_catalog", block, list=lst, name=code))
+        elif code is not None and not quiet and not _codes_checked(t, f, lst) and catalog.active(lst, code) is False:
+            if lst in PICKERS:
+                out.append(Problem.of("code_not_in_catalog", block, list=lst, id=code))
+            else:
+                out.append(Problem.of("attribute_not_in_catalog", block, object=lst, attribute=code))
+    return out
+
+
+PICKERS = ("card_list", "subscription_plan", "partner_program", "sweepstakes", "play_win")  # lists of ids
 
 AIRPORT_PAIR_VALUES = ("award_price", "distance_flown", "reward_price")  # airport_attribute's own options
 VALUE_BLOCKS = ("member_attribute", "targeting_member_attribute")  # value blocks that read a member level
 
 
-def attribute_list(t: str | None, f: dict[str, Any]) -> tuple[str, Any] | None:
-    """The screen's list a block picks its attribute (or sweepstake, play & win setup) from, and the code it names.
+def named_codes(t: str | None, f: dict[str, Any], picked: Any = None) -> list[tuple[str, str | None]]:
+    """The screen's lists a block names something from, each with the code it names there (None: none given).
 
     Each list is the screen's own (vocabulary.LEVEL_LISTS and the rest); its dropdowns hold the list's active rows only
     (block-definition.service.ts getAttributesTuple, getUpdatableAttributesTuple), so the screen leaves any other code
-    unset. None for what is not read from a list: counters, the tier programme, the airport pair block's own options.
+    unset. A member level with a picker names a card, plan or programme too (CONDITION_CODES, VALUE_CODES), and a card
+    condition on the member's active cards compares card ids. Nothing for what is not read from a list: counters, the
+    tier programme, the airport pair block's own options.
     """
     if t in CHECKED:  # rules and segment conditions (a segment condition reads as a member one: _as_condition)
-        obj = f.get("OBJECT") or ""
+        obj, level = f.get("OBJECT") or "", f.get("attribute_level") or ""
         if obj in ("member", "third_party"):
-            lst = LEVEL_LISTS.get(f.get("attribute_level") or "")
+            lst = LEVEL_LISTS.get(level)
+            if lst and level in CONDITION_CODES:
+                cards = ACTIVE_CARDS in (f.get("card_setup_id"), f.get("card_main_option"))
+                ids = [*_split(f.get("value")), *_split(picked)] if cards else []
+                return [(lst, None), *_fields(f, CONDITION_CODES[level]), *(("card_list", c) for c in ids)]
         elif obj == "products_attrs":
             lst = PRODUCT_LISTS.get(f.get("ProductOrOfferContext") or "products_attrs")
         else:
             lst = OBJECT_LISTS.get(obj)
-        return (lst, f.get("attribute")) if lst else None
-    if t in VALUE_BLOCKS and (lst := LEVEL_LISTS.get(f.get("ATTRIBUTE_TYPE") or "")):
-        return lst, f.get("ATTRIBUTE")
+        return [(lst, _code(f.get("attribute")))] if lst else []
+    if t in VALUE_BLOCKS and (lst := LEVEL_LISTS.get(level := f.get("ATTRIBUTE_TYPE") or "")):
+        return (
+            [(lst, None), *_fields(f, VALUE_CODES[level])]
+            if level in VALUE_CODES
+            else [(lst, _code(f.get("ATTRIBUTE")))]
+        )
     if t == "product_attribute" and (lst := PRODUCT_LISTS.get(f.get("ATTRIBUTE_PRODUCTS") or "")):
-        return lst, f.get("ATTRIBUTE")
+        return [(lst, _code(f.get("ATTRIBUTE")))]
     if t in ("payment_attribute", "if_payment_attribute"):
-        return "payment_method", f.get("payment_attribute")
+        return [("payment_method", _code(f.get("payment_attribute")))]
     if t == "airport_attribute" and f.get("airportpair_attribute") not in AIRPORT_PAIR_VALUES:
-        return "airport_pair", f.get("airportpair_attribute")
+        return [("airport_pair", _code(f.get("airportpair_attribute")))]
     if t in REWARD_ACTIONS and f.get("action_type") == "update_attribute":
         lst = LEVEL_LISTS.get(f.get("mta_type_value") or "")  # an offer or activity counter: no list
-        return (lst, f.get("mta_attribute")) if lst else None
+        return [(lst, _code(f.get("mta_attribute")))] if lst else []
     if t in REWARD_ACTIONS and f.get("action_type") in ACTION_LISTS:
         lst, field = ACTION_LISTS[f["action_type"]]
-        return lst, f.get(field)
-    return None
+        return [(lst, _code(f.get(field)))]
+    return []
 
 
-def _codes_checked(t: str | None, f: dict[str, Any]) -> bool:
-    """A condition whose code grammar.codes checks, with its values: any but a third party's."""
-    return t in CHECKED and f.get("OBJECT") != "third_party"
+def _code(v: Any) -> str | None:
+    """A field's value as a code, or None when it holds none (NOT_CODES)."""
+    return None if v is None or str(v).strip() in NOT_CODES else str(v).strip()
+
+
+def _split(v: Any) -> list[str]:
+    """The codes of a comma-separated value or picked field."""
+    return [c for c in (_code(x) for x in str(v or "").split(",")) if c]
+
+
+def _fields(f: dict[str, Any], pairs: tuple[tuple[str, str], ...]) -> list[tuple[str, str | None]]:
+    """The (list, code) of each of those fields the block has a code in."""
+    return [(lst, code) for field, lst in pairs if (code := _code(f.get(field))) is not None]
+
+
+GRAMMAR_LISTS = ("member", "activity", "product", "airport", "airport_pair", "location", "sponsor")
+
+
+def _codes_checked(t: str | None, f: dict[str, Any], lst: str) -> bool:
+    """A condition's attribute that grammar.codes checks, with its values: a list of its own, not a third party's."""
+    return t in CHECKED and f.get("OBJECT") != "third_party" and lst in GRAMMAR_LISTS
 
 
 def _operator_form(n: Any, f: dict[str, Any], typ: str | None) -> Form | None:

@@ -75,7 +75,7 @@ def test_the_catalog_holds_no_inactive_attribute_and_knows_the_screens_other_lis
         assert lst not in cat.attributes  # held for checks, not shown to the model
     assert len(cat.listed["sponsor"]) < len(_raw("custom_SPONSOR"))  # the saved tenant's inactive ones are left out
     assert cat.active("payment_method", "payment_method")  # a transaction attribute at payment level
-    assert cat.active("card", "anything") is None  # a list the catalog was not given: not checked
+    assert cat.active("retention", "anything") is None  # a list the catalog was not given: not checked
 
 
 def test_an_inactive_attribute_is_refused_wherever_a_canvas_names_one(cat):
