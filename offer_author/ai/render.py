@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
+from ..core.vocabulary import LEVEL_LISTS, LIST_PLACES
 from ..domain import BlockRef, Problem
 
 Facts = Mapping[str, Any]
@@ -30,6 +31,16 @@ UNREAD = {
     "sweepstakes": "sweepstakes",
     "play_win": "play & win setups",
 }
+
+
+def _level(f: Facts) -> str:
+    """A member level as problems name it: cobranded card (MA_CC), subscription (MA_SP), ..."""
+    return LIST_PLACES.get(LEVEL_LISTS.get(f["level"], ""), str(f["level"]))
+
+
+def _at(f: Facts) -> str:
+    """The block a problem is about, as a prefix; nothing when the problem already says where it sits."""
+    return f"{f['block']}: " if f.get("block") else ""
 
 
 def block(ref: BlockRef | None, facts: Facts) -> str:
@@ -169,7 +180,8 @@ WORDING: dict[str, Callable[[Facts], str]] = {
         f"{list(f['accepts'])}"
     ),
     "cannot_follow": lambda f: f"{f['type']} cannot follow {f['previous']} in {f['parent']}.{f['input']}",
-    "attribute_not_in_catalog": lambda f: f"{f['object']} attribute {f['attribute']!r} is not in the tenant catalog: "
+    "attribute_not_in_catalog": lambda f: f"{_at(f)}{f['object']} attribute {f['attribute']!r} is not in the tenant "
+    "catalog: "
     "the catalog has the attributes that are active for rules, and the screen lists no other",
     "values_not_codes": _values_not_codes,
     "privilege_not_in_catalog": lambda f: f"privilege {f['id']!r} is not in the catalog",
@@ -202,10 +214,20 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     # counters (core/run/canvases.py, core/counters.py)
     "counter_declared_twice": lambda f: f"counter '{f['name']}' is declared twice",
     "vector_without_namespace": lambda f: f"counter '{f['name']}' is VECTOR: give its namespace",
-    "list_not_in_catalog": lambda f: f"the tenant catalog holds no {UNREAD.get(f['list'], f['list'])}"
+    "list_not_in_catalog": lambda f: f"{_at(f)}the tenant catalog holds no {UNREAD.get(f['list'], f['list'])}"
     + (f" ({f['name']!r} cannot be checked or filled)" if f.get("name") else "")
     + ": no rule or segment can be built on them here",
-    "code_not_in_catalog": lambda f: f"{f['id']!r} is not one of the program's active "
+    "level_field_misplaced": lambda f: f"{_at(f)}a {_level(f)} condition on this screen keeps its "
+    f"{ {'operators': 'operator', 'value': 'compared card'}.get(f['what'], f['what']) } in "
+    f"`{f['want']}`, not `{f['given']}`: the screen drops what `{f['given']}` holds",
+    "level_field_missing": lambda f: f"{_at(f)}a {_level(f)} condition needs `{f['field']}`"
+    + (f": one of the program's active {UNREAD.get(f['what'], f['what'])}" if f.get("what") in UNREAD else "")
+    + (": its attribute" if f.get("what") == "attribute" else "")
+    + (f": one of {', '.join(f['codes'])}" if f.get("codes") else "")
+    + (f" (given {f['given']!r})" if f.get("given") not in (None, "") else ""),
+    "active_cards_field": lambda f: f"{_at(f)}a condition on the member's active cards compares card ids and has no "
+    f"`{f['field']}`: the screen drops it",
+    "code_not_in_catalog": lambda f: f"{_at(f)}{f['id']!r} is not one of the program's active "
     f"{UNREAD.get(f['list'], f['list'])}",
     "namespace_not_in_catalog": lambda f: f"counter '{f['name']}' counts per {f['namespace']!r}, which is not a "
     f"{f['object']} attribute in the tenant catalog: a VECTOR counter counts per an attribute that is active for rules",

@@ -12,7 +12,17 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from ...domain import Block
-from ..vocabulary import ATTRIBUTE_LEVELS, CATALOG_OBJECT, COUNTER_LEVELS, MEMBER_ATTRIBUTE, OFFER_COUNTER, TIER_COUNTER
+from ..vocabulary import (
+    ACTIVE_CARDS,
+    ATTRIBUTE_LEVELS,
+    CATALOG_OBJECT,
+    COUNTER_LEVELS,
+    LEVEL_FIELD_ORDER,
+    LEVEL_LISTS,
+    MEMBER_ATTRIBUTE,
+    OFFER_COUNTER,
+    TIER_COUNTER,
+)
 
 if TYPE_CHECKING:
     from ..tenant.catalog import Catalog
@@ -23,6 +33,7 @@ Counters = dict[str, dict[str, Any]]
 
 VECTOR_MODES = ("across", "unique")  # block-definition.service.ts getMAOVectorattributes: the options after the first
 CONDITIONS = ("if_generic_adaptive", "activity_criteria")
+SEGMENT_CONDITION = "targeting_condition"  # a Select Members condition: a member attribute at attr_level
 
 
 def data_type(catalog: Catalog | None, obj: str | None, level: str | None, attr: str | None) -> str | None:
@@ -31,7 +42,9 @@ def data_type(catalog: Catalog | None, obj: str | None, level: str | None, attr:
         return None
     cobj = CATALOG_OBJECT.get(obj or "")
     if cobj == "member" and level not in ATTRIBUTE_LEVELS:
-        return None  # counters (MA_O/MA_A) and other levels: not in the attribute library
+        # a member-level list the catalog holds (cards, bank accounts, analytics, ...); counters (MA_O / MA_A) and
+        # the tier programme are not in the attribute library
+        cobj = LEVEL_LISTS.get(level or "")
     a = catalog.attr(cobj, attr) if cobj else None
     return a.type if a else None
 
@@ -75,21 +88,37 @@ def _from_fields(spec: Spec, fields: Fields, given: dict[str, Any]) -> dict[str,
         # a field several attributes read (value -> value, file_upload_toggle) only fills the ones saved XML shows
         if f is not None and (readers[f] == 1 or attr in saved or attr == f):
             mut[attr] = field_text(fields[f])
-    unset = {a for a in always if a not in mut and _from_field_only(src.get(a, {}))}
+    # a member level's condition never takes a constant the UI writes for another object (if_generic_adaptive's
+    # attribute: "Segment" for a product cluster), so its unset field is "null" too (the member's active cards, a
+    # subscription: saved as attribute="null")
+    level = bool(mut.get("attribute_level"))
+    unset = {a for a in always if a not in mut and _from_field_only(src.get(a, {}), level)}
     return mut | dict.fromkeys(unset, "null")
 
 
-def _from_field_only(source: dict[str, Any]) -> bool:
-    """A mutation attribute the UI takes from a field alone (no constant, not derived): "null" when it is unset."""
-    return bool(source.get("fields")) and not source["consts"] and not source["derived"]
+def _from_field_only(source: dict[str, Any], no_consts: bool = False) -> bool:
+    """A mutation attribute the UI takes from a field alone (no constant, not derived): "null" when it is unset.
+
+    Args:
+        source: Where the UI takes the attribute from (the block reference's mutation_sources entry).
+        no_consts: None of its constants applies to this block.
+    """
+    return bool(source.get("fields")) and (no_consts or not source["consts"]) and not source["derived"]
 
 
-def _visible_value(catalog: Catalog, obj: str | None, attribute: str | None, value: Any) -> str | None:
-    """The labels of popup-picked codes, comma-joined, when the catalog knows every one; else None."""
-    a = catalog.attr(CATALOG_OBJECT.get(obj, ""), attribute or "") if obj else None
-    labels = (a.values if a else None) or {}
+def _visible_value(catalog: Catalog, obj: str | None, mut: dict[str, Any], value: Any) -> str | None:
+    """The labels of popup-picked codes, joined as the screen saves them, when the catalog knows every one; else None.
+
+    The codes of the attribute's value list, comma-joined; for a condition on the member's active cards, the cards'
+    names (the saved segment 49_COBRAND: "ICICI Amazon Pay, MEDALLION").
+    """
+    cards = ACTIVE_CARDS in (mut.get("cardmainoption"), mut.get("card_setup_id"))
+    a = catalog.attr(CATALOG_OBJECT.get(obj, ""), mut.get("attribute") or "") if obj else None
+    labels = (catalog.pickers.get("card_list") if cards else a.values if a else None) or {}
     codes = [c for c in str(value).split(",") if c]
-    return ",".join(labels[c] for c in codes) if codes and all(c in labels for c in codes) else None
+    return (
+        (", " if cards else ",").join(labels[c] for c in codes) if codes and all(c in labels for c in codes) else None
+    )
 
 
 def derive(node: Block, spec: Spec, catalog: Catalog | None = None, counters: Counters | None = None) -> dict[str, Any]:
@@ -144,7 +173,7 @@ def _from_catalog(
             if t:
                 out[key] = t
     if "value" in given and "visible_value" in src and "visible_value" not in fields:
-        labels = _visible_value(catalog, obj, mut.get("attribute"), given["value"])
+        labels = _visible_value(catalog, obj, mut, given["value"])
         if labels is not None:
             out["visible_value"] = labels
     return out
@@ -200,7 +229,22 @@ def _fill_condition(f: Fields, catalog: Catalog | None, counters: Counters) -> F
         level = (counter.get("level") or OFFER_COUNTER) if counter else MEMBER_ATTRIBUTE if known("member") else None
         if level:
             f = _put(f, "attribute_level", level, "OBJECT")
-    return _level_before_attribute(f)
+    return _level_order(_level_before_attribute(f))
+
+
+def _level_order(f: Fields) -> Fields:
+    """A level's own fields right after the level and before every other field, in the screen's order.
+
+    The card, plan or programme, then what hangs on it (LEVEL_FIELD_ORDER): the screen builds each dropdown when the
+    one before it is set, so a field set before the one its dropdown hangs on is cleared.
+    """
+    mine = [k for k in LEVEL_FIELD_ORDER if k in f]
+    level = next((k for k in ("attribute_level", "attr_level") if k in f), None)
+    if not mine or level is None:
+        return f
+    mine += [k for k in ("attribute",) if k in f]  # the rules screen's card and bank account attribute: last of them
+    head = [k for k in ("OBJECT", "third_parties_dropdown", level) if k in f]  # what the level's dropdown hangs on
+    return {k: f[k] for k in (*head, *mine, *(k for k in f if k not in head and k not in mine))}
 
 
 def _condition_object(f: Fields, counter: dict[str, Any] | None, known: Callable[[str], bool]) -> str | None:
@@ -225,7 +269,8 @@ REWARD_ACTIONS = ("action", "action_third_party")  # blocks whose give_points ne
 def fill(node: Block, catalog: Catalog | None = None, counters: Counters | None = None) -> Fields:
     """The block's fields with those the model may leave out, filled as the screen would have them.
 
-    - a condition (if_generic_adaptive, activity_criteria): OBJECT and attribute_level (_fill_condition);
+    - a condition (if_generic_adaptive, activity_criteria): OBJECT and attribute_level (_fill_condition), and its
+      level's own fields in the screen's order (_level_order; a segment condition too);
     - give_points (action, action_third_party): LOYALTY_ACCOUNT, the catalog's offer_account, and REWARD_TAGS, that
       account's reward tag (the configured one, or its only one), when the model chose none; the screen otherwise
       keeps its first account (2026-11-09 F1: a referrer bonus credited account 102);
@@ -237,6 +282,8 @@ def fill(node: Block, catalog: Catalog | None = None, counters: Counters | None 
     counters, inputs = counters or {}, node.get("inputs") or {}
     if t in CONDITIONS:
         return _fill_condition(f, catalog, counters)
+    if t == SEGMENT_CONDITION:
+        return _level_order(f)
     if t in REWARD_ACTIONS and f.get("action_type") == "give_points" and catalog is not None:
         if "LOYALTY_ACCOUNT" not in f and "LOYALTY_ACCOUNT" not in inputs and catalog.offer_account:
             f = _put(f, "LOYALTY_ACCOUNT", str(catalog.offer_account), "action_type")

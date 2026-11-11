@@ -24,7 +24,7 @@ from offer_author.core.tenant.catalog import (
     lov_requests,
     usable,
 )
-from offer_author.core.vocabulary import ACTION_LISTS, CONDITION_CODES, LEVEL_LISTS, OBJECT_LISTS, PRODUCT_LISTS
+from offer_author.core.vocabulary import ACTION_LISTS, LEVEL_FIELDS, LEVEL_LISTS, OBJECT_LISTS, PRODUCT_LISTS
 from tests.paths import CATALOGS
 from tests.support import said, saved_segment
 
@@ -53,6 +53,12 @@ def _if(**fields):
     return {"type": "if_generic_adaptive", "OBJECT": "member", "operators": ">", "RHS_INPUT": STATIC, **fields}
 
 
+def _active_cards(picked):
+    """A rules condition on the member's active cards: its own operator field, the cards picked in the popup."""
+    f = {"card_main_option": "ACTIVE_CARDS", "activecard_mainoperators": "in", "picked": picked}
+    return {"type": "if_generic_adaptive", "OBJECT": "member", "attribute_level": "MA_CC", **f}
+
+
 def _segment(level, **fields):
     s = saved_segment("15_Targeted_offers")
     f = s["blocks"]["inputs"]["CONDITIONS"][0]["fields"]
@@ -72,7 +78,8 @@ def _said(cat, x):
 
 def test_every_list_a_block_can_name_is_read_or_marked_unread():
     named = {*LEVEL_LISTS.values(), *OBJECT_LISTS.values(), *PRODUCT_LISTS.values()}
-    named |= {lst for lst, _ in ACTION_LISTS.values()} | {lst for pairs in CONDITION_CODES.values() for _, lst in pairs}
+    named |= {lst for lst, _ in ACTION_LISTS.values()}
+    named |= {x["picks"] for screen in LEVEL_FIELDS.values() for x in screen.values() if "picks" in x}
     always = {"member", "activity", "product", "airport", "airport_pair", "location", "sponsor"}
     assert named <= always | set(LEVEL_READS) | UNREAD_LISTS, named - always - set(LEVEL_READS) - UNREAD_LISTS
     assert {"personalization", "retention"} == UNREAD_LISTS
@@ -85,7 +92,8 @@ def test_the_lists_hold_active_rows_only_and_a_feature_off_holds_nothing(cat):
         ("subscription", "SUBSCRIPTION"),
     ):
         rows = _raw("custom_" + module)
-        assert cat.listed[lst] == {x["name"] for x in rows if usable(x)} and len(cat.listed[lst]) < len(rows)
+        active = {x["name"] for x in rows if usable(x) and x["data_type"] != "BOOL"}  # no BOOL, as for the member
+        assert cat.listed[lst] == active and len(active) < len(rows)
     assert cat.listed["card_list"] == {str(x["id"]) for x in _raw("lov_CARDS_LIST") if live(x)}
     assert cat.listed["subscription_plan"] == {str(x["id"]) for x in _raw("lov_SUBSCRIPTION_PLAN_LIST") if live(x)}
     assert not live({"id": 3, "status": False})  # a card that is no longer issued
@@ -115,12 +123,15 @@ def test_a_level_the_catalog_does_not_read_is_refused_wherever_it_is_named(cat, 
 
 def test_cards_and_plans_are_checked_on_both_screens(cat):
     card, account, analytics = (sorted(cat.listed[k])[0] for k in ("card", "bank_account", "analytics"))
-    plan = _if(attribute_level="MA_SP", selected_subscription_plan="1", attribute="plan_status", operators="==")
+    plan = {"selected_subscription_plan": "1", "selected_subscription_attribute": "plan_status", "operators": "=="}
+    plan = {"type": "if_generic_adaptive", "OBJECT": "member", "attribute_level": "MA_SP", **plan}
     good = {
-        "a card condition": _rules(condition=_if(attribute_level="MA_CC", card_main_option="9", attribute=card)),
-        "the member's active cards": _rules(
-            condition=_if(attribute_level="MA_CC", card_main_option="ACTIVE_CARDS", operators="in", picked="9,2")
+        "a card condition": _rules(
+            condition=_if(
+                attribute_level="MA_CC", card_main_option="9", onlycard_second_option="ALL_CARDS", attribute=card
+            )
         ),
+        "the member's active cards": _rules(condition=_active_cards("9,2")),
         "a card value": _rules(action=_value(ATTRIBUTE_TYPE="MA_CC", ATTRIBUTE="9", cardattribute=card)),
         "a plan condition": _rules(condition={**plan, "value": "ACTIVE"}),
         "a segment card condition": _segment("MA_CC", card_setup_id="9", selected_card_attribute=card),
@@ -136,9 +147,7 @@ def test_cards_and_plans_are_checked_on_both_screens(cat):
         text = _said(cat, x)[1]
         assert "tenant catalog" not in text and "program's active" not in text, (where, text)
     bad = {
-        "'1' is not one of the program's active cobranded cards": _rules(
-            condition=_if(attribute_level="MA_CC", card_main_option="ACTIVE_CARDS", operators="in", picked="9,1")
-        ),
+        "'1' is not one of the program's active cobranded cards": _rules(condition=_active_cards("9,1")),
         "'99' is not one of the program's active subscription plans": _segment(
             "MA_SP", selected_subscription_plan="99", selected_subscription_attribute="plan_status"
         ),

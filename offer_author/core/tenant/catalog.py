@@ -234,8 +234,9 @@ class Catalog:
             self.listed[name] = frozenset(rows)
             if name not in LEVEL_ATTRIBUTES:
                 self.pickers[name] = rows
-            elif rows:  # its usable attributes with their value lists (not BOOL, as for the member)
+            elif rows:  # its usable attributes with their value lists; not BOOL, as for the member, shown or named
                 self.attributes[name] = _attributes(responses[f"list:{name}"], lookups, locations, lovs)
+                self.listed[name] = frozenset(self.attributes[name])
 
     @property
     def offer_account(self) -> str | None:

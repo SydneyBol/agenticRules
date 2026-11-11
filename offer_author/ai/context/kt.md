@@ -88,7 +88,16 @@ its `attr_level`:
   (`<account id>_balance`), ... A coded attribute takes the tenant's codes.
 - `MA_T`, the tier programme: `tierslevel` is the tier class, `tiermainoption` what is tested (`name`, with the tier
   in `tierlevelnamevalue`; `tier_start_date` or `tier_validity`, compared with a date).
-- `MA_CC`, `MA_SP`, ...: cobranded card, subscription and the other levels of the member attribute table.
+- `MA_CC`, a cobranded card: `card_setup_id` is the card (its id in the catalog's cobranded cards) and
+  `selected_card_attribute` the card attribute. `card_setup_id` = `ACTIVE_CARDS` reads the cards the member holds
+  instead: it has no attribute and compares card ids (`==`, `!=` with one card id in `value`; `in`, `not_in` with the
+  card ids in `picked`).
+- `MA_CA`, a bank account: `selected_bank_attribute` is the bank account attribute.
+- `MA_SP`, a subscription: `selected_subscription_plan` is the plan (its id in the catalog's subscription plans) and
+  `selected_subscription_attribute` the subscription attribute.
+- `MA_PP`, a partner programme membership: `selected_partner_program` is the programme (its id) and
+  `selected_partner_program_attribute` the attribute.
+- `MA_S`, analytics write-back: `attribute`, as for the member profile.
 
 A segment condition (`targeting_condition`) holds `attr_level`, `attribute`, `operators` and the right-hand side, a
 value block in `RHS_INPUT`, and for `between` a second one in `RHS_VALUE`:
@@ -108,9 +117,8 @@ value block in `RHS_INPUT`, and for `between` a second one in `RHS_VALUE`:
   `tierlevelnamevalue`), `tier_start_date` (`datetime_operator` DATE, compared with a date block) or `tier_validity`
   ("Tier Validity (in months)", compared with a static value).
 - The block's other fields (`RhsSelectedOption`, `customBlockOption`, `customdateopt1`, `datevalue`,
-  `customdatedropdownopts2`, `rhsdateoptionselected`, `segment_rhs_attribute`, the card, subscription and partner
-  fields) are the screen's other ways of filling the right-hand side or other attribute levels; a segment built with
-  the value blocks above needs none of them.
+  `customdatedropdownopts2`, `rhsdateoptionselected`, `segment_rhs_attribute`) are the screen's other ways of filling
+  the right-hand side; a segment built with the value blocks above needs none of them.
 
 The tier a member is in can be read both ways: `tier_class` (MA_P) and the tier programme (MA_T) are separate data
 on a tenant. A member without the attribute reads as section 4 says (a calculated
@@ -200,7 +208,23 @@ third parties.
 | `MA_A` | Activity counter: lives for one BIT only, starts empty on every BIT |
 | `MA_T` / `MA_TO` | Tier attributes / tier counters, which belong to a tier class, not to an offer |
 | `MA_S`, `MP_S`, `MR_S` | Analytics, personalization and retention scores written back to the member |
-| `MA_CA`, `MA_CC`, `MA_SP` | Bank account, cobranded card, subscription |
+| `MA_CA`, `MA_CC`, `MA_SP`, `MA_PP` | Bank account, cobranded card, subscription, partner programme membership |
+
+A rule condition at one of these levels holds more than an attribute:
+- `MA_CC`, a cobranded card: `card_main_option` is the card (its id in the catalog's cobranded cards).
+  `onlycard_second_option` is which of the member's cards of that kind are read: `ALL_CARDS` (the condition holds
+  when any of them meets it) or `TRANSACTION_CARD` (the card the transaction was made with, when it is that card).
+  `attribute` is the card attribute; the operator and value follow as for any attribute of its type.
+- `MA_CC` with `card_main_option` = `ACTIVE_CARDS`: the cards the member holds, compared as card ids, with no
+  attribute. Its operator goes in `activecard_mainoperators` (`==`, `!=`, `in`, `not_in`, `null`, `not_null`), one
+  card id in `cardvalue`, the card ids of `in` / `not_in` in `picked`.
+- `MA_CA`, a bank account: `card_main_option` is `ALL_ACCOUNTS` (the condition holds when any of the member's
+  accounts meets it) or `TRANSACTION_ACCOUNT` (the transaction's account); `attribute` is the bank account attribute.
+- `MA_SP`, a subscription: `selected_subscription_plan` is the plan (its id in the catalog's subscription plans) and
+  `selected_subscription_attribute` the subscription attribute.
+- `MA_PP`, a partner programme membership: `selected_partner_program` is the programme (its id) and
+  `selected_partner_program_attribute` the attribute.
+- `MA_S`: `attribute`, as for `MA_P`.
 
 Calculated member attributes are computed when read, from the current date (not the BIT date): `age` (whole years
 since `date_of_birth`), `membership_tenure` (days since `date_of_joining`), `days_since_bit` (days since the last

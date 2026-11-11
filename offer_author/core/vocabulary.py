@@ -5,6 +5,7 @@ Each comes from the source cited beside it; nothing here is a guess about the ma
 
 import json
 import os
+from typing import Any
 
 # the Offer Main form: offer name length, frequency choices (generated: tools/build/offer_main_form.py)
 with open(os.path.join(os.path.dirname(__file__), "data", "offer_main_form.json")) as _f:
@@ -44,31 +45,83 @@ LIST_PLACES = {
 }
 OBJECT_LISTS = {o: o for o in ("activity", "airport", "airport_pair", "location", "sponsor")}
 PRODUCT_LISTS = {"products_attrs": "product", "product_offer_attributes": "product_offer"}  # product_cluster: none
-# Where a member level keeps its codes when it has a picker (gravty-blockly if-generic.block.ts,
-# member-attributes.block.ts, member-attribute-segment.block.ts): (field, list) pairs. A condition on the rules screen
-# picks a card, plan or programme and keeps the attribute in `attribute`; the segment screen keeps it in
-# selected_*_attribute. A level not named keeps its attribute in `attribute` (a condition) or `ATTRIBUTE` (a value
-# block).
-CONDITION_CODES = {
-    "MA_CC": (
-        ("card_setup_id", "card_list"),
-        ("card_main_option", "card_list"),
-        ("cardvalue", "card_list"),
-        ("selected_card_attribute", "card"),
-        ("attribute", "card"),
-    ),
-    "MA_CA": (("selected_bank_attribute", "bank_account"), ("attribute", "bank_account")),
-    "MA_SP": (
-        ("selected_subscription_plan", "subscription_plan"),
-        ("selected_subscription_attribute", "subscription"),
-        ("attribute", "subscription"),
-    ),
-    "MA_PP": (
-        ("selected_partner_program", "partner_program"),
-        ("selected_partner_program_attribute", "partner"),
-        ("attribute", "partner"),
-    ),
+# How each screen's condition lays out a member level that holds more than an attribute (if-generic.block.ts
+# updateShapeByCardLevel, updateShapeForBankAccountCardLevel, updateShapeForSubscriptionPlan;
+# targeting-condition-segment.block.ts updateShapeByCardSelected), by screen and level:
+#   attribute: the field that names the level's attribute;
+#   pick, picks: the field that picks a card, plan or programme, and the catalog list of its ids;
+#   scope, scopes: the field that says which of the member's cards or accounts are read, and its codes.
+# A level not named keeps its attribute in `attribute`.
+LEVEL_FIELDS: dict[str, dict[str, dict[str, Any]]] = {
+    "rules": {
+        "MA_CC": {
+            "pick": "card_main_option",
+            "picks": "card_list",
+            "scope": "onlycard_second_option",
+            "scopes": ("ALL_CARDS", "TRANSACTION_CARD"),
+            "attribute": "attribute",
+        },
+        "MA_CA": {
+            "scope": "card_main_option",
+            "scopes": ("ALL_ACCOUNTS", "TRANSACTION_ACCOUNT"),
+            "attribute": "attribute",
+        },
+        "MA_SP": {
+            "pick": "selected_subscription_plan",
+            "picks": "subscription_plan",
+            "attribute": "selected_subscription_attribute",
+        },
+        "MA_PP": {
+            "pick": "selected_partner_program",
+            "picks": "partner_program",
+            "attribute": "selected_partner_program_attribute",
+        },
+    },
+    "segment": {
+        "MA_CC": {"pick": "card_setup_id", "picks": "card_list", "attribute": "selected_card_attribute"},
+        "MA_CA": {"attribute": "selected_bank_attribute"},
+        "MA_SP": {
+            "pick": "selected_subscription_plan",
+            "picks": "subscription_plan",
+            "attribute": "selected_subscription_attribute",
+        },
+        "MA_PP": {
+            "pick": "selected_partner_program",
+            "picks": "partner_program",
+            "attribute": "selected_partner_program_attribute",
+        },
+    },
 }
+# A card condition on "the member's active cards" (the card picker's first option) compares card ids, not an attribute.
+# The rules screen keeps its operator and its one compared card in fields of their own (if-generic.block.ts
+# updateShapeByCardInput, updateShapeByActiveCardLevelOperators); the segment screen in `operators` and `value`
+# (lov_lookup_active_card_level_operators). in / not_in take the cards from the popup (picked) on both.
+ACTIVE_CARDS = "ACTIVE_CARDS"
+ACTIVE_CARD_FIELDS = {
+    "rules": {
+        "operator": "activecard_mainoperators",
+        "value": "cardvalue",
+        "operators": ("==", "!=", "null", "not_null", "in", "not_in"),
+    },
+    "segment": {"operator": "operators", "value": "value", "operators": ("==", "!=", "in", "not_in")},
+}
+# every field of LEVEL_FIELDS and ACTIVE_CARD_FIELDS, in the order the screen builds them: a field set before the one
+# its dropdown hangs on is cleared when that one is set (as attribute_level clears attribute)
+LEVEL_FIELD_ORDER = (
+    "card_main_option",
+    "card_setup_id",
+    "selected_subscription_plan",
+    "selected_partner_program",
+    "onlycard_second_option",
+    "activecard_mainoperators",
+    "cardvalue",
+    "selected_card_attribute",
+    "selected_bank_attribute",
+    "selected_subscription_attribute",
+    "selected_partner_program_attribute",
+)
+# Where a member level's value block keeps its codes when it has a picker (member-attributes.block.ts,
+# member-attribute-segment.block.ts): (field, list) pairs. A level not named keeps its attribute in `ATTRIBUTE`.
 VALUE_CODES = {
     "MA_CC": (("ATTRIBUTE", "card_list"), ("selected_card_attribute_targeted", "card"), ("cardattribute", "card")),
     "MA_SP": (
@@ -84,8 +137,7 @@ VALUE_CODES = {
 }
 # what those fields hold that is not a code: unset, and the card condition's "the member's active cards" (whose
 # compared values are then card ids: CARD_VALUES)
-NOT_CODES = ("", "null", "None", "undefined", "ACTIVE_CARDS")
-ACTIVE_CARDS = "ACTIVE_CARDS"
+NOT_CODES = ("", "null", "None", "undefined", ACTIVE_CARDS)
 ACTION_LISTS = {
     "assign_sweepstakes": ("sweepstakes", "sweepstakeid"),
     "assign_play_win_reward": ("play_win", "playwinsetup"),

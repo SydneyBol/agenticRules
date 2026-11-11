@@ -13,22 +13,24 @@ from typing import TYPE_CHECKING, Any
 from ....domain import BlockRef, Problem
 from ...vocabulary import (
     ACTION_LISTS,
+    ACTIVE_CARD_FIELDS,
     ACTIVE_CARDS,
+    ATTRIBUTE_LEVELS,
     CATALOG_OBJECT,
-    CONDITION_CODES,
     COUNTER_LEVELS,
+    LEVEL_FIELDS,
     LEVEL_LISTS,
     NOT_CODES,
     OBJECT_LISTS,
     PRODUCT_LISTS,
     VALUE_CODES,
 )
-from ..fields import CONDITIONS, REWARD_ACTIONS, data_type, fill
+from ..fields import CONDITIONS, REWARD_ACTIONS, SEGMENT_CONDITION, data_type, fill
 from ..reference import picks_by_operator
 from ..tree import nodes
 
 if TYPE_CHECKING:
-    from ...tenant.catalog import Catalog
+    from ...tenant.catalog import Attribute, Catalog
 
 Form = tuple[str, dict[str, Any]]
 
@@ -41,7 +43,7 @@ def _value_form(t: str | None, f: dict[str, Any], picked: bool, catalog: Catalog
     """
     if t not in picks_by_operator() or catalog is None or f.get("OBJECT") not in CATALOG_OBJECT:
         return None
-    a = catalog.attr(CATALOG_OBJECT[f["OBJECT"]], f.get("attribute") or "")
+    a = _read(t, f, catalog)
     if a is None or a.type not in ("LOOKUP", "LOV") or f.get("operators") in (None, "", "null", "not_null"):
         return None
     if f["operators"] in ("in", "not_in"):
@@ -51,7 +53,6 @@ def _value_form(t: str | None, f: dict[str, Any], picked: bool, catalog: Catalog
 
 DATE_PART_FIELD = {"DATE": "date_operator", "DATETIME": "datetime_operator"}  # the field the screen builds per type
 NO_RHS = ("", "null", "not_null", "in", "not_in", "between", "contains")  # operators with no single value input
-SEGMENT_CONDITION = "targeting_condition"  # a Select Members condition: a member attribute at attr_level
 CHECKED = (*CONDITIONS, SEGMENT_CONDITION)
 VALUE_FIELDS = ("value", "tierlevelnamevalue")  # a condition's compared value, besides RHS_INPUT and picked codes
 TIER_LEVEL = "MA_T"  # the tier programme (tier class, tier name, start date, validity)
@@ -73,6 +74,110 @@ def _as_condition(t: str | None, f: dict[str, Any]) -> dict[str, Any]:
     if t != SEGMENT_CONDITION:
         return f
     return dict(f, OBJECT="member", **({"attribute_level": f["attr_level"]} if "attr_level" in f else {}))
+
+
+def _screen(t: str | None) -> str:
+    """The screen a condition block is of: segment (Select Members) or rules."""
+    return "segment" if t == SEGMENT_CONDITION else "rules"
+
+
+def _layout(t: str | None, f: dict[str, Any]) -> dict[str, Any] | None:
+    """Where a member's (or third party's) condition keeps its level's card, plan and attribute on its screen.
+
+    None for a level with nothing but an attribute (LEVEL_FIELDS), and for any other block.
+    """
+    if t not in CHECKED or f.get("OBJECT") not in ("member", "third_party"):
+        return None
+    return LEVEL_FIELDS[_screen(t)].get(f.get("attribute_level") or "")
+
+
+def _active_cards(t: str | None, f: dict[str, Any]) -> dict[str, Any] | None:
+    """The fields of a card condition on the member's active cards on its screen (ACTIVE_CARD_FIELDS), else None."""
+    lay = _layout(t, f)
+    return ACTIVE_CARD_FIELDS[_screen(t)] if lay and f.get(lay.get("pick") or "") == ACTIVE_CARDS else None
+
+
+def _attribute_code(t: str | None, f: dict[str, Any]) -> Any:
+    """The attribute a condition names, from the field its level keeps it in on its screen."""
+    lay = _layout(t, f)
+    return f.get(lay["attribute"]) if lay else f.get("attribute")
+
+
+def _read(t: str | None, f: dict[str, Any], catalog: Catalog | None) -> Attribute | None:
+    """The catalog attribute a condition reads.
+
+    None for a counter, the tier programme, the member's active cards, a third party's attribute at a level without a
+    list, or a code the catalog does not have.
+    """
+    code = _attribute_code(t, f)
+    if catalog is None or t not in CHECKED or not code:
+        return None
+    obj, level = f.get("OBJECT"), f.get("attribute_level")
+    if obj in ("member", "third_party") and level not in ATTRIBUTE_LEVELS:
+        lst = LEVEL_LISTS.get(level or "")
+    else:
+        lst = CATALOG_OBJECT.get(obj or "")
+    return catalog.attr(lst, str(code)) if lst else None
+
+
+def _given(f: dict[str, Any], field: str | None) -> bool:
+    """Whether the block has something in that field."""
+    return bool(field) and f.get(field or "") not in (None, "", "null")
+
+
+def _level_fields(t: str | None, f: dict[str, Any], picked: Any) -> list[Form]:
+    """A card, bank account, subscription or partner condition whose fields the screen would not build.
+
+    Each of these levels has its own fields on each screen (LEVEL_FIELDS): the screen builds the attribute dropdown
+    only once the card, plan or programme (and, on the rules screen, which cards or accounts are read) is chosen, and
+    drops what is written in a field that level does not have. A condition on the member's active cards has its own
+    fields (_active_card_fields).
+    """
+    lay = _layout(t, f)
+    if lay is None:
+        return []
+    level, out = {"level": f["attribute_level"]}, []
+    if lay["attribute"] != "attribute" and _given(f, "attribute"):
+        out.append(
+            ("level_field_misplaced", {**level, "what": "attribute", "given": "attribute", "want": lay["attribute"]})
+        )
+    if "pick" in lay and not _given(f, lay["pick"]):
+        return [*out, ("level_field_missing", {**level, "field": lay["pick"], "what": lay["picks"]})]
+    cards = _active_cards(t, f)
+    if cards is not None:
+        return out + [(code, {**level, **facts}) for code, facts in _active_card_fields(f, lay, cards, picked)]
+    if "scope" in lay and f.get(lay["scope"]) not in lay["scopes"]:
+        asked = {"field": lay["scope"], "codes": list(lay["scopes"]), "given": f.get(lay["scope"])}
+        out.append(("level_field_missing", {**level, **asked}))
+    if not _given(f, lay["attribute"]) and not _given(f, "attribute"):
+        out.append(("level_field_missing", {**level, "field": lay["attribute"], "what": "attribute"}))
+    return out
+
+
+def _active_card_fields(f: dict[str, Any], lay: dict[str, Any], cards: dict[str, Any], picked: Any) -> list[Form]:
+    """A condition on the member's active cards whose fields the screen would not build.
+
+    It compares card ids: it has no attribute and nothing that says which cards are read. On the rules screen its
+    operator and its one compared card have fields of their own (ACTIVE_CARD_FIELDS), and `operators` and `value`
+    are dropped; in / not_in take the cards from the popup (picked).
+    """
+    op_field, value_field = cards["operator"], cards["value"]
+    out: list[Form] = [
+        ("level_field_misplaced", {"what": k, "given": k, "want": want})
+        for k, want in (("operators", op_field), ("value", value_field))
+        if k != want and _given(f, k)
+    ]
+    unused = dict.fromkeys((lay["attribute"], lay.get("scope")))
+    out += [("active_cards_field", {"field": k}) for k in unused if _given(f, k)]
+    op = f.get(op_field)
+    if op not in cards["operators"]:
+        if op_field == "operators" or not _given(f, "operators"):  # else said once, as the misplaced operator
+            out.append(("level_field_missing", {"field": op_field, "codes": list(cards["operators"]), "given": op}))
+    elif op in ("==", "!=") and not _given(f, value_field) and (value_field == "value" or not _given(f, "value")):
+        out.append(("level_field_missing", {"field": value_field, "what": "card_list"}))
+    elif op in ("in", "not_in") and picked in (None, ""):
+        out.append(("level_field_missing", {"field": "picked", "what": "card_list"}))
+    return out
 
 
 def _incomplete(n: Any, f: dict[str, Any]) -> str | None:
@@ -104,6 +209,9 @@ def _tier(f: dict[str, Any], catalog: Catalog | None) -> Form | None:
 
 def _attr_type(t: str | None, f: dict[str, Any], catalog: Catalog | None, counters: dict[str, Any] | None) -> Any:
     """The data type of the attribute or counter a condition or attribute block reads; None if unknown."""
+    if t in CHECKED and _layout(t, f):
+        a = _read(t, f, catalog)
+        return a.type if a else None
     if t in CHECKED:
         code, obj, level = f.get("attribute"), f.get("OBJECT"), f.get("attribute_level")
     elif t == "member_attribute":
@@ -152,7 +260,10 @@ def _shape(n: Any, f: dict[str, Any], catalog: Catalog | None, block: BlockRef, 
     the offer's rules then do not compile: 2026-11-05 C03, an offer counter read with activity_attribute).
     """
     t, out = n.get("type"), []
-    if t in CHECKED and (code := _incomplete(n, f)):
+    levels = _level_fields(t, f, n.get("picked"))
+    out += [Problem.of(code, block, **facts) for code, facts in levels]
+    # a level condition whose fields are not built yet is reported as that; the member's active cards compare ids
+    if t in CHECKED and not levels and not _active_cards(t, f) and (code := _incomplete(n, f)):
         out.append(Problem.of(code, block, name=name or f.get("tiermainoption")))
     if t == SEGMENT_CONDITION and (form := _tier(f, catalog)):
         out.append(Problem.of(form[0], block, **form[1]))
@@ -202,7 +313,7 @@ def named_codes(t: str | None, f: dict[str, Any], picked: Any = None) -> list[tu
 
     Each list is the screen's own (vocabulary.LEVEL_LISTS and the rest); its dropdowns hold the list's active rows only
     (block-definition.service.ts getAttributesTuple, getUpdatableAttributesTuple), so the screen leaves any other code
-    unset. A member level with a picker names a card, plan or programme too (CONDITION_CODES, VALUE_CODES), and a card
+    unset. A member level with a picker names a card, plan or programme too (LEVEL_FIELDS, VALUE_CODES), and a card
     condition on the member's active cards compares card ids. Nothing for what is not read from a list: counters, the
     tier programme, the airport pair block's own options.
     """
@@ -210,10 +321,11 @@ def named_codes(t: str | None, f: dict[str, Any], picked: Any = None) -> list[tu
         obj, level = f.get("OBJECT") or "", f.get("attribute_level") or ""
         if obj in ("member", "third_party"):
             lst = LEVEL_LISTS.get(level)
-            if lst and level in CONDITION_CODES:
-                cards = ACTIVE_CARDS in (f.get("card_setup_id"), f.get("card_main_option"))
-                ids = [*_split(f.get("value")), *_split(picked)] if cards else []
-                return [(lst, None), *_fields(f, CONDITION_CODES[level]), *(("card_list", c) for c in ids)]
+            if lst and (lay := _layout(t, f)):
+                cards = _active_cards(t, f)
+                ids = [*_split(f.get(cards["value"])), *_split(picked)] if cards else []
+                pairs = ((lay.get("pick", ""), lay.get("picks", "")), (lay["attribute"], lst))
+                return [(lst, None), *_fields(f, pairs), *(("card_list", c) for c in ids)]
         elif obj == "products_attrs":
             lst = PRODUCT_LISTS.get(f.get("ProductOrOfferContext") or "products_attrs")
         else:
@@ -350,12 +462,12 @@ def unfilled(root: Any, catalog: Catalog | None = None, counters: dict[str, Any]
     out = _filter_problems(root) + _tag_problems(root)
     for n, _, _ in nodes(root):
         t, f = n.get("type"), _as_condition(n.get("type"), fill(n, catalog, counters))
-        name = f.get("attribute") if t in CHECKED else f.get("mta_attribute")
+        name = _attribute_code(t, f) if t in CHECKED else f.get("mta_attribute")
         block = BlockRef(str(t), str(n.get("id")))
         if form := _value_form(t, f, n.get("picked") not in (None, ""), catalog):
             out.append(Problem.of(form[0], block, name=name, **form[1]))
         if form := _date_form(t, f, _attr_type(t, f, catalog, counters)):
-            out.append(Problem.of(form[0], block, name=f.get("attribute") or f.get("ATTRIBUTE"), **form[1]))
+            out.append(Problem.of(form[0], block, name=name or f.get("ATTRIBUTE"), **form[1]))
         out += _shape(n, f, catalog, block, name)
         if t in CONDITIONS and (form := _operator_form(n, f, _attr_type(t, f, catalog, counters))):
             out.append(Problem.of(form[0], block, name=name, **form[1]))

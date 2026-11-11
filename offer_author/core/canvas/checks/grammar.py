@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 from ....domain import Block, Problem
-from ...vocabulary import ATTRIBUTE_LEVELS, CATALOG_OBJECT
+from ...vocabulary import ATTRIBUTE_LEVELS, CATALOG_OBJECT, LEVEL_FIELDS, LEVEL_LISTS
 from ..reference import reference
 
 if TYPE_CHECKING:
@@ -239,6 +239,12 @@ def _value_codes(catalog: Catalog, cobj: str, obj: str | None, attr: str, m: ET.
     return [Problem.of("values_not_codes", attribute=attr, values=bad, closest=list(near))]
 
 
+# the mutation attributes a member level's condition names its attribute in, on either screen
+LEVEL_ATTRIBUTES = tuple(
+    dict.fromkeys([*(x["attribute"] for screen in LEVEL_FIELDS.values() for x in screen.values()), "attribute"])
+)
+
+
 def codes(block: ET.Element, catalog: Catalog | None) -> list[Problem]:
     """The catalog codes a condition or action block names that the catalog does not have.
 
@@ -256,6 +262,12 @@ def codes(block: ET.Element, catalog: Catalog | None) -> list[Problem]:
     product = own.get("ProductOrOfferContext") in (None, "", "products_attrs")
     cobj = CATALOG_OBJECT.get(obj or "") if obj != "products_attrs" or product else None
     out = _value_codes(catalog, cobj, obj, attr, m) if cobj and attr and level in ATTRIBUTE_LEVELS else []
+    if obj == "member" and level not in ATTRIBUTE_LEVELS and (lst := LEVEL_LISTS.get(level or "")):
+        # a card, bank account, subscription, analytics or partner attribute's coded values (the attribute itself is
+        # checked against its list by screen_fields)
+        name = next((m.get(k) for k in LEVEL_ATTRIBUTES if m.get(k) not in (None, "", "null")), None)
+        if name and catalog.attr(lst, name):
+            out += _value_codes(catalog, lst, obj, name, m)
     if obj in ("location", "sponsor") and attr:  # their own attribute lists
         listed = catalog.active(obj, attr)  # None: the catalog was not given that object's list
         owner = None if listed else next((o for o, c in CATALOG_OBJECT.items() if catalog.attr(c, attr)), None)
