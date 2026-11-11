@@ -45,6 +45,14 @@ def notes_by_part(fin: dict[str, Any], parts: Sequence[str]) -> ByPart:
     return out
 
 
+def asks_or_reports(notes: dict[str, list[Any]] | None) -> bool:
+    """Whether a part's own items ask the manager something or report a phrase of it as not buildable.
+
+    Such a part's canvas is not handed to its screen (api.pulsar.payloads.held_back) and gets no engine repair.
+    """
+    return bool(notes and (notes["blocking_questions"] or notes["unsupported"]))
+
+
 def _rules_result(
     xml: str,
     offer_id: int | None,

@@ -12,7 +12,7 @@ import html
 import re
 from typing import Any
 
-from ...core.run import NOTE_KEYS
+from ...core.run import NOTE_KEYS, asks_or_reports
 from ...domain import Problem
 from .. import text
 
@@ -83,8 +83,7 @@ def held_back(res: Res, part: str) -> bool:
     the report unseen (2026-11-10: "arriving in Hyderabad", no active airport there, came back as a rule on every
     other destination). Its questions and reports are the message instead (error_message).
     """
-    v = part_view(res, part)
-    return res.get("status") != "error" and bool(v["blocking_questions"] or v["unsupported"])
+    return res.get("status") != "error" and asks_or_reports(part_view(res, part))
 
 
 def error_message(res: Res, part: str) -> str:

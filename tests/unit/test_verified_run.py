@@ -159,6 +159,34 @@ def test_a_repair_that_kept_the_blocks_gets_no_second_repair(fixture_catalog, ve
     assert len(v["repair"]["second_check"]) == 1 and "message_2" not in v["repair"]
 
 
+HELD = [
+    {"blocking_questions": [{"text": "Which visits count?", "part": "rules"}]},
+    {"unsupported": [{"phrase": "a coffee", "reason": "no such privilege", "part": "rules"}]},
+    {"blocking_questions": ["Which programme?"]},  # names no part: every part's own
+]
+
+
+@pytest.mark.parametrize("held", HELD)
+def test_rules_the_finish_asks_about_or_reports_get_no_repair(fixture_catalog, verifier_calls, held):
+    """L05 live (2026-11-11): the rules' screen does not get them, and the cases expect what could not be built."""
+    sent, answers = verifier_calls
+    answers.append(BAD)
+    fin = finish(readback="every 5th visit earns a coffee", **held)
+    res, llm, _ = run(fixture_catalog, [[offer_main()], [("compose", S07)], [fin]])
+    v = res["diagnostics"]["verify"]
+    assert len(sent) == 1 and len(llm.calls) == 3  # checked once, no repair turn
+    assert not v["ok"] and v["repairs"] == 0 and not v["repaired"] and v["held_back"] and res["rules"]
+
+
+def test_a_question_about_the_segment_alone_leaves_the_rules_their_repair(fixture_catalog, verifier_calls):
+    sent, answers = verifier_calls
+    answers.append(BAD)
+    fin = finish(readback="x", blocking_questions=[{"text": "Gold tier or Gold test tier?", "part": "segment"}])
+    res, llm, _ = run(fixture_catalog, [[offer_main()], [("compose", S07)], [fin], [fin]])
+    v = res["diagnostics"]["verify"]
+    assert len(sent) == 2 and len(llm.calls) == 4 and v["repairs"] == 1 and "held_back" not in v
+
+
 def test_one_repair_when_the_settings_allow_one(fixture_catalog, verifier_calls):
     sent, answers = verifier_calls
     answers.append(BAD)

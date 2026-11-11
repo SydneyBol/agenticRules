@@ -32,7 +32,7 @@ from langgraph.runtime import Runtime
 from langgraph.types import Send
 
 from ..core import verifier
-from ..core.run import Run, error_result, finish_blockers
+from ..core.run import Run, asks_or_reports, error_result, finish_blockers, notes_by_part
 from ..domain import Problem, Result, ToolInput
 from . import cases, render
 from .tools import SCHEMAS, TOOLS, Done, RunContext, content, done, schema_error, started_or_run
@@ -242,7 +242,8 @@ Both branches read the same knowledge (the run's system blocks). verify sends th
 the verifier service (compile + engine, mocked members). On a mismatch the build run gets a repair: it fixes the
 blocks; the cases are never rewritten. A repair's own recheck that still disagrees gets the next repair, up to
 settings.verify_repairs (2: owner, 2026-11-05, after W01's repair left a double award its recheck had found). After
-the last repair, an unreachable verifier or no cases: the run ends with the verdict recorded.
+the last repair, an unreachable verifier or no cases: the run ends with the verdict recorded. So does a mismatch on
+rules the finish asks about or reports as not buildable: their screen will not get them, so nothing is repaired.
 """
 
 ORDINAL = ("first", "second", "third", "fourth", "fifth")
@@ -314,7 +315,13 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
     # cases had misread three amounts; both repairs rightly kept the blocks, and the second cost a model turn)
     unchanged = n > 0 and _canvases(body) == evidence.get("canvases_checked")
     evidence["canvases_checked"] = _canvases(body)
-    if report.get("ok") or n >= ctx.settings.verify_repairs or unchanged:
+    # rules their screen will not get (the finish asks about them or reports a phrase of them) get no repair: the
+    # manager answers or rewords first, and the cases expect what the model said it could not build (L05 live,
+    # 2026-11-11: repair turns on a destination no active airport has)
+    waits = asks_or_reports(notes_by_part(state["fin"] or {}, ctx.parts).get("rules"))
+    if waits:
+        verdict["held_back"] = True
+    if report.get("ok") or n >= ctx.settings.verify_repairs or unchanged or waits:
         return {"verdict": verdict, "checks": checks, "repair_asked": False, **({"repair": evidence} if n else {})}
     message = cases.mismatch_message(report, {c: ctx.run.canvases.outline(c) for c in ("rules", "segment")})
     if not n:
