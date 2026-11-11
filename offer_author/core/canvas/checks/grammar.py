@@ -275,6 +275,8 @@ def codes(block: ET.Element, catalog: Catalog | None) -> list[Problem]:
             out.append(Problem.of("attribute_not_of_object", attribute=attr, object=obj, owner=owner))
         elif listed is False:  # not in that object's own list: not active for rules, or no such attribute
             out.append(Problem.of("attribute_not_in_catalog", object=obj, attribute=attr))
+        elif listed and catalog.attr(obj, attr):  # its coded values against its value list
+            out += _value_codes(catalog, obj, obj, attr, m)
     if block.get("type") in ("action", "action_third_party") and m.get("attribute_type_input") == "give_privilege":
         pid = own.get("SELECTED_PRIVILEGE")
         if pid and str(pid) not in catalog.privileges:

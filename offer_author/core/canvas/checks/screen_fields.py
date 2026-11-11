@@ -212,6 +212,9 @@ def _attr_type(t: str | None, f: dict[str, Any], catalog: Catalog | None, counte
     if t in CHECKED and _layout(t, f):
         a = _read(t, f, catalog)
         return a.type if a else None
+    if t in CHECKED and f.get("OBJECT") in ONE_CODE_OBJECTS and catalog is not None:
+        a = catalog.attr(f["OBJECT"], str(f.get("attribute") or ""))
+        return a.type if a else None
     if t in CHECKED:
         code, obj, level = f.get("attribute"), f.get("OBJECT"), f.get("attribute_level")
     elif t == "member_attribute":
@@ -375,11 +378,30 @@ def _codes_checked(t: str | None, f: dict[str, Any], lst: str) -> bool:
     return t in CHECKED and f.get("OBJECT") != "third_party" and lst in GRAMMAR_LISTS
 
 
+# A yes/no attribute: the screen lists the text operators for it but builds no field for a typed value, and compiles
+# == / != from that missing field ("null"), so only null / not_null test it (2026-11-11, stock rules screen: sponsor
+# woman_entrepreneur). A cobranded card's or bank account's one compares with a value block too.
+BOOL_OPERATORS = ("null", "not_null")
+BOOL_COMPARED = ("MA_CC", "MA_CA")
+# A store's or sponsor's coded attribute keeps one code (== / !=): codes picked for in / not_in are not kept when the
+# screen loads the canvas, and the condition compiles to "undefined" (2026-11-11, stock rules screen)
+ONE_CODE_OBJECTS = ("location", "sponsor")
+
+
 def _operator_form(n: Any, f: dict[str, Any], typ: str | None) -> Form | None:
-    """An operator the screen has no code for, or a TEXT comparison given a block where the screen takes typed text."""
+    """An operator the screen cannot build for this condition.
+
+    One it has no code for, one it does not build for a yes/no attribute or a store's or sponsor's codes, or a TEXT
+    comparison given a block where the screen takes typed text.
+    """
     op = f.get("operators")
     if op not in (None, "", *OPERATOR_CODES):
         return "operator_not_a_code", {"given": op, "codes": list(OPERATOR_CODES)}
+    compared = f.get("attribute_level") in BOOL_COMPARED and op in ("==", "!=") and "value" not in f
+    if typ == "BOOL" and op not in (None, "", *BOOL_OPERATORS) and not compared:
+        return "bool_operator", {"given": op, "compared": f.get("attribute_level") in BOOL_COMPARED}
+    if typ in ("LOOKUP", "LOV") and f.get("OBJECT") in ONE_CODE_OBJECTS and op in ("in", "not_in"):
+        return "codes_not_kept", {"object": f["OBJECT"], "given": op}
     counter = f.get("attribute_level") in COUNTER_LEVELS
     if typ == "TEXT" and "RHS_INPUT" in (n.get("inputs") or {}) and (op in TYPED_TEXT_OPERATORS or counter):
         return "text_compared_with_block", {"operator": op}

@@ -229,12 +229,13 @@ class Catalog:
         """Takes in the screen's other lists that were read: `listed`, `pickers` and the member-level `attributes`."""
         for name in SCREEN_LISTS:
             if responses.get(f"list:{name}") is not None:
-                self.listed[name] = frozenset(x["name"] for x in _rows(responses[f"list:{name}"]) if usable(x))
+                self.attributes[name] = _attributes(responses[f"list:{name}"], lookups, locations, lovs)
+                self.listed[name] = frozenset(self.attributes[name])
         for name, rows in _level_lists(responses, _reference(responses).get("features")).items():
             self.listed[name] = frozenset(rows)
             if name not in LEVEL_ATTRIBUTES:
                 self.pickers[name] = rows
-            elif rows:  # its usable attributes with their value lists; not BOOL, as for the member, shown or named
+            elif rows:  # its usable attributes with their value lists
                 self.attributes[name] = _attributes(responses[f"list:{name}"], lookups, locations, lovs)
                 self.listed[name] = frozenset(self.attributes[name])
 
@@ -887,7 +888,7 @@ def _attribute_rows(responses: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         a
         for name, body in responses.items()
-        if name.endswith("_attributes") or name.removeprefix("list:") in LEVEL_ATTRIBUTES
+        if name.endswith("_attributes") or name.removeprefix("list:") in (*LEVEL_ATTRIBUTES, *SCREEN_LISTS)
         for a in _rows(body)
         if usable(a)
     ]
@@ -931,10 +932,10 @@ def lookup_requests(responses: dict[str, Any]) -> dict[str, str]:
 def _attributes(
     body: Any, lookups: dict[str, dict[str, str]], locations: dict[str, str], lovs: dict[str, dict[str, str]]
 ) -> dict[str, Attribute]:
-    """The attributes rules may use (usable, not BOOL), with their value lists."""
+    """The attributes rules may use (usable), with their value lists."""
     out = {}
     for x in _rows(body):
-        if not usable(x) or x["data_type"] == "BOOL":
+        if not usable(x):
             continue
         lt = x.get("lookup_type") if x.get("lookup_type") not in (None, "None", "") else None
         values = (

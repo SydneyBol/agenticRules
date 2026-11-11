@@ -26,7 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from ..core.run import Run
 from ..core.settings import Settings
-from ..core.tenant.catalog import AIRLINE_OBJECTS, LEVEL_OBJECTS, OBJECTS
+from ..core.tenant.catalog import AIRLINE_OBJECTS, LEVEL_OBJECTS, OBJECTS, SCREEN_LISTS
 from ..core.vocabulary import DECLARED_LEVELS, OFFER_MAIN_FORM
 from ..domain import Result, ToolInput
 from . import render
@@ -107,7 +107,7 @@ SegmentName = Annotated[str, Field(description="under 50 characters, when a segm
 class LookupValues(BaseModel):
     """Input of lookup_values."""
 
-    object: Literal[(*OBJECTS, *AIRLINE_OBJECTS, *LEVEL_OBJECTS)]  # type: ignore[valid-type]
+    object: Literal[(*OBJECTS, *AIRLINE_OBJECTS, *LEVEL_OBJECTS, *SCREEN_LISTS)]  # type: ignore[valid-type]
     attribute: str
     text: str = Field(description="The manager's words for ONE value")
 

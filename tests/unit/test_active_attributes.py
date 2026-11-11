@@ -72,7 +72,7 @@ def test_the_catalog_holds_no_inactive_attribute_and_knows_the_screens_other_lis
     for lst, module in SCREEN_LISTS.items():
         rows = _raw("custom_" + module)
         assert cat.listed[lst] == {x["name"] for x in rows if usable(x)}
-        assert lst not in cat.attributes  # held for checks, not shown to the model
+        assert set(cat.attributes[lst]) == cat.listed[lst]  # shown to the model too (2026-11-11)
     assert len(cat.listed["sponsor"]) < len(_raw("custom_SPONSOR"))  # the saved tenant's inactive ones are left out
     assert cat.active("payment_method", "payment_method")  # a transaction attribute at payment level
     assert cat.active("retention", "anything") is None  # a list the catalog was not given: not checked

@@ -198,6 +198,9 @@ only in the field it belongs to:
 **What a condition can test** (the OBJECT dropdown): BIT (activity) attributes, member attributes (by level, below),
 product attributes (in a Line Rule), location, sponsor, airport and airport pair, payment attributes (Payment Rule),
 third parties.
+A location condition reads the store the BIT names in `h_location`, a sponsor condition the sponsor in `h_sponsor_id`;
+each has its own attributes (the catalog's LOCATION and SPONSOR sections). A Payment Rule's `payment_attribute` reads
+the payment being processed: a payment method attribute, or a transaction attribute marked (payment).
 
 **Member attribute levels:**
 
@@ -240,6 +243,8 @@ the member: it comes from its source attribute.
 | lookup / list values | `=` `!=` `in` `not in` `matches` `doesn't match` `is null` `is not-null` |
 | payment mode, expiry | `in` `not in` only |
 | dates, date-times | the number operators, on a part of the date: DATE, DAY_OF_MONTH, DAY_OF_WEEK, DAY_OF_YEAR, MONTH, WEEK_OF_YEAR, YEAR; date-times add HOUR_OF_DAY, MINUTE_OF_HOUR, and DATETIME (date and time) |
+| yes / no | `is null` `is not-null` (whether it is set); a cobranded card or bank account one also `=` `!=` with a value block |
+| a location's or sponsor's lookup / list values | `=` `!=` (one code in `value`), `is null` `is not-null` |
 
 `between` holds strictly between its two values: both ends are excluded (`h_bit_amount between 40 and 50` holds for
 45, not for 40 or 50; on dates, between 10 and 12 Nov holds on 11 Nov only). Its first value is the block in

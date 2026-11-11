@@ -21,7 +21,14 @@ from textwrap import indent
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from ..core.tenant.catalog import AIRLINE_OBJECTS, INLINE_ACTIVITY_TYPES, INLINE_VALUES, LEVEL_OBJECTS, OBJECTS
+from ..core.tenant.catalog import (
+    AIRLINE_OBJECTS,
+    INLINE_ACTIVITY_TYPES,
+    INLINE_VALUES,
+    LEVEL_OBJECTS,
+    OBJECTS,
+    SCREEN_LISTS,
+)
 from ..core.tenant.existing_counters import normalize
 from ..core.vocabulary import ACTIVITY_TYPE
 
@@ -389,6 +396,10 @@ LEVEL_SECTIONS = {
     "analytics": "ANALYTICS attributes (attribute level MA_S: written back to the member by analytics)",
     "product_offer": "PRODUCT OFFER CONTEXT attributes (ProductOrOfferContext product_offer_attributes)",
     "partner": "PARTNER MEMBERSHIP attributes (attribute level MA_PP: of the member's partner programme membership)",
+    "location": "LOCATION attributes (OBJECT location: of the store the transaction names in h_location)",
+    "sponsor": "SPONSOR attributes (OBJECT sponsor: of the sponsor the transaction names in h_sponsor_id)",
+    "payment_method": "PAYMENT METHOD attributes (payment_attribute of the payment blocks, besides the (payment) "
+    "transaction attributes above)",
 }
 PICKER_SECTIONS = {
     "card_list": "The program's active cobranded cards (card id | name)",
@@ -464,7 +475,8 @@ def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = I
         "airport_pair": "AIRPORT PAIR attributes (OBJECT airport_pair: the BIT's origin to destination pair)",
     }
     names.update(LEVEL_SECTIONS)
-    for obj in (*OBJECTS, *(o for o in (*AIRLINE_OBJECTS, *LEVEL_OBJECTS) if catalog.attributes.get(o))):
+    shown = (*AIRLINE_OBJECTS, *LEVEL_OBJECTS, *SCREEN_LISTS)
+    for obj in (*OBJECTS, *(o for o in shown if catalog.attributes.get(o))):
         out.append(f"\n## {names[obj]}  (code | label | type [| values])")
         for a in catalog.attributes.get(obj, {}).values():
             line = f"{a.code} | {a.label} | {a.type}" + (" (payment)" if a.payment_level else "")
@@ -473,7 +485,7 @@ def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = I
                     line += " | " + ", ".join(f"{k}={v}" for k, v in a.values.items())
                 else:
                     line += f" | {len(a.values)} values, not listed: find codes with lookup_values" + (
-                        f" ({obj}, {a.code})" if obj in LEVEL_OBJECTS else ""
+                        f" ({obj}, {a.code})" if obj in (*LEVEL_OBJECTS, *SCREEN_LISTS) else ""
                     )
             out.append(line)
     out += _airports_text(catalog)

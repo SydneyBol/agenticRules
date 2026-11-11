@@ -42,6 +42,9 @@ LIST_PLACES = {
     "analytics": "analytics write-back (MA_S)",
     "partner": "partner membership (MA_PP)",
     "product_offer": "product offer context",
+    "location": "the transaction's store (OBJECT location)",
+    "sponsor": "the transaction's sponsor (OBJECT sponsor)",
+    "payment_method": "a payment's method (payment blocks)",
 }
 OBJECT_LISTS = {o: o for o in ("activity", "airport", "airport_pair", "location", "sponsor")}
 PRODUCT_LISTS = {"products_attrs": "product", "product_offer_attributes": "product_offer"}  # product_cluster: none

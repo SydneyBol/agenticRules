@@ -92,7 +92,7 @@ def test_the_lists_hold_active_rows_only_and_a_feature_off_holds_nothing(cat):
         ("subscription", "SUBSCRIPTION"),
     ):
         rows = _raw("custom_" + module)
-        active = {x["name"] for x in rows if usable(x) and x["data_type"] != "BOOL"}  # no BOOL, as for the member
+        active = {x["name"] for x in rows if usable(x)}
         assert cat.listed[lst] == active and len(active) < len(rows)
     assert cat.listed["card_list"] == {str(x["id"]) for x in _raw("lov_CARDS_LIST") if live(x)}
     assert cat.listed["subscription_plan"] == {str(x["id"]) for x in _raw("lov_SUBSCRIPTION_PLAN_LIST") if live(x)}
@@ -208,8 +208,7 @@ def test_the_model_is_shown_the_lists_that_are_held(cat):
     ):
         rows = {x["name"]: x for x in _raw("custom_" + module)}
         shown = set(cat.attributes[lst])
-        assert shown and all(usable(rows[c]) and rows[c]["data_type"] != "BOOL" for c in shown)
-        assert shown == {c for c in cat.listed[lst] if rows[c]["data_type"] != "BOOL"}  # as for the member: no BOOL
+        assert shown and all(usable(rows[c]) for c in shown) and shown == cat.listed[lst]
     assert "## COBRANDED CARD attributes (attribute level MA_CC" in text
     assert "plan_status | Plan Status | LOOKUP | ACTIVE=Active" in text
     assert "## PRODUCT OFFER CONTEXT attributes" in text and "sku | Stock Keeping Unit | TEXT" in text

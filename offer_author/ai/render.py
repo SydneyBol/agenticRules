@@ -225,6 +225,12 @@ WORDING: dict[str, Callable[[Facts], str]] = {
     + (": its attribute" if f.get("what") == "attribute" else "")
     + (f": one of {', '.join(f['codes'])}" if f.get("codes") else "")
     + (f" (given {f['given']!r})" if f.get("given") not in (None, "") else ""),
+    "bool_operator": lambda f: f"{_at(f)}'{f['name']}' is a yes/no attribute: the screen tests only whether it is "
+    "set (operators null, not_null)"
+    + (", or compares it with a value block (==, !=)" if f.get("compared") else "")
+    + f"; {f['given']!r} is not built for it",
+    "codes_not_kept": lambda f: f"{_at(f)}'{f['name']}' is a {f['object']} attribute: its condition keeps one code "
+    f"(== or != with the code in value); the codes of {f['given']} are not kept by the screen",
     "active_cards_field": lambda f: f"{_at(f)}a condition on the member's active cards compares card ids and has no "
     f"`{f['field']}`: the screen drops it",
     "code_not_in_catalog": lambda f: f"{_at(f)}{f['id']!r} is not one of the program's active "

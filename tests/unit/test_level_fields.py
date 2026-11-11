@@ -166,9 +166,6 @@ REFUSED_RULES = {
         {**CARD, "attribute": "card_datetime", "date_operator": "DATE", "operators": ">="}
         | {"RHS_INPUT": {"type": "static_date", "value": "2026-01-01"}}
     ),
-    "card attribute 'card_status' is not in the tenant catalog": (  # a BOOL: not listed, as for the member
-        {**CARD, "attribute": "card_status", "operators": "not_null"}
-    ),
 }
 
 

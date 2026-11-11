@@ -222,7 +222,7 @@ def test_airport_values_are_looked_up_and_name_the_airports_that_have_them(airli
     for obj in ("airport", "airport_pair"):
         assert tools.LookupValues(object=obj, attribute="city", text="Bengaluru").object == obj
     with pytest.raises(ValidationError):
-        tools.LookupValues(object="location", attribute="city", text="Bengaluru")
+        tools.LookupValues(object="store", attribute="city", text="Bengaluru")
     city = airline.lookup("airport", "city", "Bengaluru")
     assert {c["code"]: c["airports"] for c in city["candidates"]} == {"131": [], "190": ["BLR"]}
     assert city["same_label"] == [["131", "190"]]
