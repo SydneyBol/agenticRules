@@ -112,6 +112,12 @@ class LookupValues(BaseModel):
     text: str = Field(description="The manager's words for ONE value")
 
 
+class FindAttributes(BaseModel):
+    """Input of find_attributes."""
+
+    words: str = Field(description="The manager's words for ONE kind of data, a few words (bank, store city, class)")
+
+
 class SetOfferMain(BaseModel):
     """Input of set_offer_main: the Offer Main form."""
 
@@ -288,7 +294,7 @@ class RunContext:
     def start_lookups(self, calls: list[dict[str, Any]]) -> None:
         """Starts a turn's lookups together."""
         for c in calls:
-            if c["name"] == "lookup_values" and c["id"] not in self.started and c["id"] not in self.invalid:
+            if c["name"] in LOOKUPS and c["id"] not in self.started and c["id"] not in self.invalid:
                 self.started[c["id"]] = self.lookups.submit(run_now, self, c["id"], c["name"], c["args"])
 
     def close(self) -> None:
@@ -345,6 +351,12 @@ def lookup_values(runtime: ToolRuntime[RunContext], **fields: Any) -> tuple[str,
     return _call(runtime.context, runtime.context.run.lookup_values, fields)
 
 
+@tool("find_attributes", args_schema=FindAttributes, response_format="content_and_artifact")
+def find_attributes(runtime: ToolRuntime[RunContext], **fields: Any) -> tuple[str, Done]:
+    """Find the catalog attributes the manager's words refer to (code, label, type, where each sits)."""
+    return _call(runtime.context, runtime.context.run.find_attributes, fields)
+
+
 @tool("set_offer_main", args_schema=SetOfferMain, response_format="content_and_artifact")
 def set_offer_main(runtime: ToolRuntime[RunContext], **fields: Any) -> tuple[str, Done]:
     """The Offer Main settings, and the prompt each later screen shows."""
@@ -353,7 +365,7 @@ def set_offer_main(runtime: ToolRuntime[RunContext], **fields: Any) -> tuple[str
 
 @tool("compose", args_schema=Canvas, response_format="content_and_artifact")
 def compose(runtime: ToolRuntime[RunContext], **fields: Any) -> tuple[str, Done]:
-    """Write the canvas as XML and check it: block types and where each plugs in, field values and catalog codes, the fields the screen needs filled, and the counters. Returns the problems by block id and where they sit, and the loose blocks."""  # noqa: E501
+    """Write the canvas as XML and check it: block types and where each plugs in, field values and catalog codes, the fields the screen needs filled, and the counters. Returns the problems by block id and where they sit, and the loose blocks."""
     finish = fields.pop("finish", None)
     text, done_ = _call(runtime.context, runtime.context.run.compose, fields)
     if finish is not None:  # judged once the turn's other calls have run, as a finish call is (graph.py)
@@ -367,7 +379,9 @@ def finish(runtime: ToolRuntime[RunContext], **fields: Any) -> tuple[str, Done]:
     return "", Done(_given(fields), None)  # judged once the turn's other calls have run (graph.py)
 
 
-TOOLS = [lookup_values, set_offer_main, compose, finish]
+TOOLS = [lookup_values, set_offer_main, compose, finish, find_attributes]
+LOOKUPS = ("lookup_values", "find_attributes")  # read-only: a turn's run together
+SHORTLIST_TOOLS = ("find_attributes",)  # in the request only when the catalog text is a shortlist
 BY_NAME = {t.name: t for t in TOOLS}
 EARLY = {"set_offer_main", "compose"}  # change the run's state: started while streaming, in call order
 
@@ -407,13 +421,16 @@ def _schema(model: type[BaseModel]) -> dict[str, Any]:
     return clean(raw)
 
 
-def schemas(rules_form: str = "json") -> list[dict[str, Any]]:
+def schemas(rules_form: str = "json", shortlist: bool = False) -> list[dict[str, Any]]:
     """The tools as the chat model is given them (name, description, input schema), built from the tools themselves.
 
     compose takes the rules canvas as lines (`dsl`) only when the run writes it that way (Settings.rules_form).
+    find_attributes is offered only when the catalog text lists a shortlist of the attributes (Settings.shortlist_over).
     """
     out: list[dict[str, Any]] = []
     for t in TOOLS:
+        if t.name in SHORTLIST_TOOLS and not shortlist:
+            continue
         schema = _schema(t.args_schema)  # type: ignore[arg-type]
         if rules_form != "dsl":
             schema.get("properties", {}).pop("dsl", None)
@@ -422,12 +439,16 @@ def schemas(rules_form: str = "json") -> list[dict[str, Any]]:
 
 
 SCHEMAS = schemas()
-SCHEMAS_BY_FORM = {"json": SCHEMAS, "dsl": schemas("dsl")}
+SCHEMAS_BY_FORM = {
+    (form, short): SCHEMAS if (form, short) == ("json", False) else schemas(form, short)
+    for form in ("json", "dsl")
+    for short in (False, True)
+}
 
 
-def schemas_for(rules_form: str) -> list[dict[str, Any]]:
-    """The tool schemas of a run that writes the rules canvas in the given form."""
-    return SCHEMAS_BY_FORM.get(rules_form, SCHEMAS)
+def schemas_for(rules_form: str, shortlist: bool = False) -> list[dict[str, Any]]:
+    """The tool schemas of a run that writes the rules canvas in the given form, over a shortlisted catalog or not."""
+    return SCHEMAS_BY_FORM.get((rules_form, shortlist), SCHEMAS)
 
 
 def schema_error(error: ToolInvocationError) -> str:

@@ -139,6 +139,24 @@ UNDATED = (
 )
 AGAIN = "Call write_cases again with only these scenarios; the other scenarios you wrote are kept."
 KEPT = "Kept."
+FILL = (
+    "The offer's rules read these attributes, and none of your test cases sets them: {names}. Without a value the "
+    "transactions or members cannot match what the rules read. Call write_cases again with every scenario of yours "
+    "(the same ones, same expectations) where each transaction or member that needs them carries them."
+)
+# set for every test transaction by the engine harness or by the case schema itself
+HARNESS_SETS = frozenset(
+    {
+        "h_bit_category",
+        "h_member_id",
+        "h_program_id",
+        "h_sponsor_id",
+        "h_location",
+        "h_bit_type",
+        "h_bit_amount",
+        "h_bit_date",
+    }
+)
 
 
 def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]:
@@ -207,6 +225,44 @@ def write(ctx: RunContext) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]
     if not scenarios:
         return None, info
     return scenarios, info
+
+
+def unset_reads(scenarios: list[dict[str, Any]], reads: list[dict[str, str]]) -> list[dict[str, str]]:
+    """The transaction and member attributes the rules read that no test case gives a value.
+
+    A rule on an attribute no case sets can never hold, so every case that expects a reward disagrees with the engine
+    and the repair that follows bends correct rules to the cases (A03 live, 2026-11-11: no h_bit_currency in any case,
+    the Payment Rule on AED spends was removed). Only the transaction's and the member's own lists are judged; what the
+    engine harness cannot give at all is verifier.reads_without_test_data's.
+    """
+    given: dict[str, set[str]] = {"activity": set(HARNESS_SETS), "member": set()}
+    for s in scenarios:
+        given["member"] |= set((s.get("member") or {}).get("MA_P") or {})
+        for bit in s.get("bits") or []:
+            given["activity"] |= set(bit.get("header") or {})
+            for part in ("lines", "payment_details"):
+                for item in bit.get(part) or []:
+                    given["activity"] |= set(item or {})
+    return [r for r in reads if r["list"] in given and r["attribute"] not in given[r["list"]]]
+
+
+def fill(
+    ctx: RunContext, scenarios: list[dict[str, Any]], unset: list[dict[str, str]]
+) -> tuple[list[dict[str, Any]] | None, dict[str, Any]]:
+    """One more turn: the cases written again with the attributes the rules read that they left unset.
+
+    The attributes are shared, never the logic: the writer is told which data the rules read, not what they do with it.
+
+    Returns:
+        (the scenarios that can be posted, or None when the turn wrote none; the turn's usage).
+    """
+    llm = ctx.cases_llm or ctx.llm
+    names = ", ".join(f"{r['attribute']} ({r['place']})" for r in unset)
+    task = TASK + "\n\nYour cases so far:\n" + json.dumps(scenarios) + "\n\n" + FILL.format(names=names)
+    turn = llm.turn(ctx.system, [HumanMessage(content=ctx.prompt + task)], tools=[WRITE_CASES])
+    start, end = window(ctx)
+    more = [s for s in _scenarios(turn) or [] if _postable(s, start, end)]
+    return (more or None), dict(turn.usage or {})
 
 
 def window(ctx: RunContext) -> tuple[str, str]:

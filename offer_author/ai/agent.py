@@ -31,7 +31,7 @@ from . import attributes as grounding
 from . import graph
 from . import plan as plans
 from .model import LLMError
-from .prompt import intro, offer_main_context, system_blocks
+from .prompt import catalog_show, intro, offer_main_context, shortlisted, system_blocks
 from .tools import RunContext, schemas_for
 
 if TYPE_CHECKING:
@@ -521,7 +521,8 @@ def warm(llm: Any, catalog: Catalog, account_id: Any = None, settings: Settings 
         return None
     warm_history(catalog, settings)
     warm_values(catalog, settings)
-    return llm.warm(_system(catalog, account_id, settings), schemas_for(settings.rules_form))
+    short = shortlisted(catalog, settings.shortlist_over)
+    return llm.warm(_system(catalog, account_id, settings), schemas_for(settings.rules_form, short))
 
 
 def warm_history(catalog: Catalog, settings: Settings | None = None) -> None:
@@ -578,6 +579,7 @@ def _system(catalog: Catalog, account_id: Any, settings: Settings) -> list[dict[
         bool(settings.similar_offers and settings.history),
         settings.inline_activity_types,
         settings.rules_form,
+        catalog_show(catalog, settings),
     )
 
 

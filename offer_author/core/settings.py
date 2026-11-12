@@ -39,6 +39,10 @@ class Settings:
     # A/B 1, 2026-11-05, no accuracy gain for +6 s p50 and +40% calls; SharedPlan.md)
     rules_form: str = "json"  # how the model writes the rules canvas: "json" (a block tree) or "dsl" (sub-prompt
     # lines, core/canvas/dsl.py; SubpromptDSL-TwoPipeline-Plan.md); the segment is a block tree in both
+    attribute_text: bool = False  # the catalog text lists the attributes the tenant's earlier offers read first and
+    # adds what bolapi says an attribute holds (AttributeSelection-Review-2026-11-12.md, items 4 and 6)
+    shortlist_over: int = 0  # over this many attributes the catalog text lists the core and the ones earlier offers
+    # read, and the rest is found with find_attributes (0 = always the whole list; item 7 of the same review)
     attributes: bool = False  # the attribute step: which catalog data the terms refer to, confirmed once for the
     # build and the cases (AttributeGrounding.md); off until its A/B
 

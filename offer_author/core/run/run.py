@@ -74,6 +74,13 @@ class Run:
         self.counts["lookup_values"] += 1
         return self.lookups.lookup(x)
 
+    def find_attributes(self, x: ToolInput) -> Result:
+        """find_attributes: the catalog attributes the manager's words refer to."""
+        from ..tenant.attribute_search import find
+
+        self.counts["find_attributes"] += 1
+        return {"attributes": find(self.catalog, str(x.get("words") or ""), self.lookups.search, k=8)}
+
     def set_offer_main(self, x: ToolInput) -> Result:
         """set_offer_main: the Offer Main form."""
         self.counts["set_offer_main"] += 1

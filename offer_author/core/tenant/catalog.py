@@ -104,6 +104,21 @@ def norm(s: Any) -> str:
     return " ".join(re.sub(r"[^0-9a-z]+", " ", str(s).lower()).split())
 
 
+def says_more(a: Attribute) -> str:
+    """The attribute's description when it tells more than its code and label do, else "".
+
+    bolapi's descriptions are free text a tenant admin typed: some repeat the label ("Reason for Membership
+    Cancellation"), some are filler ("Hi", ".", "QA Testing"). One is kept when it has at least 3 words and at least 2
+    of them are in neither the label nor the code.
+    """
+    import re
+
+    words = re.findall(r"[a-z0-9]+", a.description.lower())
+    known = set(re.findall(r"[a-z0-9]+", f"{a.label} {a.code}".lower()))
+    new = [w for w in words if w not in known and len(w) > 2]
+    return a.description if len(words) >= 3 and len(new) >= 2 else ""
+
+
 @dataclass
 class Attribute:
     """One attribute of the attribute library.
@@ -116,6 +131,7 @@ class Attribute:
         values: Code -> label, when known.
         line_level: A line-item attribute.
         payment_level: A payment attribute (the payment blocks' payment_attribute dropdown).
+        description: What bolapi says the attribute holds ("" when it says nothing).
     """
 
     code: str
@@ -125,6 +141,7 @@ class Attribute:
     values: dict[str, str] | None = None
     line_level: bool = False
     payment_level: bool = False
+    description: str = ""
 
 
 @dataclass
@@ -951,5 +968,6 @@ def _attributes(
             values=values or None,
             line_level=bool(x.get("line_level")),
             payment_level=bool(x.get("payment_level")),
+            description=" ".join(str(x.get("description") or "").split()),
         )
     return out

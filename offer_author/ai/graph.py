@@ -32,9 +32,11 @@ from langgraph.runtime import Runtime
 from langgraph.types import Send
 
 from ..core import verifier
+from ..core.canvas.checks.reads import attribute_reads
 from ..core.run import Run, asks_or_reports, error_result, finish_blockers, notes_by_part
 from ..domain import Problem, Result, ToolInput
 from . import cases, render
+from .prompt import shortlisted
 from .tools import TOOLS, Done, RunContext, content, done, schema_error, schemas_for, started_or_run
 
 NUDGE = "Use the tools: compose, with finish in the compose that completes the offer."
@@ -79,8 +81,9 @@ def model(state: AgentState, runtime: Runtime[RunContext]) -> dict[str, Any]:
     ctx = runtime.context
     t0 = time.time()
     on_tool = ctx.start if ctx.settings.early_tools else None
+    short = shortlisted(ctx.run.catalog, ctx.settings.shortlist_over)
     turn = ctx.llm.turn(
-        ctx.system, cached(state["messages"]), tools=schemas_for(ctx.settings.rules_form), on_tool=on_tool
+        ctx.system, cached(state["messages"]), tools=schemas_for(ctx.settings.rules_form, short), on_tool=on_tool
     )
     ctx.invalid |= turn.invalid
     calls = turn.message.tool_calls
@@ -306,6 +309,20 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
         # no case can give these a value, so every case expecting a reward would disagree and ask for a repair
         skipped = {"skipped": "the canvases read data a test case cannot give", "reads": reads}
         return {"verdict": skipped, "repair_asked": False}
+    read = attribute_reads(body.get("rules_xml"), ctx.run.catalog)
+    unset = cases.unset_reads(state["cases"] or [], read)
+    filled: dict[str, Any] = {}
+    adopted: dict[str, Any] = {}  # the cases as filled, kept for the repair's recheck
+    if unset:  # the rules read what no case sets: the writer gets the attributes (never the logic), once
+        fixed, usage = cases.fill(ctx, state["cases"] or [], unset)
+        filled = {"unset": [r["attribute"] for r in unset], **{f"fill_{k}": v for k, v in usage.items()}}
+        if fixed and not cases.unset_reads(fixed, read) and (body2 := verifier.request(ctx.run, fixed)) is not None:
+            body, adopted = body2, {"cases": fixed}
+        else:
+            return {
+                "verdict": {"skipped": "the test cases never set what the rules read", **filled},
+                "repair_asked": False,
+            }
     t0 = time.time()
     try:
         report = verifier.verify(ctx.settings.verifier_url, body)
@@ -313,7 +330,7 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
         return {"verdict": {"error": str(e)[:300]}, "repair_asked": False}
     ctx.timing.tools_s["verify"] = round(ctx.timing.tools_s.get("verify", 0) + time.time() - t0, 2)
     n = int(state.get("repairs") or 0)
-    verdict = {**verifier.verdict(report, n > 0), "repairs": n}
+    verdict = {**verifier.verdict(report, n > 0), "repairs": n, **({"cases_filled": filled} if filled else {})}
     checks = [*(state.get("checks") or []), _answers(report)]
     evidence = dict(state.get("repair") or {})
     if n:
@@ -329,7 +346,13 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
     if waits:
         verdict["held_back"] = True
     if report.get("ok") or n >= ctx.settings.verify_repairs or unchanged or waits:
-        return {"verdict": verdict, "checks": checks, "repair_asked": False, **({"repair": evidence} if n else {})}
+        return {
+            "verdict": verdict,
+            "checks": checks,
+            "repair_asked": False,
+            **adopted,
+            **({"repair": evidence} if n else {}),
+        }
     message = cases.mismatch_message(report, {c: ctx.run.canvases.outline(c) for c in ("rules", "segment")})
     if not n:
         evidence = {
@@ -342,6 +365,7 @@ def verify_node(state: VerifiedState, runtime: Runtime[RunContext]) -> dict[str,
     return {
         "verdict": verdict,
         "checks": checks,
+        **adopted,
         "repaired": True,
         "repairs": n + 1,
         "repair_asked": True,

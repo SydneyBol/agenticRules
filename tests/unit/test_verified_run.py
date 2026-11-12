@@ -443,3 +443,38 @@ def test_a_repair_that_runs_out_of_turns_ends_the_run_instead_of_being_sent_roun
     assert res["status"] == "needs_input" and len(sent) == 1
     assert len(llm.calls) == 2 + settings.verify_repair_turns
     assert res["diagnostics"]["verify"]["skipped"] == "the run did not finish"
+
+
+LINES = 'Filter, activity h_bit_type == SPEND\nrule_1 "Adults", if profile age >= 30\nrule_1, give_points 5'
+
+
+def test_cases_that_leave_a_read_attribute_unset_are_written_again_with_it_before_the_check(
+    fixture_catalog, verifier_calls
+):
+    # A03 live, 2026-11-11: no case set h_bit_currency, the correct rule never held, the repair removed it
+    sent, answers = verifier_calls
+    answers.append(OK)
+    settings = Settings(**{**SETTINGS.__dict__, "rules_form": "dsl"})
+    first = [("compose", {"canvas": "rules", "dsl": LINES, "finish": FIN[1]})]
+    fixed = {**CASE, "member": {"MA_P": {"age": 40}}}
+    res, _, cases_llm = run(
+        fixture_catalog,
+        [[offer_main()], first],
+        cases_turns=(CASES, [("write_cases", {"scenarios": [fixed]})]),
+        settings=settings,
+    )
+    assert len(cases_llm.calls) == 2 and "age (the member's profile)" in json.dumps(cases_llm.calls[1])
+    assert len(sent) == 1 and sent[0]["scenarios"][0]["member"] == {"MA_P": {"age": 40}}
+    v = res["diagnostics"]["verify"]
+    assert v["ok"] and v["cases_filled"]["unset"] == ["age"] and not v.get("skipped")
+
+
+def test_cases_still_unset_after_the_one_more_turn_get_no_engine_check_and_no_repair(fixture_catalog, verifier_calls):
+    sent, answers = verifier_calls
+    answers.append(BAD)
+    settings = Settings(**{**SETTINGS.__dict__, "rules_form": "dsl"})
+    first = [("compose", {"canvas": "rules", "dsl": LINES, "finish": FIN[1]})]
+    res, llm, cases_llm = run(fixture_catalog, [[offer_main()], first], cases_turns=(CASES, CASES), settings=settings)
+    assert sent == [] and len(llm.calls) == 2 and len(cases_llm.calls) == 2  # no repair turn
+    v = res["diagnostics"]["verify"]
+    assert v["skipped"] == "the test cases never set what the rules read" and v["unset"] == ["age"]

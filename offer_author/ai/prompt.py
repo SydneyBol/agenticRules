@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from textwrap import indent
@@ -28,9 +30,10 @@ from ..core.tenant.catalog import (
     LEVEL_OBJECTS,
     OBJECTS,
     SCREEN_LISTS,
+    says_more,
 )
 from ..core.tenant.existing_counters import normalize
-from ..core.vocabulary import ACTIVITY_TYPE
+from ..core.vocabulary import ACTIVITY_TYPE, TRANSACTION_FIELDS
 
 if TYPE_CHECKING:
     from ..core.tenant.catalog import Catalog
@@ -169,6 +172,7 @@ def system_blocks(
     history: bool = False,
     inline_types: int = INLINE_ACTIVITY_TYPES,
     rules_form: str = "json",
+    show: CatalogShow | None = None,
 ) -> list[dict[str, Any]]:
     """The system prompt: the instructions, the knowledge every tenant shares and this tenant's catalog, each cached.
 
@@ -179,6 +183,7 @@ def system_blocks(
         history: Earlier offers may be shown in the request.
         inline_types: Activity types are listed up to this many; more are looked up.
         rules_form: How the rules canvas is written, "json" or "dsl" (the line form is then part of the knowledge).
+        show: How the attribute lists are shown (CatalogShow).
 
     Returns:
         The system content blocks.
@@ -189,7 +194,7 @@ def system_blocks(
         {"type": "text", "text": static_prompt(rules_form), "cache_control": mark},
         {
             "type": "text",
-            "text": "Tenant catalog:\n" + catalog_text(catalog, account_id, inline_types),
+            "text": "Tenant catalog:\n" + catalog_text(catalog, account_id, inline_types, show),
             "cache_control": mark,
         },
     ]
@@ -469,12 +474,85 @@ def _today(catalog: Catalog) -> str:
     return datetime.now(tz).strftime("%Y-%m-%d")
 
 
-def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = INLINE_ACTIVITY_TYPES) -> str:
+@dataclass(frozen=True)
+class CatalogShow:
+    """How the attribute lists are shown.
+
+    Attributes:
+        descriptions: Add what bolapi says an attribute holds when that tells more than its label.
+        ordered: List the attributes earlier offers read first, most read first (needs `use`).
+        use: {(list, code): offers that read it}, from the tenant's stored offers.
+        shortlist: List only the core and the attributes in `use`; the rest is found with find_attributes.
+    """
+
+    descriptions: bool = False
+    ordered: bool = False
+    use: Mapping[tuple[str, str], int] | None = None
+    shortlist: bool = False
+
+
+# the attributes every offer may need whatever the tenant's history says, when the lists are shortlisted
+SHORTLIST_CORE = {
+    "activity": (*TRANSACTION_FIELDS, "h_location", "h_sponsor_id", "h_bit_currency", "h_bit_category", "l_amount",
+                 "l_quantity", "l_product_external_id", "l_product_name"),
+    "member": ("tier_class", "date_of_birth", "date_of_joining", "gender", "membership_stage"),
+}  # fmt: skip
+
+
+def catalog_show(catalog: Catalog, settings: Any) -> CatalogShow:
+    """How the settings show this tenant's attribute lists (Settings.attribute_text, Settings.shortlist_over)."""
+    from ..core.tenant.usage import attribute_use
+
+    short = shortlisted(catalog, settings.shortlist_over)
+    use = attribute_use(settings.history, catalog) if settings.attribute_text or short else None
+    return CatalogShow(settings.attribute_text, settings.attribute_text, use or None, short)
+
+
+def shortlisted(catalog: Catalog, over: int) -> bool:
+    """Whether the catalog is shown as a shortlist: more attributes than `over` (0: never)."""
+    return over > 0 and sum(len(v) for v in catalog.attributes.values()) > over
+
+
+def _attribute_lines(catalog: Catalog, obj: str, show: CatalogShow) -> list[str]:
+    """One list's attribute lines: its attributes in the order and extent `show` asks for."""
+    attrs = list(catalog.attributes.get(obj, {}).values())
+    use = show.use or {}
+    if show.ordered and use:  # what the tenant's earlier offers read, most read first; the rest as it was
+        attrs.sort(key=lambda a: -use.get((obj, a.code), 0))
+    out: list[str] = []
+    if show.shortlist:
+        core = SHORTLIST_CORE.get(obj, ())
+        keep = [a for a in attrs if use.get((obj, a.code)) or a.code in core]
+        if len(keep) < len(attrs):
+            out.append(f"({len(attrs) - len(keep)} more {obj} attributes are not listed: use find_attributes)")
+        attrs = keep
+    for a in attrs:
+        line = f"{a.code} | {a.label} | {a.type}" + (" (payment)" if a.payment_level else "")
+        if a.values and (obj, a.code) != ("activity", ACTIVITY_TYPE):  # activity types are listed once, below
+            if len(a.values) <= INLINE_VALUES:
+                line += " | " + ", ".join(f"{k}={v}" for k, v in a.values.items())
+            else:
+                line += f" | {len(a.values)} values, not listed: find codes with lookup_values" + (
+                    f" ({obj}, {a.code})" if obj in (*LEVEL_OBJECTS, *SCREEN_LISTS) else ""
+                )
+        if show.descriptions and (more := says_more(a)):
+            line += f"  -- {more}"
+        out.append(line)
+    return out
+
+
+def catalog_text(
+    catalog: Catalog,
+    account_id: Any = None,
+    inline_types: int = INLINE_ACTIVITY_TYPES,
+    show: CatalogShow | None = None,
+) -> str:
     """The tenant catalog as the model reads it.
 
     Attributes per object (code, label, type, short value lists), activity types, tiers, the loyalty account and the
     privileges.
     """
+    show = show or CatalogShow()
     out = [
         f"Tenant: {catalog.tenant}  sponsor: {catalog.sponsor_id}"
         + f"  today: {_today(catalog)}"
@@ -491,17 +569,9 @@ def catalog_text(catalog: Catalog, account_id: Any = None, inline_types: int = I
     names.update(LEVEL_SECTIONS)
     shown = (*AIRLINE_OBJECTS, *LEVEL_OBJECTS, *SCREEN_LISTS)
     for obj in (*OBJECTS, *(o for o in shown if catalog.attributes.get(o))):
-        out.append(f"\n## {names[obj]}  (code | label | type [| values])")
-        for a in catalog.attributes.get(obj, {}).values():
-            line = f"{a.code} | {a.label} | {a.type}" + (" (payment)" if a.payment_level else "")
-            if a.values and (obj, a.code) != ("activity", ACTIVITY_TYPE):  # activity types are listed once, below
-                if len(a.values) <= INLINE_VALUES:
-                    line += " | " + ", ".join(f"{k}={v}" for k, v in a.values.items())
-                else:
-                    line += f" | {len(a.values)} values, not listed: find codes with lookup_values" + (
-                        f" ({obj}, {a.code})" if obj in (*LEVEL_OBJECTS, *SCREEN_LISTS) else ""
-                    )
-            out.append(line)
+        more_text = " [-- what it holds]" if show.descriptions else ""
+        out.append(f"\n## {names[obj]}  (code | label | type [| values]{more_text})")
+        out += _attribute_lines(catalog, obj, show)
     out += _airports_text(catalog)
     for name, title in PICKER_SECTIONS.items():
         rows = catalog.pickers.get(name)
