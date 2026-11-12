@@ -434,7 +434,7 @@ def test_compose_takes_lines_only_in_a_dsl_run(fixture_catalog):
     json_text, dsl_text = prompt.static_prompt(), prompt.static_prompt("dsl")
     assert dsl_text.startswith(json_text) and "# The rules canvas as lines" in dsl_text[len(json_text) :]
     assert prompt.system_blocks(fixture_catalog) == prompt.system_blocks(fixture_catalog, rules_form="json")
-    assert Settings.from_env({"OFFER_AUTHOR_RULES_FORM": "dsl"}).rules_form == "dsl" and Settings().rules_form == "json"
+    assert Settings.from_env({"OFFER_AUTHOR_RULES_FORM": "json"}).rules_form == "json" and Settings().rules_form == "dsl"
 
 
 def test_a_dsl_run_builds_the_rules_and_repairs_by_line(fixture_catalog):
