@@ -232,6 +232,7 @@ def intro(
     existing: dict[str, Any] | None = None,
     current: dict[str, Any] | None = None,
     earlier: dict[str, Any] | None = None,
+    rules_form: str = "json",
 ) -> str:
     """The run's first message: the manager's description, what to build, and what the offer already has.
 
@@ -242,6 +243,7 @@ def intro(
         existing: The offer's existing counters ({counters}).
         current: The rules saved on the offer ({root, loose, counters}).
         earlier: The tenant's earlier offers ({named, similar}, History.earlier).
+        rules_form: "dsl" shows the earlier offers as the lines the run writes (those stored with them).
 
     Returns:
         The message text.
@@ -298,7 +300,7 @@ def intro(
             )
         )
     if earlier and (earlier["named"] or earlier["similar"]):
-        text += "\n\n" + earlier_offers(earlier)
+        text += "\n\n" + earlier_offers(earlier, rules_form)
     return text
 
 
@@ -318,12 +320,21 @@ activity_level_tracker an activity counter (MA_A); a counter is quoted as "<data
 "activity_attribute->x" is the activity's attribute x; brackets are a formula. Rule names are not shown."""
 
 
-def earlier_offers(earlier: dict[str, Any]) -> str:
-    """The tenant's earlier offers for this request, after the note on the sub-prompt form.
+DSL_FORM = """Earlier offers show the manager's prompt and the offer's rules as lines, in the form the rules canvas is
+written in (above)."""
+
+
+def earlier_offers(earlier: dict[str, Any], rules_form: str = "json") -> str:
+    """The tenant's earlier offers for this request, after the note on the form they are shown in.
+
+    A run that writes the rules as lines (rules_form "dsl") is shown the earlier offers' lines when every offer shown
+    has them stored; else Pulsar's sub-prompt form, as a JSON run.
 
     Each with its name, date, similarity, prompt and sub-prompt lines; named by the manager first (part of the
     request), then the similar ones (reference only).
     """
+    shown = [*earlier["named"], *(e for _, e in earlier["similar"])]
+    lines = rules_form == "dsl" and all(e.dsl for e in shown)
 
     def record(i: int, score: float | None, e: PastOffer) -> str:
         meta = ", ".join(
@@ -332,8 +343,8 @@ def earlier_offers(earlier: dict[str, Any]) -> str:
         return (
             f'{i}. "{e.name}"'
             + (f" ({meta})" if meta else "")
-            + f"\n   Prompt: {e.text}\n   Sub-prompt:\n"
-            + indent(e.subprompt, "   ")
+            + f"\n   Prompt: {e.text}\n   {'Lines' if lines else 'Sub-prompt'}:\n"
+            + indent(e.dsl if lines else e.subprompt, "   ")
         )
 
     sections = (
@@ -350,7 +361,7 @@ def earlier_offers(earlier: dict[str, Any]) -> str:
         ),
     )
     return "\n\n".join(
-        [SUBPROMPT_FORM]
+        [DSL_FORM if lines else SUBPROMPT_FORM]
         + [title + "\n" + "\n".join(record(i, *x) for i, x in enumerate(rows, 1)) for title, rows in sections if rows]
     )
 

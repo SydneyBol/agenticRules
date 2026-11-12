@@ -19,7 +19,7 @@ from general.loggerutils import get_logger
 from pulsar.data_validation.n_diverse_context import put_diverse_context, file_transfer
 from pulsar.data_store.lambda_function import retraining_data_to_s3, write_file, read_file
 from pulsar.data_validation.sub_prompts.blockwise_subprompt import xml_to_subprompt
-from pulsar.data_validation.sub_prompts.feedback import compare, place_label, units
+from pulsar.data_validation.sub_prompts.feedback import _text as feedback_text, compare, place_label, units
 from general.pulsar.program_cache.template_cache import cache_processor
 from templatize_offer import templatize_xml
 
@@ -165,7 +165,7 @@ def calculate_similarity(sentence1, sentence2):
 FEEDBACK_COLUMNS = ['program_id', 'Kind', 'Place', 'SubPrompt', 'Block']
 
 
-def failed_blocks_filter(model_generated_xml: str, xml: str, program=None):
+def failed_blocks_filter(model_generated_xml: str, xml: str, program=None, form: str = "pulsar", catalog=None):
     """What the manager changed in Pulsar's draft before saving: one row per line, by its place (feedback.py).
 
     Both XMLs are the templatised ones (values as placeholders), so a store, amount or tier the manager changed is not
@@ -176,8 +176,8 @@ def failed_blocks_filter(model_generated_xml: str, xml: str, program=None):
     if not model_generated_xml or not xml:
         return None
     try:
-        generated_pairs = xml_to_subprompt(model_generated_xml) or []
-        saved_pairs = xml_to_subprompt(xml) or []
+        generated_pairs = xml_to_subprompt(model_generated_xml, form, catalog) or []
+        saved_pairs = xml_to_subprompt(xml, form, catalog) or []
     except Exception as e:
         logger.info(f"Feedback skipped, sub-prompt issue: {e}")
         return None
@@ -191,7 +191,7 @@ def failed_blocks_filter(model_generated_xml: str, xml: str, program=None):
     def block_of(pairs):
         out = {}
         for line, block in pairs:
-            out.setdefault(line.split(',,,', 1)[-1].strip(), block)
+            out.setdefault(feedback_text(line), block)
         return out
 
     saved_blocks, generated_blocks = block_of(saved_pairs), block_of(generated_pairs)

@@ -70,6 +70,7 @@ from ..vocabulary import ACTIVE_CARD_FIELDS, ACTIVE_CARDS, LEVEL_FIELD_ORDER, LE
 
 Block = dict[str, Any]
 
+FORM = "3"  # the line form's version: stored lines of another form are written again (harvest, migration)
 RULE_TYPES = ("rule", "rule_line", "payment_rule")
 PAYMENT = "payment"
 MEMBER = "member"  # a member attribute whose level the compose step fills, or `member [<level code>]` for any level
@@ -592,6 +593,12 @@ class _Printer:
     lines: list[str] = field(default_factory=list)
     rules: int = 0
     ors: int = 0
+    ids: dict[int, str] = field(default_factory=dict)  # a printed block (by identity) -> its id on the canvas
+    src: list[str | None] = field(default_factory=list)  # per line: the id of the block the line says
+
+    def add(self, line: str, node: Block | None = None) -> None:
+        self.lines.append(line)
+        self.src.append(self.ids.get(id(node)) if node is not None else None)
 
     def conditions(self, items: list[Block], label: str, filter_line: bool, path: str = "") -> None:
         for c in items:
@@ -604,9 +611,9 @@ class _Printer:
                     if isinstance(sub, list) and sub:
                         self.conditions(sub, label, filter_line, here)
                     else:
-                        self.lines.append(f"{label}{here},")  # an empty branch
+                        self.add(f"{label}{here},", c)  # an empty branch
                 continue
-            self.lines.append(f"{label}{path}, " + self.w.condition(c, filter_line))
+            self.add(f"{label}{path}, " + self.w.condition(c, filter_line), c)
 
     def rule(self, r: Block, parent: str | None) -> None:
         self.rules += 1
@@ -618,18 +625,18 @@ class _Printer:
         for a in r.get("ACTION") or []:
             if a.get("type") in RULE_TYPES and _rule_fits(a):
                 if len(self.lines) == start:
-                    self.lines.append(label + ",")
+                    self.add(label + ",", r)
                 self.rule(a, label)
             else:
-                self.lines.append(f"{label}, " + self.w.action(a))
+                self.add(f"{label}, " + self.w.action(a), a)
         if len(self.lines) == start:
-            self.lines.append(label + ",")
+            self.add(label + ",", r)
         self.lines[start] = head + self.lines[start][len(label) :]  # the rule's first line carries name and parent
 
     def activity(self, a: Block, header: str | None) -> None:
         if header:
             more = self.w.options(a, _extra(a, ("ACTIVITY_CRITERIA", "RULES")))
-            self.lines.append(f"{header}," + "".join(" " + o for o in more))
+            self.add(f"{header}," + "".join(" " + o for o in more), a)
         self.conditions(a.get("ACTIVITY_CRITERIA") or [], "Filter", True)
         for r in a.get("RULES") or []:
             if r.get("type") not in RULE_TYPES or not _rule_fits(r):
@@ -641,12 +648,18 @@ def _rule_fits(r: Block) -> bool:
     return not _extra(r, ("IDENTIFIER", "CONDITION", "ACTION"))
 
 
-def _without_ids(x: Any) -> Any:
-    """The tree without block ids and empty statement lists (lines name blocks by label, not id)."""
+def _without_ids(x: Any, ids: dict[int, str] | None = None) -> Any:
+    """The tree without block ids and empty statement lists (lines name blocks by label, not id).
+
+    `ids` collects each copied block's id, by the copy's identity, for the lines' sources (to_pairs).
+    """
     if isinstance(x, list):
-        return [_without_ids(i) for i in x]
+        return [_without_ids(i, ids) for i in x]
     if isinstance(x, dict):
-        return {k: _without_ids(v) for k, v in x.items() if k != "id" and v != []}
+        out = {k: _without_ids(v, ids) for k, v in x.items() if k != "id" and v != []}
+        if ids is not None and x.get("id"):
+            ids[id(out)] = str(x["id"])
+        return out
     return x
 
 
@@ -664,13 +677,47 @@ def to_lines(
     Raises:
         ValueError: The canvas is not one offer_generic root, or holds a section the lines cannot say.
     """
-    tops = _without_ids(tops)
+    return "\n".join(_print(tops, counters, catalog, brief).lines)
+
+
+def to_pairs(
+    tops: list[Block], counters: list[dict[str, Any]] | None = None, catalog: Any = None, brief: bool = False
+) -> list[tuple[str, str | None]]:
+    """The lines of to_lines, each with the id of the block it says.
+
+    A condition's or an action's line carries that block's id; a line that only opens a rule, an activity or an
+    event carries that one's; a counter line carries None. What a comparison of two offers needs (the feedback on a
+    draft): every line with its place in its label and its block.
+    """
+    p = _print(tops, counters, catalog, brief)
+    return list(zip(p.lines, p.src, strict=True))
+
+
+def split_label(line: str) -> tuple[str, str]:
+    """A line's label (with its rule name, parent and OR branches) and its body."""
+    i = 0
+    while i < len(line):
+        if line[i].isspace():
+            i += 1
+            continue
+        m = TOKEN.match(line, i)
+        if not m:
+            break
+        if m.group(2) == ",":
+            return line[:i].strip(), line[m.end() :].strip()
+        i = m.end()
+    return line.strip(), ""
+
+
+def _print(tops: list[Block], counters: list[dict[str, Any]] | None, catalog: Any, brief: bool) -> _Printer:
+    ids: dict[int, str] = {}
+    tops = _without_ids(tops, ids)
     if len(tops) != 1 or tops[0].get("type") != "offer_generic" or _extra(tops[0], ("activities", "events")):
         raise ValueError("the DSL writes one offer_generic root")
     cx = Context(catalog=catalog, brief=brief)
-    p = _Printer(_Writer(cx))
+    p = _Printer(_Writer(cx), ids=ids)
     for c in counters or []:
-        p.lines.append("counter, " + p.w.counter(c))
+        p.add("counter, " + p.w.counter(c))
         if c.get("name"):
             cx.counters[str(c["name"])] = c
     acts, events = tops[0].get("activities") or [], tops[0].get("events") or []
@@ -681,14 +728,14 @@ def to_lines(
         before = len(p.lines)
         p.activity(a, f"activity_{i}" if headed else None)
         if len(p.lines) == before:
-            p.lines.append(f"activity_{i},")
+            p.add(f"activity_{i},", a)
     for i, e in enumerate(events, 1):
         if e.get("type") != "event":
             raise ValueError("an event slot holds another block")
-        p.lines.append(f"event_{i}," + "".join(" " + o for o in p.w.options(e, _extra(e, ("RULES",)))))
+        p.add(f"event_{i}," + "".join(" " + o for o in p.w.options(e, _extra(e, ("RULES",)))), e)
         for r in e.get("RULES") or []:
             p.rule(r, None)
-    return "\n".join(p.lines)
+    return p
 
 
 # ---- level layouts ---------------------------------------------------------------------------------------------------

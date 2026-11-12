@@ -45,6 +45,7 @@ class PastOffer:
         name: Its name.
         text: The manager's description it was built from.
         subprompt: Pulsar's sub-prompt lines for its saved rules.
+        dsl: Its saved rules as the complete DSL lines ("" when not stored yet).
         launched: When it was launched ("" when unknown).
         own: The tenant's own offer (else another program's: matched by shape, never by name).
     """
@@ -55,6 +56,7 @@ class PastOffer:
     subprompt: str
     launched: str = ""
     own: bool = True
+    dsl: str = ""
 
 
 def normal(text: str | None) -> str:
@@ -131,7 +133,9 @@ def from_record(r: Mapping[str, Any], own: bool = True) -> PastOffer | None:
     text = r.get("prompt") or ". ".join(x for x in (r.get("name"), r.get("description")) if x)
     if not r.get("subprompt") or not text:
         return None
-    return PastOffer(str(r.get("id", "")), r.get("name") or "", text, r["subprompt"], r.get("launched") or "", own)
+    lines = r.get("dsl") or ""
+    launched = r.get("launched") or ""
+    return PastOffer(str(r.get("id", "")), r.get("name") or "", text, r["subprompt"], launched, own, lines)
 
 
 class History:

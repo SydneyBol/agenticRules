@@ -56,10 +56,7 @@ def pulsar_subprompt() -> Callable[[str], str]:
     branches, a rule inside a rule or the activity a rule runs under; core.tenant.structure.relabel gives each line the
     label of its place (Pulsar's own labels when a block cannot be placed). "" when Pulsar cannot read the XML.
     """
-    sys.path.insert(0, PULSAR)
-    log = types.ModuleType("general.loggerutils")  # Pulsar's logging setup is not part of the reviewed files
-    log.get_logger = lambda *a, **k: logging.getLogger("pulsar")  # type: ignore[attr-defined]
-    sys.modules.setdefault("general.loggerutils", log)
+    _pulsar()
     from pulsar.data_validation.sub_prompts.blockwise_subprompt import xml_to_subprompt
 
     def subprompt(xml: str) -> str:
@@ -68,6 +65,44 @@ def pulsar_subprompt() -> Callable[[str], str]:
         return relabel(xml, pairs) or "\n".join(line for line, _ in pairs)
 
     return subprompt
+
+
+def _pulsar() -> None:
+    """Pulsar's sub-prompt package (vendor/pulsar_rag) on the import path, with a plain logger for its own."""
+    if PULSAR not in sys.path:
+        sys.path.insert(0, PULSAR)
+    log = types.ModuleType("general.loggerutils")  # Pulsar's logging setup is not part of the reviewed files
+    log.get_logger = lambda *a, **k: logging.getLogger("pulsar")  # type: ignore[attr-defined]
+    sys.modules.setdefault("general.loggerutils", log)
+
+
+def dsl_pairs(xml: str, catalog: Any = None) -> list[tuple[str, str]]:
+    """A saved rules XML as the complete DSL lines, each with its block's XML (Pulsar's xml_to_subprompt, form dsl)."""
+    _pulsar()
+    from pulsar.data_validation.sub_prompts.blockwise_subprompt import xml_to_subprompt
+
+    with contextlib.chdir(PULSAR):  # Pulsar reads its block schema relative to its root
+        return xml_to_subprompt(xml, "dsl", catalog) or []
+
+
+def changes(draft_xml: str, saved_xml: str, catalog: Any = None) -> dict[str, list[dict[str, str]]] | None:
+    """What the manager changed in the agent's draft before saving, as DSL lines by their place on the canvas.
+
+    {"missing": lines the saved offer has and the draft lacks, "extra": lines only the draft has}, each {place,
+    line}; Pulsar's comparison (feedback.units / compare: rules matched by their lines whatever their order, a line
+    counted as often as it occurs) on the complete lines. None when either offer cannot be read.
+    """
+    draft, saved = dsl_pairs(draft_xml, catalog), dsl_pairs(saved_xml, catalog)
+    if not draft or not saved:
+        return None
+    from pulsar.data_validation.sub_prompts.feedback import compare, place_label, units
+
+    a, b = units(draft_xml, draft), units(saved_xml, saved)
+    if a is None or b is None:
+        return None
+    missing, extra = compare(a, b)
+    row = lambda unit, branches, text: {"place": place_label(unit, branches), "line": text}  # noqa: E731
+    return {"missing": [row(*m) for m in missing], "extra": [row(*e) for e in extra]}
 
 
 def pulsar_saved(data_store: str) -> Iterator[dict[str, Any]]:
@@ -121,8 +156,16 @@ def main(argv: list[str] | None = None) -> int:
         subprompt = pulsar_subprompt()
     except ImportError as e:
         ap.error(f"Pulsar's sub-prompt code needs the pulsar extra (pip install -e '.[pulsar]'): {e}")
+    names = catalog
+    if a.rerender:  # names for ids and codes when the tenant's catalog is at hand; codes otherwise
+        with contextlib.suppress(SystemExit, OSError, ValueError):
+            names = load_catalog(a, settings)
+
+    def lines(xml: str) -> str:
+        return "\n".join(line for line, _ in dsl_pairs(xml, names))
+
     report = harvest(
-        saved, os.path.join(root, a.tenant, "offers.jsonl"), catalog, PromptLog(root).last(a.tenant), subprompt
+        saved, os.path.join(root, a.tenant, "offers.jsonl"), catalog, PromptLog(root).last(a.tenant), subprompt, lines
     )
     report["rejected"] = {k: [word(p) for p in problems] for k, problems in report["rejected"].items()}
     print(json.dumps(report, indent=1))

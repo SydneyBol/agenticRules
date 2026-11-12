@@ -73,8 +73,14 @@ class _Walk:
 
 
 def _text(line: str) -> str:
-    """The line without Pulsar's running label (Filter_N,,, / rule_N,,,)."""
-    return line.split(",,,", 1)[1].strip() if ",,," in line else line.strip()
+    """The line without its label: Pulsar's running one (Filter_N,,, / rule_N,,,) or a DSL line's (its rule, the
+    rule's name and parent, its OR branches: all up to the first comma outside quotes). The place is read from the
+    XML, so a rule the manager only renamed or moved in the order is not a change of its lines."""
+    if ",,," in line:
+        return line.split(",,,", 1)[1].strip()
+    m = re.match(r'(?:[^",]|"(?:[^"\\]|\\.)*")*,', line)
+    dsl = re.match(r"(Filter|counter|def|(rule|rule_line|payment_rule|activity|event)_\d+)\b", line)
+    return line[m.end():].strip() if m and dsl else line.strip()
 
 
 def units(xml: str, pairs: List[Pair]) -> Optional[Dict[Tuple, Counter]]:
@@ -94,6 +100,8 @@ def units(xml: str, pairs: List[Pair]) -> Optional[Dict[Tuple, Counter]]:
     out: Dict[Tuple, Counter] = {}
     order: Dict[Tuple, Dict[int, int]] = {}
     for line, block in pairs:
+        if not block:  # a DSL line that only opens a rule or a section, or declares a counter
+            continue
         m = re.search(r'\bid="([^"]+)"', block)
         bid = m.group(1) if m else ""
         if bid not in walk.places:

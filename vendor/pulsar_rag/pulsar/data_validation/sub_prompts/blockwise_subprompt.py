@@ -188,8 +188,14 @@ class SubPromptGenerator:
         return rules_list
 
 
-def xml_to_subprompt(xml_str: str):
-    """Process xml from input to generate subPrompts"""
+def xml_to_subprompt(xml_str: str, form: str = "pulsar", catalog=None):
+    """Process xml from input to generate subPrompts
+
+    form "pulsar": the lines as before (five block types, running labels). form "dsl": the complete lines
+    (xml_to_dsl), the same (line, block) pairs.
+    """
+    if form == "dsl":
+        return xml_to_dsl(xml_str, catalog)
     try:
         df = pd.DataFrame()
         sub_prompt_generator = SubPromptGenerator(xml_str=xml_str)
@@ -234,3 +240,61 @@ def replace_self_closing_mutation_tag(xml_content):
     pattern = r'(<mutation\s+[^>]+?)\s*/>'
     modified_string = re.sub(pattern, r'\1></mutation>', xml_content)
     return modified_string
+
+
+def xml_to_dsl(xml_str: str, catalog=None):
+    """The offer's rules as the complete DSL lines, as (line, block XML) pairs like xml_to_subprompt's.
+
+    The lines say the whole canvas and compile back to it (offer_author.core.canvas.dsl): every rule with its name,
+    a rule inside a rule ("inside rule_N"), OR branches ("or1.2"), each On Activity and On Event, counters with their
+    kind, and every block type; with the tenant's catalog, names instead of ids and codes. Each line's label is its
+    place, so two offers can be compared line by line (feedback.py). The block of a line that only opens a rule, an
+    activity or an event, or declares a counter, is "". The same offers are refused as in xml_to_subprompt (not
+    base64 or XML, an incomplete block, a blueprint) and disabled blocks are left out. None when it cannot be read.
+    """
+    try:
+        from offer_author.core.canvas import dsl  # the compiler both ways; not part of ai-develop yet
+        from offer_author.core.canvas.edit import Doc
+        from offer_author.core.canvas.tree import compact
+    except ImportError as e:
+        raise ImportError(f"the DSL form needs offer_author (pip install offer-xml-generator): {e}") from e
+    try:
+        generator = SubPromptGenerator(xml_str=xml_str)  # decodes, and refuses an incomplete block
+        xml = generator._xml
+        if re.search(BLUEPRINT, xml):
+            raise ValueError("a blueprint: placeholders, not an offer's rules")
+        view = Doc(xml).view()
+        tops = [compact(t, view["counters"]) for t in view["tops"]]
+        # the compiler numbers the blocks b1, b2 ... in document order; extract_blocks keeps the same order
+        own, n, k = {}, 0, 0
+        for elem in ET.fromstring(xml).iter():
+            if elem.tag.split('}', 1)[-1] != 'block':
+                continue
+            n += 1
+            if elem.get('type') in block_wise:
+                own[f"b{n}"] = generator.blockList[k]
+                k += 1
+        pairs = []
+        for line, block_id in dsl.to_pairs(tops, view["counters"], catalog):
+            block = own.get(block_id, "")
+            if block and not re.search(rf'^<block[^>]*type="{_line_type(dsl, line)}"', block):
+                raise ValueError(f"line and block do not match: {line}")
+            if not re.search(DISABLED, block):
+                pairs.append((line, block))
+        return pairs or None
+    except Exception as e:
+        logger.info(f"Error occurred: {e}")
+
+
+def _line_type(dsl, line):
+    """The block type a DSL line's body says: a Filter's activity_criteria, a condition, an action."""
+    label, body = dsl.split_label(line)
+    if label.startswith("Filter"):
+        return "activity_criteria"
+    if body.startswith("block "):
+        return r"\w+"
+    if body.startswith("if payment "):
+        return "if_payment_attribute"
+    if body.startswith("if "):
+        return "if_generic_adaptive"
+    return "action(_third_party)?"

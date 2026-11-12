@@ -330,7 +330,9 @@ def _run(
     checked = bool(settings.verifier_url) and "rules" in parts and ("offer_main" in parts or verify)
     current = tools.current() if "rules" in parts else None
     start: dict[str, Any] = {
-        "messages": [HumanMessage(content=intro(prompt, parts, context, existing, current, found))],
+        "messages": [
+            HumanMessage(content=intro(prompt, parts, context, existing, current, found, settings.rules_form))
+        ],
         "turns": 0,
         "max_turns": settings.max_turns,
         "usage": {},

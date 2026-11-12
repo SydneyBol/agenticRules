@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any
 
 from ...domain import Problem
 from ..canvas.checks.grammar import NS, _tag, check, disabled
+from ..canvas.dsl import FORM as DSL_FORM
 from ..canvas.fields import counter_ref
 from ..vocabulary import ATTRIBUTE_LEVELS, CATALOG_OBJECT, COUNTER_LEVELS
 from .structure import FORM
@@ -152,6 +153,7 @@ def harvest(
     catalog: Catalog | None = None,
     prompts: Mapping[str, str] | None = None,
     subprompt: Callable[[str], str] | None = None,
+    dsl: Callable[[str], str] | None = None,
 ) -> dict[str, Any]:
     """Merges saved offers into a history file.
 
@@ -166,6 +168,8 @@ def harvest(
         prompts: {offer_id: prompt} (PromptLog.last), used when a version has none.
         subprompt: xml -> Pulsar's sub-prompt lines (api/harvest.py), stored with every offer that has none yet or has
             them in an earlier form (structure.FORM): the agent is shown an earlier offer only with them (history.py).
+        dsl: xml -> the complete DSL lines (api/harvest.py dsl_pairs), stored the same way: what a run that writes
+            the rules as lines is shown.
 
     Returns:
         {added, replaced, kept, rejected: {id: [Problem]}, removed: [id]}.
@@ -193,6 +197,10 @@ def harvest(
         for r in stored.values():
             if not r.get("subprompt") or r.get("subprompt_form") != FORM:
                 r["subprompt"], r["subprompt_form"] = subprompt(r["xml"]), FORM
+    if dsl:
+        for r in stored.values():
+            if not r.get("dsl") or r.get("dsl_form") != DSL_FORM:
+                r["dsl"], r["dsl_form"] = dsl(r["xml"]), DSL_FORM
     _write(store, stored.values())
     return report
 
