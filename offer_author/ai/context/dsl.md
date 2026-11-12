@@ -42,20 +42,23 @@ Subjects:
 - `profile` a member attribute of the attribute library; `analytics` an analytics write-back value.
 - `counter "<name>"` an offer counter (`counter "<name>" at <attribute>` reads a VECTOR counter's entry for the
   transaction's value of that attribute; `... at <attribute> as across` the sum of its entries; `... at <attribute>
-  as unique` the number of entries it holds); `transaction_value "<name>"` an activity-level value.
+  as unique` the number of entries it holds; a key worked out by a value goes in parentheses: `at (<value>)`);
+  `transaction_value "<name>"` an activity-level value.
 - `card <card> <attribute>` a co-branded card's attribute, `card <card> transaction <attribute>` of the card used in
   the transaction, `card <card> any <attribute>` of any of the member's cards of that kind; `card active == <card>`
   (or `in [..]`) whether the member holds the card.
 - `bank_account any|transaction <attribute>`, `subscription <plan> <attribute>`, `partner <programme> <attribute>`.
 - `tier <tier programme> == <tier>`.
 - `third_party <who> profile <attribute>` a third party's member attribute.
+- `member <group> <attribute>` an attribute of a member group the tenant added (`member vehicle_details vehicle_type`).
 A date's part is written after the attribute: `h_bit_date.DAY_OF_WEEK`, `.DATE`, `.CALENDAR_DATE` (the day and month
 in any year), `.MONTH`, `.YEAR`, `.DAY_OF_MONTH`, `.DAY_OF_YEAR`, `.WEEK_OF_YEAR`, `.HOUR_OF_DAY`, `.MINUTE_OF_HOUR`.
 A date counter takes its part the same way, after its name: `counter "Last reward day".DATE != activity.h_bit_date.DATE`.
 A date compared as a whole date is written with `.DATE` on both sides.
 Operators: `== != > >= < <= in not_in between null not_null match not_match`.
 Values: a catalog code or its name (`SPEND` or `Spend`; a name with spaces in quotes: `"HDFC Sliver"`); a list
-`in [A, B]`; a number; a date `2026-03-08`; `between 50 and 99.99`; any other value in parentheses. `null` and
+`in [A, B]`; a number; a date `2026-03-08`; a date with its time of day `datetime("2026-03-08 10:30 AM")`;
+`between 50 and 99.99`; any other value in parentheses. `null` and
 `not_null` take no value. Cards, plans and programmes are named by their id or their name from the tenant catalog.
 
 ## Values
@@ -71,7 +74,12 @@ A number, `"text"`, a date, `activity.<attribute>` (with a part: `activity.h_bit
 - `update_attribute "<counter>" INCREMENT_BY|DECREMENT_BY|SET <value>`, `update_attribute "<counter>" RESET`;
   a VECTOR counter's entry: `update_attribute "<counter>" at <attribute> INCREMENT_BY 1`.
 - `update_attribute profile <attribute> = <code>` sets a member attribute.
-- `give_privilege privilege=<id> policy=<usage policy id> validity=product_validity quantity=<value>`.
+- `give_privilege privilege=<id> policy=<usage policy id> validity=product_validity quantity=<value>`; with its own
+  dates `validity=custom_validity valid_from=(<date>) valid_to=(<date>)`; a privilege with a value `amount=<value>`.
+- `take_points account=<id> <value>`, `return_points account=<id> <value>`, `reset_points account=<id>`,
+  `expire_points account=<id> tag_operator=IN tags=<tag>`, `for <third party> transfer_points account=<id> <value>`.
+- `assign_sweepstakes sweepstake=<id> <entries>`,
+  `assign_play_win_reward game=SCRATCH_CARD|SPIN_THE_WHEEL setup=<id> policy=<id> <quantity>`.
 - `for <third party> give_points ...` gives to a third party.
 - Any other action of the reference: `<action_type> <field>=<value> ...` with the reference's own field names.
 A block no form above covers can be written whole: `block <type>(<field>=<value>, <input>=(<value>))`.

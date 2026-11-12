@@ -46,12 +46,15 @@ Conditions, `[if] <subject> <attribute>[.PART] <operator> [<right>] [and <right>
 
 Actions, `[for <third party>] <action> ...`: `give_points [account=.. tag=..] <value>`,
 `update_attribute "<counter>" [at <key>] <INCREMENT_BY | SET | RESET ...> [<value>]`,
-`update_attribute [profile] <name> = <value>`, `give_privilege privilege=.. policy=.. validity=.. quantity=..`,
-any other action with `key=value`.
+`update_attribute [profile] <name> = <value>`, `give_privilege privilege=.. policy=.. validity=.. quantity=..`
+(`amount=`, `kind=`, `valid_from=`, `valid_to=`), `expire_points account=.. tag_operator=.. tags=..`,
+`transfer_points account=.. <value>`, `assign_play_win_reward game=.. setup=.. policy=.. <value>`,
+`assign_sweepstakes sweepstake=.. <value>`, any other action with `key=value` (ACTION_ALIASES: each action's words).
 
 Values: numbers, `"text"`, dates, `activity.<attr>[.PART]`, `profile.<attr>[.PART]`, `counter."<name>"`,
 `transaction_value."<name>"`, `product.<attr>`, `payment.<attr>`, `airport_pair.<attr>`, `today[.PART]`,
-`rate(<conversion>[, <account>])`, `setting(<name>)`, `(a op b)`, `(date + 1 DAYS)`, `$def`.
+`rate(<conversion>[, <account>])`, `setting(<name>)`, `datetime(<date and time>)`, `(a op b)`, `(date + 1 DAYS)`,
+`$def`.
 
 Anything the forms above cannot say exactly is written as the block itself: `block type(key=value, key=(block))`.
 Every line `to_lines` writes is compiled back and compared with its block before it is kept, so the lines never
@@ -70,7 +73,7 @@ from ..vocabulary import ACTIVE_CARD_FIELDS, ACTIVE_CARDS, LEVEL_FIELD_ORDER, LE
 
 Block = dict[str, Any]
 
-FORM = "4"  # the line form's version: stored lines of another form are written again (harvest, migration)
+FORM = "5"  # the line form's version: stored lines of another form are written again (harvest, migration)
 RULE_TYPES = ("rule", "rule_line", "payment_rule")
 PAYMENT = "payment"
 MEMBER = "member"  # a member attribute whose level the compose step fills, or `member [<level code>]` for any level
@@ -127,8 +130,8 @@ PARTS = (
     "MINUTE_OF_HOUR",
 )
 FIELD_VALUED = ("LOOKUP", "LOV")  # attribute types whose compared value is a code in a field, never a value block
-NUMBER = re.compile(r"-?\d+(\.\d+)?")
-DATE = re.compile(r"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?")
+NUMBER = re.compile(r"-?(\d+(\.\d+)?|\.\d+)")
+DATE = re.compile(r"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?")
 BARE = re.compile(r"[^\s()\[\]{},\"=]+")
 OPTION = re.compile(r"([A-Za-z_]\w*)=(.*)", re.S)
 LABEL = re.compile(r"(rule_line|payment_rule|rule)_(\d+)")
@@ -162,6 +165,7 @@ VALUE_WORDS: dict[str, tuple[str, dict[str, str], str]] = {
     **{w: ("member_attribute", {"ATTRIBUTE_TYPE": code}, "ATTRIBUTE") for code, w in LEVEL_WORDS.items()},
 }
 TODAY = "today"  # current_date_block: the date (today) or one part of it (today.MONTH)
+DATETIME = "datetime"  # static_date_time: a date with its time of day, as the screen keeps it
 RATE, SETTING = "rate", "setting"  # currency_converter(conversion_type[, LOYALTY_ACCOUNT]); blueprint_variable
 
 # Short names for action fields a manager reads (the block's own field name otherwise).
@@ -174,8 +178,39 @@ ALIASES = {
     "previlege_Validity": "validity",
     "PRIVILEGE_QUANTITY": "quantity",
 }
-UNALIAS = {v: k for k, v in ALIASES.items()}
-BLOCK_OPTIONS = ("PRIVILEGE_QUANTITY",)  # options that hold a value block: a bare number there is a number block
+# The same for the fields only one action has: {action: {field: its word}}; these win over ALIASES for that action.
+ACTION_ALIASES: dict[str, dict[str, str]] = {
+    "give_privilege": {
+        "PRIVILEGE": "amount",  # a dynamic privilege's value
+        "PRIVILEGE_types": "kind",  # the privilege picked by a value (a program setting)
+        "Privilege_Quantity": "fixed_quantity",  # the quantity kept as a field (older canvases)
+        "VALIDITY_START_DATE": "valid_from",
+        "VALIDITY_END_DATE": "valid_to",
+    },
+    "expire_points": {
+        "SELECTED_EXPIRE_LOYALTY_ACC": "account",
+        "SELECTED_EXP_OPERATOR": "tag_operator",
+        "picked": "tags",
+    },
+    "transfer_points": {"Transfer_P_L": "account"},
+    "assign_play_win_reward": {"playwintype": "game", "playwinsetup": "setup", "playwinusagepolicy": "policy"},
+    "assign_sweepstakes": {"sweepstakeid": "sweepstake"},
+}
+ACTION_VALUES = {"transfer_points": "TransferPoints"}  # the value input an action's line ends with (FORMULA otherwise)
+
+
+def aliases(kind: Any) -> dict[str, str]:
+    """{field: its word} on a line of this action."""
+    return {**ALIASES, **ACTION_ALIASES.get(str(kind), {})}
+
+
+def unaliases(kind: Any) -> dict[str, str]:
+    """{word: the field it names} on a line of this action (an action's own word wins over the shared one)."""
+    return {**{v: k for k, v in ALIASES.items()}, **{v: k for k, v in ACTION_ALIASES.get(str(kind), {}).items()}}
+
+
+# options that hold a value block: a bare number there is a number block
+BLOCK_OPTIONS = ("PRIVILEGE_QUANTITY", "PRIVILEGE")
 ACTION_TYPES = ("action", "action_third_party")
 COUNTER_TYPES = {"number": "NUMBER", "text": "TEXT", "date": "DATE"}
 COUNTER_DEFAULT_TARGET = {"MA_O": "NO TARGET"}  # what the screen saves for a counter with no target
@@ -284,8 +319,20 @@ def _ref(attr: Any) -> str:
 
 def _vector_key(n: Block) -> list[str]:
     """`at <key>` of a vector counter, `as <name>` when the key is shown under another name."""
-    name, key = n["vector_counter_name"], n["vector_counter_namespace"]
-    return ["at", val(key)] + (["as", val(name)] if name != key else [])
+    name, key = n.get("vector_counter_name"), n.get("vector_counter_namespace")
+    if key is None:
+        return ["as", val(name)]
+    return ["at", val(key)] + (["as", val(name)] if name != key and name is not None else [])
+
+
+def _keyed(n: Block) -> tuple[list[str], set[str]] | None:
+    """The `at` / `as` words of a vector counter's key held in fields, and the keys they say (None: no such key)."""
+    said = {k for k in ("vector_counter_name", "vector_counter_namespace") if k in n}
+    if not said or any(isinstance(n[k], (dict, list)) for k in said):
+        return None
+    if said == {"vector_counter_namespace"}:  # a key with no name is not what `at <key>` reads back to
+        return None
+    return _vector_key(n), said
 
 
 def _extra(n: Block, own: tuple[str, ...]) -> list[str]:
@@ -312,8 +359,11 @@ class _Writer:
     def options(self, n: Block, keys: list[str], alias: bool = False) -> list[str]:
         """`key=value` for each key: a block in parentheses, a list in brackets."""
         out = []
+        words, back = (aliases(n.get("action_type")), unaliases(n.get("action_type"))) if alias else ({}, {})
         for k in keys:
-            v, name = n[k], (ALIASES.get(k, k) if alias else k)
+            v, name = n[k], words.get(k, k)
+            if back.get(name, k) != k:  # two fields with one word: the one the word does not read back to keeps its own
+                name = k
             if isinstance(v, dict):
                 s = self.expr(v)
                 bare = alias and k in BLOCK_OPTIONS and NUMBER.fullmatch(s)
@@ -344,6 +394,8 @@ class _Writer:
             return json.dumps(str(n["value"]), ensure_ascii=False)
         if t == "static_date" and _only(n, {"value"}) and DATE.fullmatch(str(n["value"])):
             return str(n["value"])
+        if t == "static_date_time" and _only(n, {"value"}):
+            return f"{DATETIME}({val(n['value'])})"
         if t == "current_date_block" and _only(n, {"current_date_type"}):
             part = n["current_date_type"]
             return TODAY if part == "DATE" else f"{TODAY}.{part}"
@@ -377,6 +429,10 @@ class _Writer:
             s, done = f"{s}.{n[part]}", done | {part}
         rest = [k for k in n if k not in done and k != "type"]
         return s + ("{" + ", ".join(self.options(n, rest)) + "}" if rest else "")
+
+    def _in_parens(self, n: Block) -> str:
+        s = self.expr(n)
+        return s if s.startswith("(") else f"({s})"
 
     def right(self, n: Block) -> str:
         """A value block as a condition's right side or an action's value: text goes in parentheses."""
@@ -475,7 +531,7 @@ class _Writer:
             if level not in COUNTER_LEVELS:
                 return None
         if level not in LEVEL_WORDS:
-            return f"{MEMBER} [{val(level)}] {val(attr)}", LEVEL_LISTS.get(str(level)), done
+            return f"{MEMBER} {val(level)} {val(attr)}", LEVEL_LISTS.get(str(level)), done
         words = [LEVEL_WORDS[level]]
         if "pick" in u:
             names = self.cx.names(PICKERS.get(level))
@@ -488,9 +544,13 @@ class _Writer:
             done.add("scope")
         if attr != ACTIVE_CARDS_ATTRIBUTE:
             words.append(val(attr))
-        if level in COUNTER_LEVELS and "vector_counter_name" in u and "vector_counter_namespace" in u:
-            words += _vector_key(u)
-            done |= {"vector_counter_name", "vector_counter_namespace"}
+        keyed = _keyed(u) if level in COUNTER_LEVELS else None
+        if keyed is not None:
+            words += keyed[0]
+            done |= keyed[1]
+        elif level in COUNTER_LEVELS and isinstance(u.get("vector_counter_namespace"), dict):
+            words += ["at", self._in_parens(u["vector_counter_namespace"])]  # a key worked out by a value
+            done.add("vector_counter_namespace")
         if level == TIER_LEVEL and u.get(TIER_DEFAULT[0]) == TIER_DEFAULT[1]:
             done.add(TIER_DEFAULT[0])
         return " ".join(words), LEVEL_LISTS.get(level), done
@@ -528,16 +588,20 @@ class _Writer:
             return None
         parts = [f"for {val(n['third_parties_dropdown'])}"] if t == "action_third_party" else []
         parts.append(str(kind))
-        done, last = {"type", "action_type", "third_parties_dropdown"}, "FORMULA"
+        done, last = {"type", "action_type", "third_parties_dropdown"}, ACTION_VALUES.get(str(kind), "FORMULA")
         if kind == "update_attribute" and "mta_attribute" in n:
             done.add("mta_attribute")
             if n.get("mta_type_value") in LEVEL_WORDS:
                 parts.append(LEVEL_WORDS[n["mta_type_value"]])
                 done.add("mta_type_value")
             parts.append(val(n["mta_attribute"]))
-            if "vector_counter_name" in n and "vector_counter_namespace" in n:
-                parts += _vector_key(n)
-                done |= {"vector_counter_name", "vector_counter_namespace"}
+            keyed = _keyed(n)
+            if keyed is not None:
+                parts += keyed[0]
+                done |= keyed[1]
+            elif isinstance(n.get("vector_counter_namespace"), dict):
+                parts += ["at", self._in_parens(n["vector_counter_namespace"])]  # a key worked out by a value
+                done.add("vector_counter_namespace")
             if n.get("action_operator"):
                 parts.append(val(n["action_operator"]))
                 done.add("action_operator")
@@ -559,6 +623,9 @@ class _Writer:
     # -- counters
     def counter(self, c: dict[str, Any]) -> str:
         """A counter line's body."""
+        default = COUNTER_DEFAULT_TARGET.get(str(c.get("level")))
+        if self.cx.brief and "target_type" not in c and default is not None:
+            c = {**c, "target_type": default}  # the screen saves a counter with no target the same
         s = self._counter(c)
         if s is not None:
             try:
@@ -807,8 +874,9 @@ def from_uniform(m: Block) -> Block:
 # ---- reading ---------------------------------------------------------------------------------------------------------
 @dataclass
 class _Tok:
-    kind: str  # str | punct | word | level
+    kind: str  # str | punct | word | level | block
     text: str
+    block: Block | None = None  # kind block: a value in parentheses before the operator (a vector counter's key)
 
 
 def tokens(s: str) -> list[_Tok]:
@@ -992,6 +1060,8 @@ class _Reader:
             n = {"type": "blueprint_variable", "BLUEPRINT_ATTRIBUTE_TYPE": self.scalar()}
         elif w == "date":
             n = {"type": "static_date", "value": self.scalar()}
+        elif w == DATETIME:
+            n = {"type": "static_date_time", "value": self.scalar()}
         else:
             n = {"type": w}
             self.pairs(n, ")")
@@ -1044,7 +1114,9 @@ class _Reader:
                 raise ValueError(expected)
             if tok.kind == "word" and tok.text in OPERATORS:
                 return out
-            if tok.kind == "punct":
+            if tok.kind == "punct" and tok.text == "(" and out and out[-1].kind == "word" and out[-1].text == "at":
+                out.append(_Tok("block", "(", self.expression()))
+            elif tok.kind == "punct":
                 if tok.text != "[":
                     raise ValueError(f"{expected}, found {tok.text!r}")
                 self.i += 1
@@ -1085,7 +1157,7 @@ def _subject(pre: list[_Tok], filter_line: bool, cx: Context) -> tuple[Block, st
         lst = _object_subject(n, word, pre)
     elif word == MEMBER:
         lst = "member"
-        if pre and pre[0].kind == "level":
+        if pre and (pre[0].kind == "level" or len(pre) == 2):  # `member <group> <attribute>`: a level of its own
             n["attribute_level"] = pre.pop(0).text
             lst = LEVEL_LISTS.get(n["attribute_level"])
         n["attribute"] = _take(pre, "an attribute")
@@ -1161,10 +1233,13 @@ def _counter_subject(n: Block, level: str, pre: list[_Tok], cx: Context) -> None
     n["attribute"] = name
     if _is(pre, "at"):
         pre.pop(0)
-        n["vector_counter_name"] = n["vector_counter_namespace"] = _take(pre, "the counter's key")
-        if _is(pre, "as"):
-            pre.pop(0)
-            n["vector_counter_name"] = _take(pre, "the key's name")
+        if pre and pre[0].kind == "block":
+            n["vector_counter_namespace"] = pre.pop(0).block
+        else:
+            n["vector_counter_name"] = n["vector_counter_namespace"] = _take(pre, "the counter's key")
+    if _is(pre, "as"):
+        pre.pop(0)
+        n["vector_counter_name"] = _take(pre, "the key's name")
 
 
 def _condition(r: _Reader, filter_line: bool, cx: Context) -> Block:
@@ -1242,7 +1317,7 @@ def _rest(r: _Reader, n: Block, alias: bool, last: str | None = None) -> None:
             if not r.done():
                 raise ValueError("a value ends the line")
             return
-        key = UNALIAS.get(kv[0], kv[0]) if alias else kv[0]
+        key = unaliases(n.get("action_type")).get(kv[0], kv[0]) if alias else kv[0]
         value = kv[1]
         if alias and key in BLOCK_OPTIONS and isinstance(value, str) and NUMBER.fullmatch(value):
             value = {"type": "static_value", "value": value}
@@ -1258,7 +1333,7 @@ def _action(r: _Reader, cx: Context) -> Block:
     if kind in RESERVED:
         raise ValueError(f"expected an action (give_points, update_attribute, give_privilege, ...), found {kind!r}")
     n["action_type"] = kind
-    last = "FORMULA"
+    last = ACTION_VALUES.get(kind, "FORMULA")
     if kind == "update_attribute" and not r.done() and not r.at_option() and not r.starts_value():
         tok = r.peek()
         if tok is not None and tok.kind == "word" and tok.text in WORD_LEVELS:
@@ -1266,10 +1341,13 @@ def _action(r: _Reader, cx: Context) -> Block:
         n["mta_attribute"] = r.scalar()
         if r.at("word", "at"):
             r.i += 1
-            n["vector_counter_name"] = n["vector_counter_namespace"] = r.scalar()
-            if r.at("word", "as"):
-                r.i += 1
-                n["vector_counter_name"] = r.scalar()
+            if r.at("punct", "("):
+                n["vector_counter_namespace"] = r.expression()
+            else:
+                n["vector_counter_name"] = n["vector_counter_namespace"] = r.scalar()
+        if r.at("word", "as"):
+            r.i += 1
+            n["vector_counter_name"] = r.scalar()
         if r.at("word", "="):
             r.i += 1
             last = "RHS_INPUT"

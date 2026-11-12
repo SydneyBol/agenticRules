@@ -491,3 +491,78 @@ def test_a_calendar_date_and_a_date_counter_take_their_part_after_the_name():
     )
     assert once["date_operator"] == "DATE" and once["attribute"] == "Last reward day"
     assert dsl.to_lines(tops, counters) == text  # written back in the same words, no raw field names
+
+
+NATURAL_FORMS = [
+    # (the line, where its block sits, what the block holds)
+    (
+        'rule_1, if activity h_bit_date >= datetime("2026-03-08 10:30 AM")',
+        "CONDITION",
+        {"RHS_INPUT": {"type": "static_date_time", "value": "2026-03-08 10:30 AM"}},
+    ),
+    (
+        "rule_1, if activity h_bit_date >= 2026-07-01T00:00:00Z",
+        "CONDITION",
+        {"RHS_INPUT": {"type": "static_date", "value": "2026-07-01T00:00:00Z"}},
+    ),
+    ("rule_1, give_points (.01 * activity.l_amount)", "ACTION", {"action_type": "give_points"}),
+    (
+        "rule_1, if member vehicle_details vehicle_type == TWO_WHEELER",
+        "CONDITION",
+        {"attribute_level": "vehicle_details", "attribute": "vehicle_type", "value": "TWO_WHEELER"},
+    ),
+    (
+        "rule_1, give_privilege privilege=259 policy=191 validity=custom_validity amount=100 quantity=1"
+        " valid_from=(activity.h_bit_date.DATE) valid_to=(activity.h_bit_date.DATE + 120 DAYS)",
+        "ACTION",
+        {"PRIVILEGE": {"type": "static_value", "value": "100"}, "VALIDITY_START_DATE": ..., "VALIDITY_END_DATE": ...},
+    ),
+    (
+        "rule_1, give_privilege kind=(setting(voucher_1)) fixed_quantity=1",
+        "ACTION",
+        {
+            "PRIVILEGE_types": {"type": "blueprint_variable", "BLUEPRINT_ATTRIBUTE_TYPE": "voucher_1"},
+            "Privilege_Quantity": "1",
+        },
+    ),
+    (
+        "rule_1, expire_points account=1 tag_operator=IN tags=BASE",
+        "ACTION",
+        {"SELECTED_EXPIRE_LOYALTY_ACC": "1", "SELECTED_EXP_OPERATOR": "IN", "picked": "BASE"},
+    ),
+    (
+        "rule_1, for TRANSFEREE transfer_points account=2 activity.h_bit_amount",
+        "ACTION",
+        {"Transfer_P_L": "2", "TransferPoints": {"type": "activity_attribute", "ATTRIBUTE": "h_bit_amount"}},
+    ),
+    (
+        "rule_1, assign_play_win_reward game=SCRATCH_CARD setup=1 policy=1 1",
+        "ACTION",
+        {"playwintype": "SCRATCH_CARD", "playwinsetup": "1", "playwinusagepolicy": "1"},
+    ),
+    ("rule_1, assign_sweepstakes sweepstake=3 10", "ACTION", {"sweepstakeid": "3"}),
+    (
+        'rule_1, update_attribute Bought at (activity.l_product_external_id) INCREMENT_BY 1',
+        "ACTION",
+        {"vector_counter_namespace": {"type": "activity_attribute", "ATTRIBUTE": "l_product_external_id"}},
+    ),
+    (
+        'rule_1, if transaction_value Bought at (activity.l_product_external_id) < 1',
+        "CONDITION",
+        {"vector_counter_namespace": {"type": "activity_attribute", "ATTRIBUTE": "l_product_external_id"}},
+    ),
+    ('rule_1, if counter "Stores visited" as unique >= 3', "CONDITION", {"vector_counter_name": "unique"}),
+]
+
+
+@pytest.mark.parametrize("line, where, holds", NATURAL_FORMS, ids=[c[0].split(", ", 1)[1][:40] for c in NATURAL_FORMS])
+def test_every_block_has_a_line_of_its_own(line, where, holds):
+    """No whole-block form, no field name of the screen: the line reads to the block and is written back as it was."""
+    tops, counters, _ = dsl.from_lines(line)
+    block = tops[0]["activities"][0]["RULES"][0][where][0]
+    for key, value in holds.items():
+        assert key in block and (value is ... or block[key] == value), (key, block)
+    assert "vector_counter_name" in block or "as unique" not in line
+    written = dsl.to_lines(tops, counters).splitlines()[-1]
+    assert written == line.replace("rule_1,", written.split(",", 1)[0] + ",", 1), written
+    assert " block " not in written and "{" not in written
