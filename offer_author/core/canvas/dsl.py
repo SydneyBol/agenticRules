@@ -56,6 +56,10 @@ Values: numbers, `"text"`, dates, `activity.<attr>[.PART]`, `profile.<attr>[.PAR
 `rate(<conversion>[, <account>])`, `setting(<name>)`, `datetime(<date and time>)`, `(a op b)`, `(date + 1 DAYS)`,
 `$def`.
 
+Saved canvases that are not finished keep a line too: `if activity adjustment_type` (no operator picked yet),
+`transaction_value.-` (no attribute picked), `at <key> as -` (a vector key with no name), a counter typed `undefined`.
+Without a catalog, `date_kind, <list> <attribute> DATE|DATETIME` says which field a date part sits in when the default
+would put it in the other one (the writer adds it; with a catalog the attribute's type decides).
 Anything the forms above cannot say exactly is written as the block itself: `block type(key=value, key=(block))`.
 Every line `to_lines` writes is compiled back and compared with its block before it is kept, so the lines never
 lose anything the tree holds.
@@ -73,7 +77,7 @@ from ..vocabulary import ACTIVE_CARD_FIELDS, ACTIVE_CARDS, LEVEL_FIELD_ORDER, LE
 
 Block = dict[str, Any]
 
-FORM = "5"  # the line form's version: stored lines of another form are written again (harvest, migration)
+FORM = "6"  # the line form's version: stored lines of another form are written again (harvest, migration)
 RULE_TYPES = ("rule", "rule_line", "payment_rule")
 PAYMENT = "payment"
 MEMBER = "member"  # a member attribute whose level the compose step fills, or `member [<level code>]` for any level
@@ -129,6 +133,8 @@ PARTS = (
     "HOUR_OF_DAY",
     "MINUTE_OF_HOUR",
 )
+PART_FIELDS = ("date_operator", "datetime_operator")  # where a block keeps the date part it compares
+DATE_KINDS = {"date_operator": "DATE", "datetime_operator": "DATETIME"}
 FIELD_VALUED = ("LOOKUP", "LOV")  # attribute types whose compared value is a code in a field, never a value block
 NUMBER = re.compile(r"-?(\d+(\.\d+)?|\.\d+)")
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?")
@@ -167,6 +173,8 @@ VALUE_WORDS: dict[str, tuple[str, dict[str, str], str]] = {
 TODAY = "today"  # current_date_block: the date (today) or one part of it (today.MONTH)
 DATETIME = "datetime"  # static_date_time: a date with its time of day, as the screen keeps it
 RATE, SETTING = "rate", "setting"  # currency_converter(conversion_type[, LOYALTY_ACCOUNT]); blueprint_variable
+NO_NAME = "-"  # `at <key> as -`: a vector counter's key with no name of its own; `<word>.-`: no attribute picked
+DATE_KIND = "date_kind"  # `date_kind, <list> <attribute> DATE|DATETIME`: the attribute's type, when no catalog says
 
 # Short names for action fields a manager reads (the block's own field name otherwise).
 ALIASES = {
@@ -214,6 +222,7 @@ BLOCK_OPTIONS = ("PRIVILEGE_QUANTITY", "PRIVILEGE")
 ACTION_TYPES = ("action", "action_third_party")
 COUNTER_TYPES = {"number": "NUMBER", "text": "TEXT", "date": "DATE"}
 COUNTER_DEFAULT_TARGET = {"MA_O": "NO TARGET"}  # what the screen saves for a counter with no target
+COUNTER_UNTYPED = ("undefined",)  # a counter saved before its type was picked: the screen keeps the word itself
 
 
 class DslError(ValueError):
@@ -241,6 +250,8 @@ class Context:
     defs: dict[str, Block] = field(default_factory=dict)
     brief: bool = False
     ids: bool = False
+    kinds: dict[tuple[str, str], str] = field(default_factory=dict)  # date_kind lines: (list, code) -> part field
+    seen: dict[tuple[str, str], set[tuple[str, str]]] = field(default_factory=dict)  # writing: (used, expected)
 
     def attr(self, lst: str | None, code: Any) -> Any:
         """The catalog's attribute, or None."""
@@ -253,15 +264,25 @@ class Context:
         a = self.attr(lst, code)
         return a is not None and a.type in FIELD_VALUED
 
-    def part_field(self, lst: str | None, code: Any, member: bool = False) -> str:
+    def part_field(self, lst: str | None, code: Any, member: bool = False, own: str | None = None) -> str:
         """The field a date part of the attribute is kept in.
 
         The attribute's type decides (date_operator for a DATE, datetime_operator for a DATETIME); when the catalog
         does not say, a member's own value keeps it in date_operator and a transaction's in datetime_operator.
         """
+        declared = self.kinds.get((own or lst or "", str(code)))
+        if declared is not None:
+            return declared
         a = self.attr(lst, code)
         kind = a.type if a is not None and a.type in ("DATE", "DATETIME") else ("DATE" if member else "DATETIME")
         return "date_operator" if kind == "DATE" else "datetime_operator"
+
+    def used(self, own: str | None, code: Any, n: Block, expected: str) -> None:
+        """Writing: note the field the block keeps a date part of this attribute in, and the one its type gives."""
+        if own and isinstance(code, str):
+            for f in PART_FIELDS:
+                if n.get(f) in PARTS:
+                    self.seen.setdefault((own, code), set()).add((f, expected))
 
     def names(self, lst: str | None, code: Any = None) -> dict[str, str]:
         """{code: name} of an attribute's values (lst, code) or of a picker list (lst alone)."""
@@ -322,15 +343,24 @@ def _vector_key(n: Block) -> list[str]:
     name, key = n.get("vector_counter_name"), n.get("vector_counter_namespace")
     if key is None:
         return ["as", val(name)]
-    return ["at", val(key)] + (["as", val(name)] if name != key and name is not None else [])
+    if name is None:  # a key the screen keeps with no name of its own
+        return ["at", val(key), "as", NO_NAME]
+    return ["at", val(key)] + (["as", val(name)] if name != key else [])
+
+
+def _own(lst: str | None, subject: str) -> str:
+    """The list a date_kind line names an attribute by: the catalog list, else the subject's first word."""
+    return lst or (subject.split(" ", 1)[0] if subject else "")
+
+
+def _subject_text(words: list[str]) -> str:
+    return " ".join(words)
 
 
 def _keyed(n: Block) -> tuple[list[str], set[str]] | None:
     """The `at` / `as` words of a vector counter's key held in fields, and the keys they say (None: no such key)."""
     said = {k for k in ("vector_counter_name", "vector_counter_namespace") if k in n}
     if not said or any(isinstance(n[k], (dict, list)) for k in said):
-        return None
-    if said == {"vector_counter_namespace"}:  # a key with no name is not what `at <key>` reads back to
         return None
     return _vector_key(n), said
 
@@ -415,20 +445,44 @@ class _Writer:
         dated = t == "arithmetic_date" and _only(n, {"operator", "number", "date_quantity", "LHS"}) and blocks
         if dated and n["operator"] in ("+", "-"):
             return f"({self.expr(n['LHS'])} {n['operator']} {n['number']} {n['date_quantity']})"
+        return self._value_word(n)
+
+    def _value_word(self, n: Block) -> str | None:
+        """`<word>.<attribute>` of an attribute value block, `<word>.-` when no attribute is picked yet."""
+        t = n.get("type")
         for word, (kind, fixed, key) in VALUE_WORDS.items():
             if t == kind and key in n and all(n.get(k) == v for k, v in fixed.items()):
                 return self._attribute(n, word, fixed, key)
+        for word, (kind, fixed, key) in VALUE_WORDS.items():
+            if t == kind and key not in n and set(n) == {"type", *fixed} and all(n[k] == v for k, v in fixed.items()):
+                return f"{word}.{NO_NAME}"
         return None
 
     def _attribute(self, n: Block, word: str, fixed: dict[str, str], key: str) -> str:
         """`<word>.<attribute>[.PART]{other fields}`."""
         s, done = f"{word}.{_ref(n[key])}", {key, *fixed}
         lst = "activity" if word == "activity" else LEVEL_LISTS.get(fixed.get("ATTRIBUTE_TYPE", ""))
-        part = "date_operator" if n.get("type") == "member_attribute" else self.cx.part_field(lst, n[key])
+        part = "date_operator" if n.get("type") == "member_attribute" else self.cx.part_field(lst, n[key], own=word)
+        if n.get("type") != "member_attribute":
+            self.cx.used(word, n[key], n, part)
         if n.get(part) in PARTS:
             s, done = f"{s}.{n[part]}", done | {part}
         rest = [k for k in n if k not in done and k != "type"]
+        tested = self._tested(n, rest)
+        if tested is not None:
+            return s + "{" + tested + "}"
         return s + ("{" + ", ".join(self.options(n, rest)) + "}" if rest else "")
+
+    @staticmethod
+    def _tested(n: Block, rest: list[str]) -> str | None:
+        """`<operator> [codes]` or `<operator> <code>` of a value block that holds a test of its own (a payment's)."""
+        if set(rest) not in ({"operators", "picked"}, {"operators", "value"}) or n["operators"] not in OPERATORS:
+            return None
+        if any(not isinstance(n[k], str) for k in rest):
+            return None
+        if "picked" in n:
+            return f"{n['operators']} [" + ", ".join(fval(c) for c in n["picked"].split(",")) + "]"
+        return f"{n['operators']} {fval(n['value'])}"
 
     def _in_parens(self, n: Block) -> str:
         s = self.expr(n)
@@ -472,11 +526,17 @@ class _Writer:
             done = found[2] | {"type", "operators"}
         else:
             return None
-        if u.get("operators") not in OPERATORS:
+        unfinished = u.get("operators") == "" and not set(u) - done - {"type"}  # a condition with no operator picked
+        if u.get("operators") not in OPERATORS and not unfinished:
             return None
         attr = u.get("attribute", u.get("payment_attribute"))
-        part = self.cx.part_field(lst, attr, t != "if_payment_attribute" and "OBJECT" not in u)
+        own = _own(lst, subject)
         named = subject.endswith(" " + str(attr)) or subject.endswith(" " + val(attr))  # a counter's name is quoted
+        part = self.cx.part_field(lst, attr, t != "if_payment_attribute" and "OBJECT" not in u, own)
+        if named:
+            self.cx.used(own, attr, u, part)
+        if unfinished:
+            return subject
         if u.get(part) in PARTS and attr != ACTIVE_CARDS_ATTRIBUTE and named:
             subject, done = f"{subject}.{u[part]}", done | {part}
         parts = [subject, str(u["operators"]), *self._right(u, lst, attr, done)]
@@ -590,28 +650,7 @@ class _Writer:
         parts.append(str(kind))
         done, last = {"type", "action_type", "third_parties_dropdown"}, ACTION_VALUES.get(str(kind), "FORMULA")
         if kind == "update_attribute" and "mta_attribute" in n:
-            done.add("mta_attribute")
-            if n.get("mta_type_value") in LEVEL_WORDS:
-                parts.append(LEVEL_WORDS[n["mta_type_value"]])
-                done.add("mta_type_value")
-            parts.append(val(n["mta_attribute"]))
-            keyed = _keyed(n)
-            if keyed is not None:
-                parts += keyed[0]
-                done |= keyed[1]
-            elif isinstance(n.get("vector_counter_namespace"), dict):
-                parts += ["at", self._in_parens(n["vector_counter_namespace"])]  # a key worked out by a value
-                done.add("vector_counter_namespace")
-            if n.get("action_operator"):
-                parts.append(val(n["action_operator"]))
-                done.add("action_operator")
-                last = "RHS_INPUT_VALUE"
-            elif isinstance(n.get("RHS_INPUT"), dict):
-                parts.append("=")
-                last = "RHS_INPUT"
-            elif "value" in n and not isinstance(n["value"], (dict, list)):
-                parts += ["=", fval(n["value"])]
-                done.add("value")
+            last = self._updated(n, parts, done)
         tail = n.get(last) if isinstance(n.get(last), dict) else None
         if tail is not None:
             done.add(last)
@@ -619,6 +658,36 @@ class _Writer:
         if tail is not None:
             parts.append(self.right(tail))
         return " ".join(parts)
+
+    def _updated(self, n: Block, parts: list[str], done: set[str]) -> str:
+        """An update_attribute's counter or attribute, key and operator; returns the value input it ends with."""
+        last = "FORMULA"
+        done.add("mta_attribute")
+        if n.get("mta_type_value") in LEVEL_WORDS:
+            parts.append(LEVEL_WORDS[n["mta_type_value"]])
+            done.add("mta_type_value")
+        parts.append(val(n["mta_attribute"]))
+        keyed = _keyed(n)
+        if keyed is not None:
+            parts += keyed[0]
+            done |= keyed[1]
+        elif isinstance(n.get("vector_counter_namespace"), dict):
+            parts += ["at", self._in_parens(n["vector_counter_namespace"])]  # a key worked out by a value
+            done.add("vector_counter_namespace")
+        if n.get("action_operator"):
+            parts.append(val(n["action_operator"]))
+            done.add("action_operator")
+            last = "RHS_INPUT_VALUE"
+        elif isinstance(n.get("RHS_INPUT"), dict):
+            parts.append("=")
+            last = "RHS_INPUT"
+            if isinstance(n.get("value"), str):  # a code left in the field beside the value block
+                parts.append(fval(n["value"]))
+                done.add("value")
+        elif "value" in n and not isinstance(n["value"], (dict, list)):
+            parts += ["=", fval(n["value"])]
+            done.add("value")
+        return last
 
     # -- counters
     def counter(self, c: dict[str, Any]) -> str:
@@ -640,9 +709,10 @@ class _Writer:
     def _counter(c: dict[str, Any]) -> str | None:
         kinds = {v: k for k, v in COUNTER_TYPES.items()}
         level, kind = c.get("level"), c.get("counter_type")
-        if c.get("data_type") not in kinds or level not in ("MA_O", "MA_A") or kind not in ("REGULAR", "VECTOR"):
+        typed = c.get("data_type") in kinds or c.get("data_type") in COUNTER_UNTYPED
+        if not typed or level not in ("MA_O", "MA_A") or kind not in ("REGULAR", "VECTOR"):
             return None
-        parts = [val(c.get("name")), kinds[c["data_type"]]]
+        parts = [val(c.get("name")), kinds.get(c["data_type"], c["data_type"])]
         if kind == "VECTOR":
             if "namespace" not in c:
                 return None
@@ -779,11 +849,29 @@ def split_label(line: str) -> tuple[str, str]:
 
 
 def _print(tops: list[Block], counters: list[dict[str, Any]] | None, catalog: Any, brief: bool) -> _Printer:
+    """The lines; an attribute whose date part sits in a field its type does not give gets a date_kind line first."""
+    first = _print_once(tops, counters, catalog, brief, {})
+    kinds: dict[tuple[str, str], str] = {}
+    for key, pairs in first.w.cx.seen.items():
+        used = {u for u, _ in pairs}
+        if len(used) == 1 and all(u != e for u, e in pairs):  # every use keeps it in the field its type does not give
+            kinds[key] = next(iter(used))
+    if not kinds:
+        return first
+    p = _print_once(tops, counters, catalog, brief, kinds)
+    declared = [f"{DATE_KIND}, {o} {val(c)} {DATE_KINDS[f]}" for (o, c), f in sorted(kinds.items())]
+    p.lines[:0], p.src[:0] = declared, [None] * len(declared)
+    return p
+
+
+def _print_once(
+    tops: list[Block], counters: list[dict[str, Any]] | None, catalog: Any, brief: bool, kinds: dict[Any, str]
+) -> _Printer:
     ids: dict[int, str] = {}
     tops = _without_ids(tops, ids)
     if len(tops) != 1 or tops[0].get("type") != "offer_generic" or _extra(tops[0], ("activities", "events")):
         raise ValueError("the DSL writes one offer_generic root")
-    cx = Context(catalog=catalog, brief=brief)
+    cx = Context(catalog=catalog, brief=brief, kinds=dict(kinds))
     p = _Printer(_Writer(cx), ids=ids)
     for c in counters or []:
         p.add("counter, " + p.w.counter(c))
@@ -1085,9 +1173,12 @@ class _Reader:
             if nxt is not None and nxt.kind == "word" and nxt.text[:1] == "." and nxt.text[1:] in PARTS:
                 part = self.take().text[1:]
         n: Block = {"type": kind, **fixed, key: attr}
+        if attr == NO_NAME and part is None:  # no attribute picked yet
+            del n[key]
+            return n
         if part is not None:
             lst = "activity" if word == "activity" else LEVEL_LISTS.get(fixed.get("ATTRIBUTE_TYPE", ""))
-            n["date_operator" if kind == "member_attribute" else self.cx.part_field(lst, attr)] = part
+            n["date_operator" if kind == "member_attribute" else self.cx.part_field(lst, attr, own=word)] = part
         return self._suffix(n)
 
     def _name(self, rest: str) -> str:
@@ -1101,7 +1192,23 @@ class _Reader:
     def _suffix(self, n: Block) -> Block:
         if self.at("punct", "{"):
             self.i += 1
-            self.pairs(n, "}")
+            tok = self.peek()
+            if tok is not None and tok.kind == "word" and tok.text in OPERATORS:  # `{in [A, B]}`: the block's own test
+                n["operators"] = self.take().text
+                if self.at("punct", "["):
+                    self.i += 1
+                    codes = []
+                    while not self.at("punct", "]"):
+                        codes.append(self.scalar())
+                        if self.at("punct", ","):
+                            self.i += 1
+                    self.i += 1
+                    n["picked"] = ",".join(codes)
+                else:
+                    n["value"] = self.scalar()
+                self.expect("punct", "}")
+            else:
+                self.pairs(n, "}")
         return n
 
     def subject(self) -> list[_Tok]:
@@ -1111,6 +1218,8 @@ class _Reader:
         while True:
             tok = self.peek()
             if tok is None:
+                if len(out) > 1:  # `<subject> <attribute>` and nothing more: no operator picked yet
+                    return out
                 raise ValueError(expected)
             if tok.kind == "word" and tok.text in OPERATORS:
                 return out
@@ -1239,12 +1348,29 @@ def _counter_subject(n: Block, level: str, pre: list[_Tok], cx: Context) -> None
             n["vector_counter_name"] = n["vector_counter_namespace"] = _take(pre, "the counter's key")
     if _is(pre, "as"):
         pre.pop(0)
-        n["vector_counter_name"] = _take(pre, "the key's name")
+        if _is(pre, NO_NAME):
+            pre.pop(0)
+            n.pop("vector_counter_name", None)
+        else:
+            n["vector_counter_name"] = _take(pre, "the key's name")
 
 
 def _condition(r: _Reader, filter_line: bool, cx: Context) -> Block:
     """A condition after its `if` (a Filter line has none)."""
+    n, lst, attr = _subject_part(r, filter_line, cx)
+    if r.done():  # a condition with no operator picked yet
+        n["operators"] = ""
+    else:
+        n["operators"] = r.scalar()
+        _compared(r, n, lst, attr, cx)
+        _rest(r, n, alias=False)
+    return _in_screen_order(from_uniform(n)) if n["type"] != "if_payment_attribute" else n
+
+
+def _subject_part(r: _Reader, filter_line: bool, cx: Context) -> tuple[Block, str | None, Any]:
+    """The condition its subject names, with the date part written after the attribute: (block, list, attribute)."""
     pre = r.subject()
+    pre_words = [t.text for t in pre]
     part = None
     if pre and pre[-1].kind == "word":
         head, dot, last = pre[-1].text.rpartition(".")
@@ -1253,11 +1379,21 @@ def _condition(r: _Reader, filter_line: bool, cx: Context) -> Block:
         elif dot and not head and last in PARTS and len(pre) > 1 and pre[-2].kind == "str":
             part = last  # after a quoted name: counter "Cap Date".DATE
             pre.pop()
-    n, lst = _subject(pre, filter_line, cx)
+    try:
+        n, lst = _subject(pre, filter_line, cx)
+    except ValueError:
+        if r.done():  # no operator: an unfinished condition must still name its subject and attribute exactly
+            raise ValueError(f"expected an operator ({' '.join(OPERATORS)})") from None
+        raise
     attr = n.get("attribute", n.get("payment_attribute"))
     if part is not None:
-        n[cx.part_field(lst, attr, n["type"] != "if_payment_attribute" and "OBJECT" not in n)] = part
-    n["operators"] = r.scalar()
+        member = n["type"] != "if_payment_attribute" and "OBJECT" not in n
+        n[cx.part_field(lst, attr, member, _own(lst, _subject_text(pre_words)))] = part
+    return n, lst, attr
+
+
+def _compared(r: _Reader, n: Block, lst: str | None, attr: Any, cx: Context) -> None:
+    """What a condition compares with: a list of codes, a value block (and a second for between) or a code."""
     names = cx.names(PICKERS["MA_CC"]) if attr == ACTIVE_CARDS_ATTRIBUTE else cx.names(lst, attr)
     plain = cx.field_valued(lst, attr) or attr == ACTIVE_CARDS_ATTRIBUTE
     if r.at("punct", "["):
@@ -1276,8 +1412,6 @@ def _condition(r: _Reader, filter_line: bool, cx: Context) -> Block:
             n["RHS_VALUE"] = r.expression()
     elif not r.done() and not r.at_option():
         n["value"] = Context.read(r.scalar(), names)
-    _rest(r, n, alias=False)
-    return _in_screen_order(from_uniform(n)) if n["type"] != "if_payment_attribute" else n
 
 
 # The order the rules screen builds a condition's fields in: each dropdown hangs on the one before it, so a field
@@ -1310,9 +1444,7 @@ def _rest(r: _Reader, n: Block, alias: bool, last: str | None = None) -> None:
         kv = r.option()
         if kv is None:
             if last is None:
-                raise ValueError(
-                    f"expected key=value, found {r.take().text!r} (a value with spaces goes in quotes)"
-                )
+                raise ValueError(f"expected key=value, found {r.take().text!r} (a value with spaces goes in quotes)")
             n[last] = r.expression()
             if not r.done():
                 raise ValueError("a value ends the line")
@@ -1347,7 +1479,11 @@ def _action(r: _Reader, cx: Context) -> Block:
                 n["vector_counter_name"] = n["vector_counter_namespace"] = r.scalar()
         if r.at("word", "as"):
             r.i += 1
-            n["vector_counter_name"] = r.scalar()
+            if r.at("word", NO_NAME):
+                r.i += 1
+                n.pop("vector_counter_name", None)
+            else:
+                n["vector_counter_name"] = r.scalar()
         if r.at("word", "="):
             r.i += 1
             last = "RHS_INPUT"
@@ -1367,9 +1503,9 @@ def _counter(r: _Reader) -> dict[str, Any]:
         _rest(r, c, alias=False)
         return c
     kind = r.scalar()
-    if kind not in COUNTER_TYPES:
+    if kind not in COUNTER_TYPES and kind not in COUNTER_UNTYPED:
         raise ValueError(f"expected the counter's type ({', '.join(COUNTER_TYPES)}), found {kind!r}")
-    c.update(level="MA_O", data_type=COUNTER_TYPES[kind], counter_type="REGULAR")
+    c.update(level="MA_O", data_type=COUNTER_TYPES.get(kind, kind), counter_type="REGULAR")
     if r.at("word", "per"):
         r.i += 1
         c.update(counter_type="VECTOR", namespace=r.scalar())
@@ -1493,7 +1629,7 @@ def _paths(node: Any, path: str, by_id: dict[int, int], out: dict[str, int]) -> 
             _paths(x, f"{path}[{i}]", by_id, out)
 
 
-LABELS = "Filter, rule_N, rule_line_N, payment_rule_N, counter, def, activity_N, event_N"
+LABELS = "Filter, rule_N, rule_line_N, payment_rule_N, counter, def, date_kind, activity_N, event_N"
 
 
 def _line(b: _Builder, line: str, n: int) -> None:
@@ -1504,7 +1640,7 @@ def _line(b: _Builder, line: str, n: int) -> None:
         raise ValueError("expected '<label>, <body>'")
     head, r = _Reader(toks[:comma]), _Reader(toks[comma + 1 :], b.cx)
     label = head.scalar()
-    if label in ("def", "counter") or SECTION.fullmatch(label):
+    if label in ("def", "counter", DATE_KIND) or SECTION.fullmatch(label):
         _declaration(b, label, r, n)
         return
     if label == "Filter":
@@ -1543,6 +1679,12 @@ def _declaration(b: _Builder, label: str, r: _Reader, n: int) -> None:
         b.cx.defs[name] = r.expression()
         if not r.done():
             raise ValueError("a def holds one value")
+    elif label == DATE_KIND:
+        own, code, kind = r.scalar(), r.scalar(), r.scalar()
+        fields = {v: k for k, v in DATE_KINDS.items()}
+        if kind not in fields or not r.done():
+            raise ValueError("expected `date_kind, <list> <attribute> DATE|DATETIME`")
+        b.cx.kinds[(own, code)] = fields[kind]
     elif label == "counter":
         c = _counter(r)
         b.counters.append(c)

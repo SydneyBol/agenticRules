@@ -435,7 +435,9 @@ def test_compose_takes_lines_only_in_a_dsl_run(fixture_catalog):
     json_text, dsl_text = prompt.static_prompt(), prompt.static_prompt("dsl")
     assert dsl_text.startswith(json_text) and "# The rules canvas as lines" in dsl_text[len(json_text) :]
     assert prompt.system_blocks(fixture_catalog) == prompt.system_blocks(fixture_catalog, rules_form="json")
-    assert Settings.from_env({"OFFER_AUTHOR_RULES_FORM": "json"}).rules_form == "json" and Settings().rules_form == "dsl"
+    assert (
+        Settings.from_env({"OFFER_AUTHOR_RULES_FORM": "json"}).rules_form == "json" and Settings().rules_form == "dsl"
+    )
 
 
 def test_a_dsl_run_builds_the_rules_and_repairs_by_line(fixture_catalog):
@@ -542,16 +544,40 @@ NATURAL_FORMS = [
     ),
     ("rule_1, assign_sweepstakes sweepstake=3 10", "ACTION", {"sweepstakeid": "3"}),
     (
-        'rule_1, update_attribute Bought at (activity.l_product_external_id) INCREMENT_BY 1',
+        "rule_1, update_attribute Bought at (activity.l_product_external_id) INCREMENT_BY 1",
         "ACTION",
         {"vector_counter_namespace": {"type": "activity_attribute", "ATTRIBUTE": "l_product_external_id"}},
     ),
     (
-        'rule_1, if transaction_value Bought at (activity.l_product_external_id) < 1',
+        "rule_1, if transaction_value Bought at (activity.l_product_external_id) < 1",
         "CONDITION",
         {"vector_counter_namespace": {"type": "activity_attribute", "ATTRIBUTE": "l_product_external_id"}},
     ),
     ('rule_1, if counter "Stores visited" as unique >= 3', "CONDITION", {"vector_counter_name": "unique"}),
+    (
+        'rule_1, update_attribute "Store Visits" at h_location as - RESET_ALL',
+        "ACTION",
+        {"vector_counter_namespace": "h_location"},
+    ),
+    (
+        'rule_1, update_attribute pointsPay INCREMENT_BY payment.payment_method{in ["Loyalty Points", Cash]}',
+        "ACTION",
+        {
+            "RHS_INPUT_VALUE": {
+                "type": "payment_attribute",
+                "payment_attribute": "payment_method",
+                "operators": "in",
+                "picked": "Loyalty Points,Cash",
+            }
+        },
+    ),
+    ("rule_1, if activity adjustment_type", "CONDITION", {"operators": ""}),
+    (
+        "rule_1, give_points transaction_value.-",
+        "ACTION",
+        {"FORMULA": {"type": "member_attribute", "ATTRIBUTE_TYPE": "MA_A"}},
+    ),
+    ('rule_1, update_attribute "Reward Received" = "" ("Yes")', "ACTION", {"value": ""}),
 ]
 
 
@@ -563,6 +589,26 @@ def test_every_block_has_a_line_of_its_own(line, where, holds):
     for key, value in holds.items():
         assert key in block and (value is ... or block[key] == value), (key, block)
     assert "vector_counter_name" in block or "as unique" not in line
+    assert "vector_counter_name" not in block or " as - " not in line
     written = dsl.to_lines(tops, counters).splitlines()[-1]
     assert written == line.replace("rule_1,", written.split(",", 1)[0] + ",", 1), written
-    assert " block " not in written and "{" not in written
+    assert " block " not in written and not re.search(r"[{(,]\s*[A-Za-z_]+=", written)  # no screen field names
+
+
+def test_a_date_part_kept_where_its_type_does_not_put_it_is_declared_once():
+    """Without a catalog the attribute's type comes from a date_kind line: the part's field reads back as it was."""
+    tops = [{"type": "offer_generic", "activities": [{"type": "activity", "ACTIVITY_CRITERIA": [
+        {"type": "activity_criteria", "OBJECT": "activity", "attribute": "h_start_date", "operators": ">=",
+         "date_operator": "DATE", "RHS_INPUT": {"type": "static_date", "value": "2026-06-01"}}]}]}]  # fmt: skip
+    text = dsl.to_lines(tops, [])
+    assert text.splitlines()[0] == "date_kind, activity h_start_date DATE"
+    assert "Filter, activity h_start_date.DATE >= 2026-06-01" in text and "date_operator" not in text
+    assert dsl.from_lines(text)[0] == tops
+
+
+def test_counter_saved_before_its_type_was_picked():
+    counters = [{"name": "null", "level": "MA_A", "data_type": "undefined", "counter_type": "REGULAR"}]
+    tops = [{"type": "offer_generic"}]
+    text = dsl.to_lines(tops, counters)
+    assert text == 'counter, "null" undefined transaction_only'
+    assert dsl.from_lines(text)[1] == counters

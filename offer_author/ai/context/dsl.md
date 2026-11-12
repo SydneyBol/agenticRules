@@ -60,6 +60,7 @@ Values: a catalog code or its name (`SPEND` or `Spend`; a name with spaces in qu
 `in [A, B]`; a number; a date `2026-03-08`; a date with its time of day `datetime("2026-03-08 10:30 AM")`;
 `between 50 and 99.99`; any other value in parentheses. `null` and
 `not_null` take no value. Cards, plans and programmes are named by their id or their name from the tenant catalog.
+A payment attribute used as a value can carry its own test: `payment.payment_method{in [Cash, Card]}`.
 
 ## Values
 A number, `"text"`, a date, `activity.<attribute>` (with a part: `activity.h_bit_date.MONTH`),
