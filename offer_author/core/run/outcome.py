@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from ...domain import Composed, Problem
 from ..canvas.checks.counters import used_counters
+from ..canvas.checks.reads import attribute_reads, lookalikes
 from .offer_main import offer_settings
 
 if TYPE_CHECKING:
@@ -61,10 +62,12 @@ def _rules_result(
     report: dict[str, Any] | None = None,
     loose: Sequence[Any] = (),
     edited: bool = False,
+    reads: Sequence[Any] = (),
 ) -> dict[str, Any]:
     """The rules part of a result."""
     return {
         "xml": xml,
+        "attributes_read": list(reads),
         "counters": list(counters),
         "expected_offer_id": offer_id,
         "rule_count": len(RULE_BLOCKS.findall(xml)),
@@ -98,11 +101,13 @@ def _rules(run: Run, fin: dict[str, Any], parts: Sequence[str], offer_id: int | 
     done: Composed | None = canvases.clean.get("rules") or canvases.last.get("rules")
     if done and done.built:
         used = used_counters(done.xml, done.counters)
+        reads = attribute_reads(done.xml, run.catalog)
         by_part["rules"]["assumptions"] += [
             Problem.of("loose_block", type=lb["type"], reason=lb["reason"])
             for lb in done.loose
             if lb["reason"].code != "loose_saved"
         ]
+        by_part["rules"]["assumptions"] += lookalikes(reads, run.catalog)
         return _rules_result(
             done.xml,
             offer_id,
@@ -111,6 +116,7 @@ def _rules(run: Run, fin: dict[str, Any], parts: Sequence[str], offer_id: int | 
             _counter_report(run, offer_id, used),
             done.loose,
             canvases.edited("rules"),
+            reads,
         )
     if not done and canvases.doc is not None and not (fin["blocking_questions"] or fin["unsupported"]):
         return _rules_result(canvases.doc.xml, offer_id, report=run.guard.report([]) if run.guard else None)

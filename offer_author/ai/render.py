@@ -305,6 +305,10 @@ WORDING: dict[str, Callable[[Facts], str]] = {
         + (f" (the {f['side']} airport condition)" if f.get("side") else "")
         + f"; the active airports that have a value of it: {', '.join(f['active']) or 'none'}"
     ),
+    "attribute_lookalike": lambda f: (
+        f"{f['attribute']} is read from {f['place']}; the catalog has the same name in {'; '.join(f['others'])}. "
+        "Both compile. Say in the assumptions which one the description means and why, or ask when it does not say"
+    ),
     # catalog lookups (core/catalog.py)
     "not_a_catalog_attribute": lambda f: f"{f['attribute']} is not a catalog attribute",
     "no_value_list": lambda f: f"{f['attribute']} has no value list",

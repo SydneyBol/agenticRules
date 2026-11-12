@@ -16,6 +16,7 @@ from ..canvas.build import to_xml
 from ..canvas.checks.airports import airport_notes
 from ..canvas.checks.counters import counter_problems
 from ..canvas.checks.grammar import ROOTS, check, detach
+from ..canvas.checks.reads import attribute_reads, lookalikes
 from ..canvas.checks.screen_fields import unfilled
 from ..canvas.declare import declare
 from ..canvas.dsl import DslError, from_lines
@@ -207,6 +208,8 @@ class Canvases:
         written = Composed(xml, [], counters, self._loose(canvas, tops, moved))
         if airports := airport_notes(xml, self.catalog):  # facts beside the problems: they hold no finish back
             noted["airports"] = airports
+        if alike := lookalikes(attribute_reads(xml, self.catalog), self.catalog):
+            noted["attribute_lookalikes"] = alike
         return {**self._check(canvas, tops, written, paths, xids), **noted}
 
     def pending(self) -> list[Problem]:

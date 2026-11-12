@@ -26,6 +26,10 @@ FOR_THE_MANAGER: dict[str, Callable[[Facts], str]] = {
         f"The {f['type']} block is on the canvas but not attached, and disabled so it adds nothing to the rules "
         f"({word(f['reason'])}). Attach it where it fits and enable it, or delete it."
     ),
+    "attribute_lookalike": lambda f: (
+        f"{f['attribute']} is taken from {f['place']}; the catalog also has {'; '.join(f['others'])}. "
+        "Check that the offer reads the one you mean."
+    ),
     "select_segment": lambda f: (
         f"Who qualifies is the member segment '{f['name']}': create and select it on Select Members, otherwise every "
         "member qualifies."
