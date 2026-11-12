@@ -68,7 +68,7 @@ def test_migration_writes_lines_that_compile_back(tmp_path):
     assert migrate(str(store), None, write=False)["migrated"] == 1 and "dsl" not in store.read_text()
     got = migrate(str(store), None, write=True)
     first, second = (json.loads(line) for line in store.read_text().splitlines())
-    assert got["failed"] == ["B"] and first["subprompt"] == "legacy" and first["dsl_form"] == "3"
+    assert got["failed"] == ["B"] and first["subprompt"] == "legacy" and first["dsl_form"] == dsl.FORM
     assert _norm(dsl.from_lines(first["dsl"])[0]) == _canvas(xml)[0] and "dsl" not in second
     assert len(list(tmp_path.glob("offers.jsonl.bak-*"))) == 1
 
@@ -470,3 +470,23 @@ def test_an_engine_mismatch_shows_the_lines_and_asks_for_lines():
     assert "compose the rules again with dsl" in text and "block ids" not in text
     tree = cases.mismatch_message(report, {"rules": {"root": {"type": "offer_generic", "id": "b1"}}})
     assert "block ids for edits" in tree and "compose with edits by these block ids" in tree
+
+
+def test_a_calendar_date_and_a_date_counter_take_their_part_after_the_name():
+    text = "\n".join(
+        (
+            'counter, "Last reward day" date',
+            "Filter, activity h_bit_type == SPEND",
+            'rule_1 "Birthday bonus", if activity h_bit_date.CALENDAR_DATE >= (profile.date_of_birth.CALENDAR_DATE - 7 DAYS)',
+            'rule_1, if counter "Last reward day".DATE != activity.h_bit_date.DATE',
+            "rule_1, give_points 300",
+        )
+    )
+    tops, counters, _ = dsl.from_lines(text)
+    window, once = tops[0]["activities"][0]["RULES"][0]["CONDITION"]
+    assert (
+        window["datetime_operator"] == "CALENDAR_DATE"
+        and window["RHS_INPUT"]["LHS"]["date_operator"] == "CALENDAR_DATE"
+    )
+    assert once["date_operator"] == "DATE" and once["attribute"] == "Last reward day"
+    assert dsl.to_lines(tops, counters) == text  # written back in the same words, no raw field names

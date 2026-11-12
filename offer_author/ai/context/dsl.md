@@ -10,6 +10,16 @@ One statement per line: `<label>, <body>`. The lines read top to bottom as the o
 the whole canvas; to fix a problem, send all the lines again with the line corrected. A problem names its line:
 `#L7` is line 7, `#L7.2` a value inside line 7, `#rule_2` the rule with that label.
 
+## What the lines are on the canvas
+The lines are the canvas, top to bottom, so they run as their blocks do (section 3 of the engine knowledge):
+- `Filter` lines are the On Activity's filter: all must hold for a transaction, or none of that activity's rules runs.
+- Each rule label is one Rule block. The rules stand in the order of their first lines and every rule whose `if` lines
+  hold runs; there is no "else" between rules.
+- A rule's action lines are its Action blocks, run in line order. A counter an earlier line updated is read with its
+  new value by the lines and rules after it.
+- A rule written `inside` another sits among that rule's actions at the place of its first line.
+- `rule_line` and `payment_rule` lines are checked once per line item or payment item.
+
 ## Labels
 - `counter, "<name>" number|text|date` declares a counter of the offer (an offer counter, kept per member).
   `... per <attribute> of Activity` makes it a VECTOR counter counted per that attribute; `... transaction_only`
@@ -31,15 +41,18 @@ Subjects:
   `product` (a line item's product), `payment` (a payment item's attribute, in a payment_rule).
 - `profile` a member attribute of the attribute library; `analytics` an analytics write-back value.
 - `counter "<name>"` an offer counter (`counter "<name>" at <attribute>` reads a VECTOR counter's entry for the
-  transaction's value of that attribute); `transaction_value "<name>"` an activity-level value.
+  transaction's value of that attribute; `... at <attribute> as across` the sum of its entries; `... at <attribute>
+  as unique` the number of entries it holds); `transaction_value "<name>"` an activity-level value.
 - `card <card> <attribute>` a co-branded card's attribute, `card <card> transaction <attribute>` of the card used in
   the transaction, `card <card> any <attribute>` of any of the member's cards of that kind; `card active == <card>`
   (or `in [..]`) whether the member holds the card.
 - `bank_account any|transaction <attribute>`, `subscription <plan> <attribute>`, `partner <programme> <attribute>`.
 - `tier <tier programme> == <tier>`.
 - `third_party <who> profile <attribute>` a third party's member attribute.
-A date's part is written after the attribute: `h_bit_date.DAY_OF_WEEK`, `.DATE`, `.MONTH`, `.YEAR`, `.DAY_OF_MONTH`,
-`.DAY_OF_YEAR`, `.WEEK_OF_YEAR`, `.HOUR_OF_DAY`.
+A date's part is written after the attribute: `h_bit_date.DAY_OF_WEEK`, `.DATE`, `.CALENDAR_DATE` (the day and month
+in any year), `.MONTH`, `.YEAR`, `.DAY_OF_MONTH`, `.DAY_OF_YEAR`, `.WEEK_OF_YEAR`, `.HOUR_OF_DAY`, `.MINUTE_OF_HOUR`.
+A date counter takes its part the same way, after its name: `counter "Last reward day".DATE != activity.h_bit_date.DATE`.
+A date compared as a whole date is written with `.DATE` on both sides.
 Operators: `== != > >= < <= in not_in between null not_null match not_match`.
 Values: a catalog code or its name (`SPEND` or `Spend`; a name with spaces in quotes: `"HDFC Sliver"`); a list
 `in [A, B]`; a number; a date `2026-03-08`; `between 50 and 99.99`; any other value in parentheses. `null` and
@@ -47,7 +60,7 @@ Values: a catalog code or its name (`SPEND` or `Spend`; a name with spaces in qu
 
 ## Values
 A number, `"text"`, a date, `activity.<attribute>` (with a part: `activity.h_bit_date.MONTH`),
-`profile.<attribute>`, `counter."<name>"`, `transaction_value."<name>"`, `product.<attribute>`,
+`profile.<attribute>` (with a part: `profile.date_of_birth.CALENDAR_DATE`), `counter."<name>"`, `transaction_value."<name>"`, `product.<attribute>`,
 `payment.<attribute>`, `today`, `today.MONTH`, arithmetic in parentheses with one operator per pair
 `((activity.h_bit_amount - 100) * 2)` (operators `+ - * / %`), a date moved by a number of units
 `(2026-03-08 + 7 DAYS)` (`DAYS`, `MONTHS`, `YEARS`).

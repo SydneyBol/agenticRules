@@ -70,7 +70,7 @@ from ..vocabulary import ACTIVE_CARD_FIELDS, ACTIVE_CARDS, LEVEL_FIELD_ORDER, LE
 
 Block = dict[str, Any]
 
-FORM = "3"  # the line form's version: stored lines of another form are written again (harvest, migration)
+FORM = "4"  # the line form's version: stored lines of another form are written again (harvest, migration)
 RULE_TYPES = ("rule", "rule_line", "payment_rule")
 PAYMENT = "payment"
 MEMBER = "member"  # a member attribute whose level the compose step fills, or `member [<level code>]` for any level
@@ -115,6 +115,7 @@ OPERATORS = ("==", "!=", ">=", "<=", ">", "<", "in", "not_in", "between", "null"
 ARITHMETIC = ("*", "/", "+", "-", "%")
 PARTS = (
     "DATE",
+    "CALENDAR_DATE",  # the day and month in any year (birthday and anniversary windows)
     "DATETIME",
     "MONTH",
     "YEAR",
@@ -419,7 +420,8 @@ class _Writer:
             return None
         attr = u.get("attribute", u.get("payment_attribute"))
         part = self.cx.part_field(lst, attr, t != "if_payment_attribute" and "OBJECT" not in u)
-        if u.get(part) in PARTS and attr != ACTIVE_CARDS_ATTRIBUTE and subject.endswith(" " + str(attr)):
+        named = subject.endswith(" " + str(attr)) or subject.endswith(" " + val(attr))  # a counter's name is quoted
+        if u.get(part) in PARTS and attr != ACTIVE_CARDS_ATTRIBUTE and named:
             subject, done = f"{subject}.{u[part]}", done | {part}
         parts = [subject, str(u["operators"]), *self._right(u, lst, attr, done)]
         parts += self.options(u, [k for k in u if k not in done])
@@ -1173,6 +1175,9 @@ def _condition(r: _Reader, filter_line: bool, cx: Context) -> Block:
         head, dot, last = pre[-1].text.rpartition(".")
         if dot and head and last in PARTS:
             pre[-1], part = _Tok("word", head), last
+        elif dot and not head and last in PARTS and len(pre) > 1 and pre[-2].kind == "str":
+            part = last  # after a quoted name: counter "Cap Date".DATE
+            pre.pop()
     n, lst = _subject(pre, filter_line, cx)
     attr = n.get("attribute", n.get("payment_attribute"))
     if part is not None:
