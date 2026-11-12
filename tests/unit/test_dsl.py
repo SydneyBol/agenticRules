@@ -292,6 +292,7 @@ def test_a_def_is_written_once_and_used_by_name():
         ("discount, give_points 5", 1, "expected a label"),
         ("counter, Total money", 1, "expected the counter's type"),
         ('rule_1, if activity h_location == "HYD', 1, "cannot read"),
+        ("rule_1, if sponsor employee_count == 51 - 100", 1, "a value with spaces goes in quotes"),
     ],
 )
 def test_a_line_that_does_not_parse_names_its_number(lines, line, expected):

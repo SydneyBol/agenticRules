@@ -1235,7 +1235,9 @@ def _rest(r: _Reader, n: Block, alias: bool, last: str | None = None) -> None:
         kv = r.option()
         if kv is None:
             if last is None:
-                raise ValueError(f"expected key=value, found {r.take().text!r}")
+                raise ValueError(
+                    f"expected key=value, found {r.take().text!r} (a value with spaces goes in quotes)"
+                )
             n[last] = r.expression()
             if not r.done():
                 raise ValueError("a value ends the line")
