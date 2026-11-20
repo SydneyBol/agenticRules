@@ -1,11 +1,16 @@
 """Generate the Offer Main form rules the tools check set_offer_main against, from the sources (no hand-typed rules):
-  offer name: required and maxLength on the Offer Title input (newui offer-details-form.component.html);
+  offer name, subtitle, offer description: required and maxLength on the Offer Title, Offer Subtitle and Offer
+  Description inputs (newui offer-details-form.component.html). The screen sets a generated value through ngModel,
+  which maxLength does not cut, so an over-long value reaches bolapi (2026-11-20: a 751-character description, bolapi
+  400 "no more than 500 characters" on offer_description, CharField max_length=500);
   frequency, offer_frequency_type: the choices of bolapi's Offer model (offers/models.py FREQUENCY_CHOICES,
   OFFER_FREQUENCY_CHOICES); both may be blank (blank=True there; the screen sends "").
 The JSON records a hash of every source file read, so a test can tell when it is stale.
 
 usage: python tools/build/offer_main_form.py [--ui ~/Downloads/newui-develop/gravty-ui] [--bolapi ~/Downloads/bolapi-develop]
-writes offer_author/core/data/offer_main_form.json in $OFFER_AUTHOR_REPO (default ~/PycharmProjects/offer-xml-generator)
+       [--out <path to offer_main_form.json>]
+writes offer_author/core/data/offer_main_form.json in this checkout unless --out names another file (the Pulsar
+agent's copy: <ai repo>/apis/flask_apis/pulsar/pulsar_offer_agent/core/data/offer_main_form.json)
 """
 
 import argparse
@@ -21,6 +26,7 @@ ROOT = os.path.dirname(
 OUT = os.path.join(ROOT, "offer_author", "core", "data", "offer_main_form.json")
 DETAILS = "src/app/workspaces/offer/modules/offer-setup/screens/offer-main/components/offer-main-forms/offer-details-form/offer-details-form.component.html"
 MODELS = "offers/models.py"
+TEXT_FIELDS = ("offer_name", "subtitle", "offer_description")  # the text inputs set_offer_main fills
 
 
 def input_rules(html, model_field):
@@ -43,7 +49,7 @@ def build(ui, bolapi):
     paths = {"ui": os.path.join(ui, DETAILS), "bolapi": os.path.join(bolapi, MODELS)}
     text = {k: Path(p).read_text() for k, p in paths.items()}
     return {
-        "offer_name": input_rules(text["ui"], "offer_name"),
+        **{field: input_rules(text["ui"], field) for field in TEXT_FIELDS},
         "frequency": {"choices": choices(text["bolapi"], "FREQUENCY_CHOICES"), "blank": True},
         "offer_frequency_type": {"choices": choices(text["bolapi"], "OFFER_FREQUENCY_CHOICES"), "blank": True},
         "sources": {
@@ -57,12 +63,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--ui", default=os.path.expanduser("~/Downloads/newui-develop/gravty-ui"))
     ap.add_argument("--bolapi", default=os.path.expanduser("~/Downloads/bolapi-develop"))
+    ap.add_argument("--out", default=OUT)
     a = ap.parse_args()
     spec = build(a.ui, a.bolapi)
-    with open(OUT, "w") as f:
+    with open(a.out, "w") as f:
         json.dump(spec, f, indent=1)
         f.write("\n")
-    print(OUT, json.dumps({k: v for k, v in spec.items() if k != "sources"}))
+    print(a.out, json.dumps({k: v for k, v in spec.items() if k != "sources"}))
 
 
 if __name__ == "__main__":
